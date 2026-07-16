@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
 
@@ -12,6 +13,7 @@ import { useCart } from "@/context/CartContext";
  * Displays tax (8%), shipping fees, and grand totals with a Checkout CTA button.
  */
 export default function CartSummary() {
+  const router = useRouter();
   const { cartSubtotal, clearCart } = useCart();
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
@@ -41,8 +43,7 @@ export default function CartSummary() {
   const grandTotal = cartSubtotal + tax + shipping - discountAmount;
 
   const handleCheckout = () => {
-    alert("Thank you for shopping at Cloud Certitude Fashion! This is a demo checkout simulation. Your cart will now be cleared.");
-    clearCart();
+    router.push("/checkout");
   };
 
   return (
