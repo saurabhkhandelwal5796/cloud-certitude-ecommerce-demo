@@ -1,1 +1,1 @@
-# cloud-certitude-ecommerce-demo
+# Cloud Certitude E-Commerce Demo
