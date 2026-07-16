@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { formatPrice } from "@/utils";
+import { useCart } from "@/context/CartContext";
 
 interface ProductType {
   id: string;
@@ -33,6 +34,7 @@ export default function ProductQuickViewModal({
   isOpen,
   onClose,
 }: ProductQuickViewModalProps) {
+  const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState("M");
   const [selectedColor, setSelectedColor] = useState("Beige");
   const [quantity, setQuantity] = useState(1);
@@ -48,7 +50,19 @@ export default function ProductQuickViewModal({
     setIsAdding(true);
     setTimeout(() => {
       setIsAdding(false);
-      alert(`Successfully added ${quantity} x "${product.name}" (Size: ${selectedSize}, Color: ${selectedColor}) to your cart!`);
+      addToCart(
+        {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          imageSrc: product.imageSrc,
+          discountPercent: product.discountPercent,
+          brand: product.brand,
+        },
+        quantity,
+        selectedSize,
+        selectedColor
+      );
       onClose();
     }, 600);
   };

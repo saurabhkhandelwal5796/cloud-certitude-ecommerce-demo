@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import CartBadge from "@/components/ui/CartBadge";
 
 interface NavbarClientProps {
   user: {
@@ -147,18 +148,16 @@ export default function NavbarClient({ user }: NavbarClientProps) {
               </button>
 
               {/* Cart */}
-              <button
-                onClick={() => alert("Cart is coming soon!")}
-                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer"
+              <Link
+                href="/cart"
+                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative p-1 cursor-pointer"
                 title="Cart"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-[#E0A99E] text-[10px] text-white font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-sm">
-                  0
-                </span>
-              </button>
+                <CartBadge />
+              </Link>
 
               {/* Profile / Auth Menu */}
               {currentUser ? (
@@ -209,14 +208,12 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             </button>
 
             {/* Cart Icon */}
-            <button onClick={() => alert("Cart is coming soon!")} className="text-stone-600 hover:text-[#C68B7D] p-2 relative cursor-pointer">
+            <Link href="/cart" className="text-stone-600 hover:text-[#C68B7D] p-2 relative cursor-pointer">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <span className="absolute top-0.5 right-0.5 bg-[#E0A99E] text-[8px] text-white font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center shadow-sm">
-                0
-              </span>
-            </button>
+              <CartBadge />
+            </Link>
 
             {/* Hamburger toggle */}
             <button

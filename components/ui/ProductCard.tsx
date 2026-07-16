@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/utils";
+import { useCart } from "@/context/CartContext";
 
 interface ProductCardProps {
   id: string;
@@ -47,6 +48,7 @@ export default function ProductCard({
   description,
   onQuickView,
 }: ProductCardProps) {
+  const { addToCart } = useCart();
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
@@ -60,7 +62,7 @@ export default function ProductCard({
     setIsAdding(true);
     setTimeout(() => {
       setIsAdding(false);
-      alert(`"${name}" added to cart!`);
+      addToCart({ id, name, price, imageSrc, discountPercent, brand }, 1, "M", "Beige");
     }, 600);
   };
 

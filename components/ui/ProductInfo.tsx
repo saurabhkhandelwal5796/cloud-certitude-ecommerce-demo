@@ -2,12 +2,14 @@
 
 import React, { useState } from "react";
 import { formatPrice } from "@/utils";
+import { useCart } from "@/context/CartContext";
 
 interface ProductInfoProps {
   id: string;
   name: string;
   brand: string;
   price: number;
+  imageSrc: string;
   discountPercent?: number;
   rating: number;
   reviewCount: number;
@@ -35,9 +37,11 @@ const COLORS = [
  * and collapsible care/shipping details.
  */
 export default function ProductInfo({
+  id,
   name,
   brand,
   price,
+  imageSrc,
   discountPercent,
   rating,
   reviewCount,
@@ -48,6 +52,7 @@ export default function ProductInfo({
   shippingInfo = "Free standard shipping on orders over $150. Delivery within 3-5 business days.",
   returnPolicy = "Hassle-free 30-day returns. Items must be unworn and contain original tags intact.",
 }: ProductInfoProps) {
+  const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState("M");
   const [selectedColor, setSelectedColor] = useState("Beige");
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -63,7 +68,7 @@ export default function ProductInfo({
     setIsAdding(true);
     setTimeout(() => {
       setIsAdding(false);
-      alert(`Added "${name}" (Size: ${selectedSize}, Color: ${selectedColor}) to your cart!`);
+      addToCart({ id, name, price, imageSrc, discountPercent, brand }, 1, selectedSize, selectedColor);
     }, 600);
   };
 

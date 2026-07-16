@@ -285,6 +285,7 @@ export default async function ProductDetailsPage({ params }: PageProps) {
             name={product.name}
             brand={product.brand}
             price={product.price}
+            imageSrc={product.imageSrc}
             discountPercent={product.discountPercent}
             rating={product.rating}
             reviewCount={product.reviewCount}
