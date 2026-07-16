@@ -1,5 +1,4 @@
 import React from "react";
-import { notFound } from "next/navigation";
 import ProductImageGallery from "@/components/ui/ProductImageGallery";
 import ProductInfo from "@/components/ui/ProductInfo";
 import DeliveryChecker from "@/components/ui/DeliveryChecker";
