@@ -61,6 +61,13 @@ export default function CheckoutPage() {
         if (storedPay) {
           setSelectedPayment(storedPay);
         }
+        const storedPromo = localStorage.getItem("certitude_applied_promo");
+        if (storedPromo) {
+          const parsed = JSON.parse(storedPromo);
+          setDiscountPercent(parsed.discountPercent);
+          setPromoApplied(true);
+          setAppliedCode(parsed.appliedCode);
+        }
       } catch (err) {
         console.error("[Checkout] Failed loading settings from localStorage:", err);
       }
