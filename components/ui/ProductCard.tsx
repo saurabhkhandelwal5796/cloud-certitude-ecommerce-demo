@@ -12,6 +12,19 @@ interface ProductCardProps {
   discountPercent?: number;
   rating: number;
   category: string;
+  brand?: string;
+  description?: string;
+  onQuickView?: (product: {
+    id: string;
+    name: string;
+    price: number;
+    imageSrc: string;
+    discountPercent?: number;
+    rating: number;
+    category: string;
+    brand?: string;
+    description?: string;
+  }) => void;
 }
 
 /**
@@ -19,14 +32,19 @@ interface ProductCardProps {
  *
  * Renders individual apparel items in a bright, warm luxury aesthetic.
  * Displays cream/white shadow cards, rose gold badges, and elegant hover animations.
+ * Supports a "Quick View" action modal trigger.
  */
 export default function ProductCard({
+  id,
   name,
   price,
   imageSrc,
   discountPercent,
   rating,
   category,
+  brand = "Atelier",
+  description,
+  onQuickView,
 }: ProductCardProps) {
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -90,13 +108,21 @@ export default function ProductCard({
         </button>
 
         {/* Quick Add Overlay on hover (desktop only) */}
-        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0 hidden md:block">
+        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0 hidden md:flex flex-col gap-2">
+          {onQuickView && (
+            <button
+              onClick={() => onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description })}
+              className="flex w-full justify-center rounded-full bg-white py-2 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 shadow-sm transition-colors cursor-pointer border border-stone-200"
+            >
+              Quick View
+            </button>
+          )}
           <button
             onClick={handleAddToCart}
             disabled={isAdding}
-            className="flex w-full justify-center rounded-full bg-[#E0A99E] py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] shadow-md transition-colors cursor-pointer"
+            className="flex w-full justify-center rounded-full bg-[#E0A99E] py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] shadow-md transition-colors cursor-pointer"
           >
-            {isAdding ? "Adding..." : "Quick Add"}
+            {isAdding ? "Adding..." : "Add to Cart"}
           </button>
         </div>
       </div>
@@ -141,14 +167,24 @@ export default function ProductCard({
           )}
         </div>
 
-        {/* Mobile quick add button */}
-        <button
-          onClick={handleAddToCart}
-          disabled={isAdding}
-          className="mt-4 flex w-full justify-center rounded-full bg-stone-50 border border-stone-200 py-2 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-[#E0A99E] hover:text-white disabled:opacity-50 transition-all md:hidden cursor-pointer"
-        >
-          {isAdding ? "Adding..." : "Add to Cart"}
-        </button>
+        {/* Mobile quick add/view buttons */}
+        <div className="mt-4 flex flex-col gap-2 md:hidden">
+          {onQuickView && (
+            <button
+              onClick={() => onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description })}
+              className="flex w-full justify-center rounded-full bg-white border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 cursor-pointer"
+            >
+              Quick View
+            </button>
+          )}
+          <button
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className="flex w-full justify-center rounded-full bg-stone-50 border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-[#E0A99E] hover:text-white disabled:opacity-50 transition-all cursor-pointer"
+          >
+            {isAdding ? "Adding..." : "Add to Cart"}
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -96,11 +96,11 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             <div className="flex space-x-8">
               {[
                 { name: "Home", href: "/" },
-                { name: "Men", href: "#men" },
-                { name: "Women", href: "#women" },
-                { name: "Kids", href: "#kids" },
-                { name: "New Arrivals", href: "#new-arrivals" },
-                { name: "Sale", href: "#sale", isSale: true },
+                { name: "Men", href: "/men" },
+                { name: "Women", href: "/women" },
+                { name: "Kids", href: "/kids" },
+                { name: "New Arrivals", href: "/new-arrivals" },
+                { name: "Sale", href: "/sale", isSale: true },
               ].map((link) => (
                 <Link
                   key={link.name}
@@ -246,11 +246,11 @@ export default function NavbarClient({ user }: NavbarClientProps) {
         <div className="space-y-1 px-3 pb-4 pt-3">
           {[
             { name: "Home", href: "/" },
-            { name: "Men", href: "#men" },
-            { name: "Women", href: "#women" },
-            { name: "Kids", href: "#kids" },
-            { name: "New Arrivals", href: "#new-arrivals" },
-            { name: "Sale", href: "#sale", isSale: true },
+            { name: "Men", href: "/men" },
+            { name: "Women", href: "/women" },
+            { name: "Kids", href: "/kids" },
+            { name: "New Arrivals", href: "/new-arrivals" },
+            { name: "Sale", href: "/sale", isSale: true },
           ].map((link) => (
             <Link
               key={link.name}
