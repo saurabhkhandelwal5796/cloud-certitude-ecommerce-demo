@@ -32,10 +32,13 @@ export default function PromoCode({
 
   // Sync state if already applied on mount
   useEffect(() => {
-    if (promoApplied && appliedCode) {
-      setPromoInput(appliedCode);
-      setSuccessMsg("Promo code applied successfully.");
-    }
+    const loadApplied = async () => {
+      if (promoApplied && appliedCode) {
+        setPromoInput(appliedCode);
+        setSuccessMsg("Promo code applied successfully.");
+      }
+    };
+    loadApplied();
   }, [promoApplied, appliedCode]);
 
   const handleApply = (e: React.MouseEvent<HTMLButtonElement>) => {
