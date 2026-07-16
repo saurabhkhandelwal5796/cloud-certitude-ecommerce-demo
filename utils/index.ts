@@ -95,3 +95,35 @@ export function isValidEmail(email: string): boolean {
 export function cn(...classes: (string | boolean | null | undefined)[]): string {
   return classes.filter(Boolean).join(" ");
 }
+
+// ---------------------------------------------------------------------------
+// Supabase connection verification
+// ---------------------------------------------------------------------------
+
+export interface SupabaseConfigStatus {
+  isConfigured: boolean;
+  hasUrl: boolean;
+  hasAnonKey: boolean;
+  urlFormatValid: boolean;
+}
+
+/**
+ * Checks at runtime if the required Supabase environment variables are loaded
+ * and present. Does not throw errors, allowing components/pages to render a fallback status.
+ */
+export function verifySupabaseConfig(): SupabaseConfigStatus {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  const hasUrl = !!url && url.trim().length > 0 && url !== "your-supabase-project-url";
+  const hasAnonKey = !!anonKey && anonKey.trim().length > 0 && anonKey !== "your-supabase-anon-key";
+  const urlFormatValid = hasUrl && url.startsWith("https://");
+
+  return {
+    isConfigured: hasUrl && hasAnonKey && urlFormatValid,
+    hasUrl,
+    hasAnonKey,
+    urlFormatValid,
+  };
+}
+
