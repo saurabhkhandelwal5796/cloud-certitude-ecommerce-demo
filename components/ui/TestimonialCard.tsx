@@ -13,7 +13,7 @@ interface TestimonialCardProps {
  * TestimonialCard Component
  *
  * Renders luxury feedback cards from verified customers.
- * Includes user profile avatars, feedback statements, and star ratings.
+ * Designed with a warm cream / rose-gold styling, light shadows, and clean borders.
  */
 export default function TestimonialCard({
   name,
@@ -23,9 +23,9 @@ export default function TestimonialCard({
   role = "Verified Purchaser",
 }: TestimonialCardProps) {
   return (
-    <div className="flex flex-col justify-between rounded-2xl border border-white/5 bg-slate-900/20 p-6 md:p-8 backdrop-blur-sm relative">
+    <div className="flex flex-col justify-between rounded-2xl border border-stone-200/40 bg-white p-6 md:p-8 shadow-sm shadow-stone-200/40 relative hover:shadow-md transition-all duration-300">
       {/* Decorative quotes */}
-      <span className="absolute top-6 right-6 text-slate-800 text-6xl font-serif leading-none select-none">
+      <span className="absolute top-6 right-6 text-stone-100 text-6xl font-serif leading-none select-none">
         “
       </span>
 
@@ -35,7 +35,7 @@ export default function TestimonialCard({
           {Array.from({ length: 5 }).map((_, i) => (
             <svg
               key={i}
-              className={`h-4 w-4 ${i < rating ? "fill-current" : "text-slate-600"}`}
+              className={`h-4 w-4 ${i < rating ? "fill-current" : "text-stone-200"}`}
               viewBox="0 0 20 20"
               fill="currentColor"
             >
@@ -45,14 +45,14 @@ export default function TestimonialCard({
         </div>
 
         {/* Feedback text */}
-        <p className="mt-4 text-sm md:text-base text-slate-300 italic leading-relaxed relative z-10">
+        <p className="mt-4 text-sm md:text-base text-stone-600 italic leading-relaxed relative z-10">
           &ldquo;{review}&rdquo;
         </p>
       </div>
 
       {/* User avatar & info */}
-      <div className="mt-6 flex items-center gap-4 border-t border-white/5 pt-4">
-        <div className="relative h-10 w-10 overflow-hidden rounded-full bg-slate-800">
+      <div className="mt-6 flex items-center gap-4 border-t border-stone-100 pt-4">
+        <div className="relative h-10 w-10 overflow-hidden rounded-full bg-stone-100 border border-stone-200/50">
           <Image
             src={avatarSrc}
             alt={name}
@@ -61,9 +61,9 @@ export default function TestimonialCard({
             className="object-cover"
           />
         </div>
-        <div>
-          <h4 className="text-sm font-bold text-white tracking-wide">{name}</h4>
-          <span className="text-[10px] font-semibold text-emerald-400 tracking-wider uppercase flex items-center gap-1 mt-0.5">
+        <div className="text-left">
+          <h4 className="text-sm font-bold text-stone-800 tracking-wide">{name}</h4>
+          <span className="text-[10px] font-bold text-[#E0A99E] tracking-wider uppercase flex items-center gap-1 mt-0.5">
             <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>

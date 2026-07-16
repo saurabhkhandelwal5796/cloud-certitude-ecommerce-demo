@@ -8,8 +8,8 @@ import { getSupabaseClient } from "@/lib/supabase/client";
  * ResetPasswordForm Component
  *
  * Allows customers to set a new password.
- * Users must be authenticated (which they will be after clicking their emailed recovery link)
- * to update their user credentials.
+ * Users must be authenticated to update their user credentials.
+ * Styled in warm cream, soft shadows, and rose gold accents.
  */
 export default function ResetPasswordForm() {
   const router = useRouter();
@@ -79,19 +79,19 @@ export default function ResetPasswordForm() {
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Messaging */}
       {errorMsg && (
-        <div className="rounded-md bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-400">
+        <div className="rounded-md bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-600">
           {errorMsg}
         </div>
       )}
       {successMsg && (
-        <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-400">
+        <div className="rounded-md bg-emerald-500/10 border border-emerald-500/20 p-4 text-sm text-emerald-600">
           {successMsg}
         </div>
       )}
 
       {/* New Password input */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-slate-300">
+        <label htmlFor="password" className="block text-sm font-semibold text-stone-700">
           New Password
         </label>
         <div className="mt-1 relative rounded-md shadow-sm">
@@ -102,13 +102,13 @@ export default function ResetPasswordForm() {
             disabled={isLoading || !!successMsg}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="block w-full rounded-md border border-white/10 bg-white/5 pl-3 pr-10 py-2 text-white placeholder-slate-500 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 sm:text-sm"
+            className="block w-full rounded-md border border-stone-200 bg-white pl-3 pr-10 py-2 text-stone-900 placeholder-stone-400 shadow-sm focus:border-[#E0A99E] focus:outline-none focus:ring-1 focus:ring-[#E0A99E] disabled:opacity-50 sm:text-sm"
             placeholder="Min. 8 characters"
           />
           <button
             type="button"
             onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
           >
             {showPassword ? (
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -141,7 +141,7 @@ export default function ResetPasswordForm() {
 
       {/* Confirm Password input */}
       <div>
-        <label htmlFor="confirm-password" className="block text-sm font-medium text-slate-300">
+        <label htmlFor="confirm-password" className="block text-sm font-semibold text-stone-700">
           Confirm New Password
         </label>
         <div className="mt-1 relative rounded-md shadow-sm">
@@ -152,13 +152,13 @@ export default function ResetPasswordForm() {
             disabled={isLoading || !!successMsg}
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className="block w-full rounded-md border border-white/10 bg-white/5 pl-3 pr-10 py-2 text-white placeholder-slate-500 shadow-sm focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500 disabled:opacity-50 sm:text-sm"
+            className="block w-full rounded-md border border-stone-200 bg-white pl-3 pr-10 py-2 text-stone-900 placeholder-stone-400 shadow-sm focus:border-[#E0A99E] focus:outline-none focus:ring-1 focus:ring-[#E0A99E] disabled:opacity-50 sm:text-sm"
             placeholder="••••••••"
           />
           <button
             type="button"
             onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors cursor-pointer"
+            className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
           >
             {showConfirmPassword ? (
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,12 +194,12 @@ export default function ResetPasswordForm() {
         <button
           type="submit"
           disabled={isLoading || !!successMsg}
-          className="flex w-full justify-center rounded-md border border-transparent bg-emerald-500 px-4 py-2 text-sm font-medium text-slate-950 shadow-sm hover:bg-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 focus:ring-offset-slate-950 disabled:opacity-50 transition-colors cursor-pointer"
+          className="flex w-full justify-center rounded-full bg-[#E0A99E] px-4 py-2.5 text-sm font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] shadow-sm hover:shadow-[#E0A99E]/20 transition-all cursor-pointer"
         >
           {isLoading ? (
             <span className="flex items-center gap-2">
               <svg
-                className="animate-spin h-5 w-5 text-slate-950"
+                className="animate-spin h-5 w-5 text-white"
                 fill="none"
                 viewBox="0 0 24 24"
               >

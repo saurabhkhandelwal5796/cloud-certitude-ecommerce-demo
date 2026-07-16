@@ -17,9 +17,8 @@ interface ProductCardProps {
 /**
  * ProductCard Component
  *
- * Renders individual apparel items.
- * Displays image overlay buttons, discount tags, dynamic star rating reviews,
- * and quick-add actions.
+ * Renders individual apparel items in a bright, warm luxury aesthetic.
+ * Displays cream/white shadow cards, rose gold badges, and elegant hover animations.
  */
 export default function ProductCard({
   name,
@@ -49,20 +48,20 @@ export default function ProductCard({
   };
 
   return (
-    <div className="group relative flex flex-col overflow-hidden rounded-xl border border-white/5 bg-slate-900/40 backdrop-blur-sm transition-all duration-300 hover:border-white/10 hover:shadow-lg">
+    <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200/50 bg-white shadow-sm shadow-stone-200/40 hover:shadow-xl hover:border-stone-300/60 transition-all duration-500">
       {/* Product Image and Overlay triggers */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-slate-950">
+      <div className="relative aspect-[3/4] overflow-hidden bg-stone-50">
         <Image
           src={imageSrc}
           alt={name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
         />
 
         {/* Discount Badge */}
         {discountPercent && (
-          <span className="absolute top-3 left-3 rounded-full bg-rose-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-white">
+          <span className="absolute top-3 left-3 rounded-full bg-[#E0A99E] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
             {discountPercent}% OFF
           </span>
         )}
@@ -70,7 +69,7 @@ export default function ProductCard({
         {/* Wishlist Button */}
         <button
           onClick={handleWishlistToggle}
-          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-slate-950/80 text-slate-300 backdrop-blur-sm transition-all hover:bg-slate-950 hover:text-white cursor-pointer"
+          className="absolute top-3 right-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-500 hover:text-rose-500 shadow-sm backdrop-blur-sm transition-all hover:bg-white cursor-pointer"
           title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
         >
           <svg
@@ -95,7 +94,7 @@ export default function ProductCard({
           <button
             onClick={handleAddToCart}
             disabled={isAdding}
-            className="flex w-full justify-center rounded-md bg-emerald-500 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-950 hover:bg-emerald-400 disabled:opacity-50 transition-colors cursor-pointer"
+            className="flex w-full justify-center rounded-full bg-[#E0A99E] py-2.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] shadow-md transition-colors cursor-pointer"
           >
             {isAdding ? "Adding..." : "Quick Add"}
           </button>
@@ -104,10 +103,10 @@ export default function ProductCard({
 
       {/* Info & pricing */}
       <div className="flex flex-1 flex-col p-4 text-left">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+        <span className="text-[9px] font-bold uppercase tracking-widest text-[#E0A99E]">
           {category}
         </span>
-        <h4 className="mt-1 text-sm font-bold text-white tracking-wide truncate">
+        <h4 className="mt-1 text-sm font-bold text-stone-800 tracking-wide truncate">
           {name}
         </h4>
 
@@ -118,7 +117,7 @@ export default function ProductCard({
               <svg
                 key={i}
                 className={`h-3 w-3 ${
-                  i < Math.floor(rating) ? "fill-current" : "text-slate-600"
+                  i < Math.floor(rating) ? "fill-current" : "text-stone-200"
                 }`}
                 viewBox="0 0 20 20"
                 fill="currentColor"
@@ -127,26 +126,26 @@ export default function ProductCard({
               </svg>
             ))}
           </div>
-          <span className="text-[10px] font-semibold text-slate-400">({rating.toFixed(1)})</span>
+          <span className="text-[10px] font-semibold text-stone-400">({rating.toFixed(1)})</span>
         </div>
 
         {/* Pricing tag */}
         <div className="mt-3 flex items-baseline gap-2">
-          <span className="text-sm font-bold text-white">
+          <span className="text-sm font-bold text-stone-900">
             {formatPrice(discountedPrice)}
           </span>
           {discountPercent && (
-            <span className="text-xs font-semibold text-slate-500 line-through">
+            <span className="text-xs font-semibold text-stone-400 line-through">
               {formatPrice(price)}
             </span>
           )}
         </div>
 
-        {/* Mobile quick add button (always visible on small screens) */}
+        {/* Mobile quick add button */}
         <button
           onClick={handleAddToCart}
           disabled={isAdding}
-          className="mt-4 flex w-full justify-center rounded-md bg-emerald-500/10 border border-emerald-500/20 py-2 text-xs font-bold uppercase tracking-wider text-emerald-400 hover:bg-emerald-500 hover:text-slate-950 disabled:opacity-50 transition-all md:hidden cursor-pointer"
+          className="mt-4 flex w-full justify-center rounded-full bg-stone-50 border border-stone-200 py-2 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-[#E0A99E] hover:text-white disabled:opacity-50 transition-all md:hidden cursor-pointer"
         >
           {isAdding ? "Adding..." : "Add to Cart"}
         </button>

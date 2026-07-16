@@ -9,7 +9,7 @@ interface UserProfileCardProps {
   user: {
     id: string;
     email?: string;
-    created_at: string;
+    created_at?: string;
     last_sign_in_at?: string;
   };
 }
@@ -17,8 +17,8 @@ interface UserProfileCardProps {
 /**
  * UserProfileCard Component
  *
- * Renders the customer profile details inside a clean, modern card.
- * Handles logout operations via the client-side Supabase instance.
+ * Displays active customer profile parameters and allows logout actions.
+ * Styled in warm cream, soft shadows, and rose gold accents.
  */
 export default function UserProfileCard({ user }: UserProfileCardProps) {
   const router = useRouter();
@@ -28,7 +28,6 @@ export default function UserProfileCard({ user }: UserProfileCardProps) {
   const handleLogout = async () => {
     setIsLoggingOut(true);
     setErrorMsg(null);
-
     try {
       const supabase = getSupabaseClient();
       const { error } = await supabase.auth.signOut();
@@ -39,7 +38,7 @@ export default function UserProfileCard({ user }: UserProfileCardProps) {
         return;
       }
 
-      // Refresh the page and route back to signin (middleware will ensure redirection if route is protected)
+      // Refresh the page and route back to signin
       router.push("/signin");
       router.refresh();
     } catch {
@@ -49,50 +48,50 @@ export default function UserProfileCard({ user }: UserProfileCardProps) {
   };
 
   return (
-    <div className="w-full max-w-xl rounded-2xl border border-white/10 bg-white/5 p-6 md:p-8 shadow-xl backdrop-blur-md">
+    <div className="w-full max-w-xl rounded-2xl border border-stone-200/50 bg-white p-6 md:p-8 shadow-xl shadow-stone-200/30 text-stone-800 transition-all duration-300">
       {/* Header Info */}
-      <div className="flex items-center gap-4 border-b border-white/10 pb-6 mb-6">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-lg">
+      <div className="flex items-center gap-4 border-b border-stone-100 pb-6 mb-6">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#E0A99E]/20 text-[#C68B7D] font-bold text-lg">
           {user.email ? user.email.slice(0, 2).toUpperCase() : "U"}
         </div>
-        <div>
-          <h3 className="text-lg font-bold text-white leading-tight">Customer Profile</h3>
-          <p className="text-sm text-slate-400">Certitude Atelier Patron</p>
+        <div className="text-left">
+          <h3 className="text-lg font-bold text-stone-900 leading-tight">Customer Profile</h3>
+          <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mt-0.5">Certitude Patron</p>
         </div>
       </div>
 
       {errorMsg && (
-        <div className="mb-4 rounded-md bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-400">
+        <div className="mb-4 rounded-md bg-rose-500/10 border border-rose-500/20 p-4 text-sm text-rose-600">
           {errorMsg}
         </div>
       )}
 
       {/* Details List */}
-      <div className="space-y-4">
+      <div className="space-y-4 text-left">
         {/* Email */}
-        <div className="flex justify-between border-b border-white/5 pb-3">
-          <span className="text-sm text-slate-400">Email Address</span>
-          <span className="text-sm font-semibold text-slate-200">{user.email || "N/A"}</span>
+        <div className="flex justify-between border-b border-stone-50 pb-3">
+          <span className="text-sm text-stone-500">Email Address</span>
+          <span className="text-sm font-semibold text-stone-850">{user.email || "N/A"}</span>
         </div>
 
         {/* User ID */}
-        <div className="flex justify-between border-b border-white/5 pb-3">
-          <span className="text-sm text-slate-400">Customer ID</span>
-          <span className="text-sm font-mono text-slate-300 select-all">{user.id}</span>
+        <div className="flex justify-between border-b border-stone-50 pb-3">
+          <span className="text-sm text-stone-500">Customer ID</span>
+          <span className="text-sm font-mono text-stone-600 select-all">{user.id}</span>
         </div>
 
         {/* Member Since */}
-        <div className="flex justify-between border-b border-white/5 pb-3">
-          <span className="text-sm text-slate-400">Account Created</span>
-          <span className="text-sm font-semibold text-slate-200">
+        <div className="flex justify-between border-b border-stone-50 pb-3">
+          <span className="text-sm text-stone-500">Account Created</span>
+          <span className="text-sm font-semibold text-stone-850">
             {user.created_at ? formatDate(user.created_at) : "N/A"}
           </span>
         </div>
 
         {/* Last Sign In */}
         <div className="flex justify-between pb-3">
-          <span className="text-sm text-slate-400">Last Active</span>
-          <span className="text-sm font-semibold text-slate-200">
+          <span className="text-sm text-stone-500">Last Active</span>
+          <span className="text-sm font-semibold text-stone-850">
             {user.last_sign_in_at ? formatDate(user.last_sign_in_at) : "N/A"}
           </span>
         </div>
@@ -103,7 +102,7 @@ export default function UserProfileCard({ user }: UserProfileCardProps) {
         <button
           onClick={handleLogout}
           disabled={isLoggingOut}
-          className="rounded-md border border-white/10 bg-transparent px-4 py-2 text-sm font-medium text-slate-300 hover:bg-white/5 hover:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:opacity-50 transition-all cursor-pointer"
+          className="rounded-full border border-stone-200 bg-white px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 focus:outline-none focus:ring-1 focus:ring-stone-400 disabled:opacity-50 transition-all cursor-pointer shadow-sm"
         >
           {isLoggingOut ? "Signing out..." : "Sign Out"}
         </button>

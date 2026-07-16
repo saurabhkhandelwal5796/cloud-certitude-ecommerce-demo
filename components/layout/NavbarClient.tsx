@@ -15,9 +15,8 @@ interface NavbarClientProps {
 /**
  * NavbarClient Component
  *
- * Premium navigation header styled for "Cloud Certitude Fashion".
- * Integrates dynamic routing, search inputs, active wishlist/cart indicators,
- * and maintains reactive user session rendering.
+ * Premium light glassmorphic navigation header styled for "Cloud Certitude Fashion".
+ * Features warm charcoal text, rose gold buttons, and elegant visual states.
  */
 export default function NavbarClient({ user }: NavbarClientProps) {
   const router = useRouter();
@@ -79,16 +78,16 @@ export default function NavbarClient({ user }: NavbarClientProps) {
   };
 
   return (
-    <nav className="border-b border-white/5 bg-slate-950/80 backdrop-blur-md sticky top-0 z-50 text-white">
+    <nav className="border-b border-stone-200/50 bg-white/70 backdrop-blur-md sticky top-0 z-50 text-stone-850 transition-all duration-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-20 items-center justify-between gap-4">
           {/* Logo */}
           <div className="flex-shrink-0">
             <Link
               href="/"
-              className="text-base sm:text-lg md:text-xl font-black tracking-widest uppercase hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+              className="text-base sm:text-lg md:text-xl font-black tracking-widest uppercase text-stone-850 hover:text-[#C68B7D] transition-colors flex items-center gap-1.5"
             >
-              Cloud <span className="text-emerald-400 font-light">Certitude</span> Fashion
+              Cloud <span className="text-[#E0A99E] font-light">Certitude</span> Fashion
             </Link>
           </div>
 
@@ -106,8 +105,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-xs font-semibold uppercase tracking-wider transition-colors hover:text-white ${
-                    link.isSale ? "text-rose-400" : "text-slate-300"
+                  className={`text-xs font-bold uppercase tracking-wider transition-colors hover:text-stone-900 ${
+                    link.isSale ? "text-rose-500 hover:text-rose-600" : "text-stone-600 hover:text-stone-900"
                   }`}
                 >
                   {link.name}
@@ -125,9 +124,9 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search collections..."
-                className="w-full rounded-full border border-white/10 bg-white/5 pl-4 pr-10 py-1.5 text-xs text-white placeholder-slate-500 shadow-sm focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
+                className="w-full rounded-full border border-stone-200 bg-stone-100/50 pl-4 pr-10 py-1.5 text-xs text-stone-850 placeholder-stone-400 shadow-sm focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50 transition-all"
               />
-              <button type="submit" className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-white transition-colors cursor-pointer">
+              <button type="submit" className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-[#C68B7D] transition-colors cursor-pointer">
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
@@ -139,24 +138,24 @@ export default function NavbarClient({ user }: NavbarClientProps) {
               {/* Wishlist */}
               <button
                 onClick={() => alert("Wishlist is coming soon!")}
-                className="text-slate-300 hover:text-white transition-colors relative cursor-pointer"
+                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer"
                 title="Wishlist"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
               </button>
 
               {/* Cart */}
               <button
                 onClick={() => alert("Cart is coming soon!")}
-                className="text-slate-300 hover:text-white transition-colors relative cursor-pointer"
+                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer"
                 title="Cart"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                 </svg>
-                <span className="absolute -top-1.5 -right-1.5 bg-emerald-500 text-[10px] text-slate-950 font-bold rounded-full h-4 w-4 flex items-center justify-center">
+                <span className="absolute -top-1.5 -right-1.5 bg-[#E0A99E] text-[10px] text-white font-bold rounded-full h-4 w-4 flex items-center justify-center shadow-sm">
                   0
                 </span>
               </button>
@@ -166,17 +165,17 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <div className="flex items-center gap-3">
                   <Link
                     href="/profile"
-                    className="text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    className="text-stone-600 hover:text-[#C68B7D] transition-colors cursor-pointer"
                     title="Profile"
                   >
                     <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                     </svg>
                   </Link>
                   <button
                     onClick={handleLogout}
                     disabled={isLoggingOut}
-                    className="text-xs font-semibold uppercase tracking-wider text-slate-400 hover:text-white transition-colors cursor-pointer"
+                    className="text-xs font-semibold uppercase tracking-wider text-stone-500 hover:text-stone-850 transition-colors cursor-pointer"
                   >
                     Logout
                   </button>
@@ -185,13 +184,13 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <div className="flex items-center gap-3">
                   <Link
                     href="/signin"
-                    className="text-xs font-semibold uppercase tracking-wider text-slate-300 hover:text-white transition-colors cursor-pointer"
+                    className="text-xs font-bold uppercase tracking-wider text-stone-600 hover:text-stone-900 transition-colors cursor-pointer"
                   >
                     Sign In
                   </Link>
                   <Link
                     href="/signup"
-                    className="rounded-full bg-white px-4 py-1.5 text-xs font-semibold text-slate-950 hover:bg-emerald-400 hover:text-slate-950 transition-colors cursor-pointer"
+                    className="rounded-full bg-[#E0A99E] px-4 py-1.5 text-xs font-bold text-white hover:bg-[#D4988D] transition-colors cursor-pointer shadow-sm hover:shadow-[#E0A99E]/20"
                   >
                     Sign Up
                   </Link>
@@ -202,19 +201,19 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
           {/* Mobile hamburger menu trigger */}
           <div className="flex items-center gap-3 lg:hidden">
-            {/* Search (small viewport icon click triggers modal/search page in future, for now dummy click) */}
-            <button onClick={() => alert("Search is coming soon!")} className="text-slate-300 hover:text-white p-2 cursor-pointer md:hidden">
+            {/* Search */}
+            <button onClick={() => alert("Search is coming soon!")} className="text-stone-600 hover:text-[#C68B7D] p-2 cursor-pointer md:hidden">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
 
             {/* Cart Icon */}
-            <button onClick={() => alert("Cart is coming soon!")} className="text-slate-300 hover:text-white p-2 relative cursor-pointer">
+            <button onClick={() => alert("Cart is coming soon!")} className="text-stone-600 hover:text-[#C68B7D] p-2 relative cursor-pointer">
               <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
               </svg>
-              <span className="absolute top-0.5 right-0.5 bg-emerald-500 text-[8px] text-slate-950 font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center">
+              <span className="absolute top-0.5 right-0.5 bg-[#E0A99E] text-[8px] text-white font-bold rounded-full h-3.5 w-3.5 flex items-center justify-center shadow-sm">
                 0
               </span>
             </button>
@@ -223,7 +222,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             <button
               onClick={() => setIsOpen(!isOpen)}
               type="button"
-              className="inline-flex items-center justify-center rounded-md p-2 text-slate-400 hover:bg-slate-800 hover:text-white focus:outline-none cursor-pointer"
+              className="inline-flex items-center justify-center rounded-md p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-800 focus:outline-none cursor-pointer"
               aria-controls="mobile-menu"
               aria-expanded={isOpen}
             >
@@ -243,7 +242,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
       </div>
 
       {/* Mobile Drawer */}
-      <div className={`${isOpen ? "block" : "hidden"} lg:hidden border-t border-white/5 bg-slate-950`} id="mobile-menu">
+      <div className={`${isOpen ? "block" : "hidden"} lg:hidden border-t border-stone-200/50 bg-white/95 backdrop-blur-md`} id="mobile-menu">
         <div className="space-y-1 px-3 pb-4 pt-3">
           {[
             { name: "Home", href: "/" },
@@ -257,8 +256,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
               key={link.name}
               href={link.href}
               onClick={() => setIsOpen(false)}
-              className={`block rounded-md px-3 py-2 text-sm font-semibold uppercase tracking-wider hover:bg-white/5 ${
-                link.isSale ? "text-rose-400" : "text-slate-300 hover:text-white"
+              className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider hover:bg-stone-50 ${
+                link.isSale ? "text-rose-500" : "text-stone-600 hover:text-stone-900"
               }`}
             >
               {link.name}
@@ -266,35 +265,35 @@ export default function NavbarClient({ user }: NavbarClientProps) {
           ))}
 
           {currentUser ? (
-            <div className="border-t border-white/5 mt-4 pt-4 space-y-1">
+            <div className="border-t border-stone-200/50 mt-4 pt-4 space-y-1">
               <Link
                 href="/profile"
                 onClick={() => setIsOpen(false)}
-                className="block rounded-md px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-300 hover:bg-white/5 hover:text-white"
+                className="block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50"
               >
                 My Profile
               </Link>
               <button
                 onClick={handleLogout}
                 disabled={isLoggingOut}
-                className="w-full text-left block rounded-md px-3 py-2 text-sm font-semibold uppercase tracking-wider text-rose-400 hover:bg-rose-500/10 transition-colors disabled:opacity-50 cursor-pointer"
+                className="w-full text-left block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider text-rose-500 hover:bg-rose-50/50 transition-colors disabled:opacity-50 cursor-pointer"
               >
                 {isLoggingOut ? "Signing out..." : "Logout"}
               </button>
             </div>
           ) : (
-            <div className="border-t border-white/5 mt-4 pt-4 flex flex-col gap-2 px-3">
+            <div className="border-t border-stone-200/50 mt-4 pt-4 flex flex-col gap-2 px-3">
               <Link
                 href="/signin"
                 onClick={() => setIsOpen(false)}
-                className="block text-center rounded-md border border-white/10 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-white hover:bg-white/5"
+                className="block text-center rounded-md border border-stone-200 px-3 py-2 text-sm font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50"
               >
                 Sign In
               </Link>
               <Link
                 href="/signup"
                 onClick={() => setIsOpen(false)}
-                className="block text-center rounded-md bg-emerald-500 px-3 py-2 text-sm font-semibold uppercase tracking-wider text-slate-950 hover:bg-emerald-400"
+                className="block text-center rounded-md bg-[#E0A99E] px-3 py-2 text-sm font-bold uppercase tracking-wider text-white hover:bg-[#D4988D]"
               >
                 Sign Up
               </Link>
