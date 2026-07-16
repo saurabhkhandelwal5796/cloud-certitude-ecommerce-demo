@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useRef } from "react";
 
 export interface CartItemType {
   id: string;
@@ -43,19 +43,23 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItemType[]>([]);
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const toastIdRef = useRef(0);
 
   // 1. Safe hydration mount loader from localStorage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("certitude_cart");
-      if (stored) {
-        setCartItems(JSON.parse(stored));
+    const loadCart = async () => {
+      try {
+        const stored = localStorage.getItem("certitude_cart");
+        if (stored) {
+          setCartItems(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error("[CartContext] Failed loading cart from localStorage:", err);
+      } finally {
+        setIsInitialized(true);
       }
-    } catch (err) {
-      console.error("[CartContext] Failed loading cart from localStorage:", err);
-    } finally {
-      setIsInitialized(true);
-    }
+    };
+    loadCart();
   }, []);
 
   // 2. Persist state edits to storage
@@ -70,7 +74,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   // Toast Manager helpers
   const addToast = (message: string) => {
-    const id = Math.random().toString(36).substring(2, 9);
+    toastIdRef.current += 1;
+    const id = `toast-${toastIdRef.current}`;
     setToasts((prev) => [...prev, { id, message }]);
     setTimeout(() => {
       removeToast(id);
