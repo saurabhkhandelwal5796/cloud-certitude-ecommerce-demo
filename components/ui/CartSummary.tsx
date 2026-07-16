@@ -14,7 +14,7 @@ import { useCart } from "@/context/CartContext";
  */
 export default function CartSummary() {
   const router = useRouter();
-  const { cartSubtotal, clearCart } = useCart();
+  const { cartSubtotal } = useCart();
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);

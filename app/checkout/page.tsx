@@ -47,22 +47,25 @@ export default function CheckoutPage() {
 
   // 1. Safe hydration mount loader from localStorage
   useEffect(() => {
-    try {
-      const storedAddr = localStorage.getItem("certitude_shipping_address");
-      if (storedAddr) {
-        setAddress(JSON.parse(storedAddr));
+    const loadSettings = async () => {
+      try {
+        const storedAddr = localStorage.getItem("certitude_shipping_address");
+        if (storedAddr) {
+          setAddress(JSON.parse(storedAddr));
+        }
+        const storedDel = localStorage.getItem("certitude_delivery_option");
+        if (storedDel) {
+          setSelectedDelivery(storedDel);
+        }
+        const storedPay = localStorage.getItem("certitude_payment_selection");
+        if (storedPay) {
+          setSelectedPayment(storedPay);
+        }
+      } catch (err) {
+        console.error("[Checkout] Failed loading settings from localStorage:", err);
       }
-      const storedDel = localStorage.getItem("certitude_delivery_option");
-      if (storedDel) {
-        setSelectedDelivery(storedDel);
-      }
-      const storedPay = localStorage.getItem("certitude_payment_selection");
-      if (storedPay) {
-        setSelectedPayment(storedPay);
-      }
-    } catch (err) {
-      console.error("[Checkout] Failed loading settings from localStorage:", err);
-    }
+    };
+    loadSettings();
   }, []);
 
   // Compute active delivery fee
@@ -118,9 +121,7 @@ export default function CheckoutPage() {
 
       // Generate order detail payload
       const orderId = `CC-${Math.floor(100000 + Math.random() * 900000)}`;
-      
       // Calculate timeframe
-      const deliveryOpt = DELIVERY_OPTIONS.find((o) => o.id === selectedDelivery);
       const deliveryDate = new Date();
       if (selectedDelivery === "sameday") {
         // Today

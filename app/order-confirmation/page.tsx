@@ -36,14 +36,17 @@ export default function OrderConfirmationPage() {
   const [order, setOrder] = useState<OrderDetailType | null>(null);
 
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem("certitude_last_order");
-      if (stored) {
-        setOrder(JSON.parse(stored));
+    const loadOrder = async () => {
+      try {
+        const stored = localStorage.getItem("certitude_last_order");
+        if (stored) {
+          setOrder(JSON.parse(stored));
+        }
+      } catch (err) {
+        console.error("[Confirmation] Failed loading order from localStorage:", err);
       }
-    } catch (err) {
-      console.error("[Confirmation] Failed loading order from localStorage:", err);
-    }
+    };
+    loadOrder();
   }, []);
 
   if (!order) {
