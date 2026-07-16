@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/utils";
 
@@ -31,8 +32,8 @@ interface ProductCardProps {
  * ProductCard Component
  *
  * Renders individual apparel items in a bright, warm luxury aesthetic.
- * Displays cream/white shadow cards, rose gold badges, and elegant hover animations.
- * Supports a "Quick View" action modal trigger.
+ * Clicking the card routes to the product details page.
+ * Buttons are isolated using higher z-indices on top of a full-card link.
  */
 export default function ProductCard({
   id,
@@ -53,7 +54,9 @@ export default function ProductCard({
     ? price * (1 - discountPercent / 100)
     : price;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsAdding(true);
     setTimeout(() => {
       setIsAdding(false);
@@ -61,14 +64,27 @@ export default function ProductCard({
     }, 600);
   };
 
-  const handleWishlistToggle = () => {
+  const handleWishlistToggle = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     setIsWishlisted(!isWishlisted);
+  };
+
+  const handleQuickViewClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onQuickView) {
+      onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description });
+    }
   };
 
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200/50 bg-white shadow-sm shadow-stone-200/40 hover:shadow-xl hover:border-stone-300/60 transition-all duration-500">
+      {/* Absolute Full Card Link */}
+      <Link href={`/products/${id}`} className="absolute inset-0 z-0" aria-label={`View details of ${name}`} />
+
       {/* Product Image and Overlay triggers */}
-      <div className="relative aspect-[3/4] overflow-hidden bg-stone-50">
+      <div className="relative aspect-[3/4] overflow-hidden bg-stone-50 z-0">
         <Image
           src={imageSrc}
           alt={name}
@@ -79,7 +95,7 @@ export default function ProductCard({
 
         {/* Discount Badge */}
         {discountPercent && (
-          <span className="absolute top-3 left-3 rounded-full bg-[#E0A99E] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm">
+          <span className="absolute top-3 left-3 rounded-full bg-[#E0A99E] px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-wider text-white shadow-sm z-10">
             {discountPercent}% OFF
           </span>
         )}
@@ -108,10 +124,10 @@ export default function ProductCard({
         </button>
 
         {/* Quick Add Overlay on hover (desktop only) */}
-        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0 hidden md:flex flex-col gap-2">
+        <div className="absolute inset-x-0 bottom-0 p-4 translate-y-full transition-transform duration-300 group-hover:translate-y-0 hidden md:flex flex-col gap-2 z-10">
           {onQuickView && (
             <button
-              onClick={() => onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description })}
+              onClick={handleQuickViewClick}
               className="flex w-full justify-center rounded-full bg-white py-2 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 shadow-sm transition-colors cursor-pointer border border-stone-200"
             >
               Quick View
@@ -128,7 +144,7 @@ export default function ProductCard({
       </div>
 
       {/* Info & pricing */}
-      <div className="flex flex-1 flex-col p-4 text-left">
+      <div className="flex flex-1 flex-col p-4 text-left z-0 pointer-events-none">
         <span className="text-[9px] font-bold uppercase tracking-widest text-[#E0A99E]">
           {category}
         </span>
@@ -166,25 +182,25 @@ export default function ProductCard({
             </span>
           )}
         </div>
+      </div>
 
-        {/* Mobile quick add/view buttons */}
-        <div className="mt-4 flex flex-col gap-2 md:hidden">
-          {onQuickView && (
-            <button
-              onClick={() => onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description })}
-              className="flex w-full justify-center rounded-full bg-white border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 cursor-pointer"
-            >
-              Quick View
-            </button>
-          )}
+      {/* Mobile quick add/view buttons */}
+      <div className="mt-auto p-4 pt-0 flex flex-col gap-2 md:hidden z-10">
+        {onQuickView && (
           <button
-            onClick={handleAddToCart}
-            disabled={isAdding}
-            className="flex w-full justify-center rounded-full bg-stone-50 border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-[#E0A99E] hover:text-white disabled:opacity-50 transition-all cursor-pointer"
+            onClick={handleQuickViewClick}
+            className="flex w-full justify-center rounded-full bg-white border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 cursor-pointer"
           >
-            {isAdding ? "Adding..." : "Add to Cart"}
+            Quick View
           </button>
-        </div>
+        )}
+        <button
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          className="flex w-full justify-center rounded-full bg-stone-50 border border-stone-200 py-1.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-[#E0A99E] hover:text-white disabled:opacity-50 transition-all cursor-pointer"
+        >
+          {isAdding ? "Adding..." : "Add to Cart"}
+        </button>
       </div>
     </div>
   );
