@@ -25,7 +25,8 @@
  *     inventory, or order status changes directly to the client.
  */
 
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
+import { SupabaseClient } from "@supabase/supabase-js";
 import { Database } from "./types";
 
 let _client: SupabaseClient<Database> | null = null;
@@ -48,6 +49,6 @@ export function getSupabaseClient(): SupabaseClient<Database> {
     );
   }
 
-  _client = createClient<Database>(supabaseUrl, supabaseAnonKey);
+  _client = createBrowserClient<Database>(supabaseUrl, supabaseAnonKey);
   return _client;
 }

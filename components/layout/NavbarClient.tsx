@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
@@ -17,24 +17,67 @@ interface NavbarClientProps {
  *
  * Renders the responsive header navigation bar for the e-commerce store.
  * Adapts based on authentication state provided by the Server Component parent.
- * Includes a mobile hamburger drawer toggle and logout functions.
+ * Listens to active onAuthStateChange events to ensure local states and cookies stay aligned.
  */
 export default function NavbarClient({ user }: NavbarClientProps) {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [currentUser, setCurrentUser] = useState(user);
+
+
+
+  useEffect(() => {
+    const supabase = getSupabaseClient();
+
+    // Listen to changes in auth state (login, logout, token refresh)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`[Auth Navbar] Auth State Changed Event: ${event}`);
+
+      if (session) {
+        console.log(`[Auth Navbar] User session active: ${session.user.email}`);
+        setCurrentUser({
+          id: session.user.id,
+          email: session.user.email,
+        });
+      } else {
+        console.log("[Auth Navbar] No active user session detected.");
+        setCurrentUser(null);
+      }
+
+      // If the event suggests a cookie state shift, refresh router to sync Server Components
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
+        router.refresh();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [router]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
+    console.log("[Auth Navbar] Initiating user logout request...");
+
     try {
       const supabase = getSupabaseClient();
-      await supabase.auth.signOut();
-      router.refresh();
-      setIsOpen(false);
-    } catch (error) {
-      console.error("Error signing out:", error);
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error(`[Auth Navbar] Logout error: ${error.message}`);
+      } else {
+        console.log("[Auth Navbar] Signout succeeded");
+        setCurrentUser(null);
+        router.push("/");
+        router.refresh();
+      }
+    } catch {
+      console.error("[Auth Navbar] Unexpected error during logout");
     } finally {
       setIsLoggingOut(false);
+      setIsOpen(false);
     }
   };
 
@@ -62,7 +105,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 Home
               </Link>
 
-              {user ? (
+              {currentUser ? (
                 <>
                   <Link
                     href="/profile"
@@ -153,7 +196,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             Home
           </Link>
 
-          {user ? (
+          {currentUser ? (
             <>
               <Link
                 href="/profile"
