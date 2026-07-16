@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import CartBadge from "@/components/ui/CartBadge";
+import WishlistBadge from "@/components/ui/WishlistBadge";
 
 interface NavbarClientProps {
   user: {
@@ -137,15 +138,16 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             {/* Icons */}
             <div className="flex items-center gap-4 flex-shrink-0">
               {/* Wishlist */}
-              <button
-                onClick={() => alert("Wishlist is coming soon!")}
-                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer"
+              <Link
+                href="/wishlist"
+                className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer p-1"
                 title="Wishlist"
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                 </svg>
-              </button>
+                <WishlistBadge />
+              </Link>
 
               {/* Cart */}
               <Link

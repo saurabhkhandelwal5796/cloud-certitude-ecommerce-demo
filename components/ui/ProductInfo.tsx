@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 interface ProductInfoProps {
   id: string;
@@ -53,9 +54,9 @@ export default function ProductInfo({
   returnPolicy = "Hassle-free 30-day returns. Items must be unworn and contain original tags intact.",
 }: ProductInfoProps) {
   const { addToCart } = useCart();
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [selectedSize, setSelectedSize] = useState("M");
   const [selectedColor, setSelectedColor] = useState("Beige");
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("description");
   const [isAdding, setIsAdding] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
@@ -63,6 +64,8 @@ export default function ProductInfo({
   const discountedPrice = discountPercent
     ? price * (1 - discountPercent / 100)
     : price;
+
+  const isWishlisted = isInWishlist(id);
 
   const handleAddToCart = () => {
     setIsAdding(true);
@@ -81,7 +84,21 @@ export default function ProductInfo({
   };
 
   const toggleWishlist = () => {
-    setIsWishlisted(!isWishlisted);
+    if (isWishlisted) {
+      removeFromWishlist(id);
+    } else {
+      addToWishlist({
+        id,
+        name,
+        price,
+        imageSrc,
+        discountPercent,
+        rating,
+        category: brand, // ProductInfo has no category prop; use brand as a display label
+        brand,
+        description,
+      });
+    }
   };
 
   return (

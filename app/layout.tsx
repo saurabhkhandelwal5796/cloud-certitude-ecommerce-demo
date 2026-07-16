@@ -28,6 +28,7 @@ export const metadata: Metadata = {
 import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import { CartProvider } from "@/context/CartContext";
+import { WishlistProvider } from "@/context/WishlistContext";
 
 export default function RootLayout({
   children,
@@ -41,11 +42,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-[#FAF9F6] text-stone-800">
         <CartProvider>
-          <Navbar />
-          <main className="flex-grow">
-            {children}
-          </main>
-          <Footer />
+          <WishlistProvider>
+            <Navbar />
+            <main className="flex-grow">
+              {children}
+            </main>
+            <Footer />
+          </WishlistProvider>
         </CartProvider>
       </body>
     </html>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
+import { useWishlist } from "@/context/WishlistContext";
 
 interface ProductCardProps {
   id: string;
@@ -49,8 +50,10 @@ export default function ProductCard({
   onQuickView,
 }: ProductCardProps) {
   const { addToCart } = useCart();
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [isAdding, setIsAdding] = useState(false);
+
+  const isWishlisted = isInWishlist(id);
 
   const discountedPrice = discountPercent
     ? price * (1 - discountPercent / 100)
@@ -69,7 +72,11 @@ export default function ProductCard({
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsWishlisted(!isWishlisted);
+    if (isWishlisted) {
+      removeFromWishlist(id);
+    } else {
+      addToWishlist({ id, name, price, imageSrc, discountPercent, rating, category, brand, description });
+    }
   };
 
   const handleQuickViewClick = (e: React.MouseEvent) => {
