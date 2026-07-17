@@ -163,6 +163,18 @@ export default function CheckoutPage() {
       total: grandTotal,
       itemsCount: cartItems.length,
       paymentMethod: selectedPayment,
+      address,
+      items: cartItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        quantity: item.quantity,
+        size: item.selectedSize,
+        color: item.selectedColor,
+        price: item.price,
+        imageSrc: item.imageSrc,
+        brand: item.brand,
+        discountPercent: item.discountPercent,
+      })),
     });
 
     clearCart();

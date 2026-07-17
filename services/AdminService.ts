@@ -1,7 +1,7 @@
 /**
  * AdminService.ts
  *
- * Core service for the cloud-certitude-ecommerce-demo Admin Panel.
+ * Core service for the cloud-certitude-ecommerce-demo Admin Panel & Customer Orders.
  * Handles fetching, updating, and saving Products, Orders, Customers, and Stats.
  *
  * Data Persistence Strategy:
@@ -36,16 +36,20 @@ export interface AdminOrder {
   customerEmail: string;
   orderDate: string;
   paymentMethod: string;
-  status: "Pending" | "Processing" | "Shipped" | "Delivered" | "Cancelled";
+  status: "Pending" | "Confirmed" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Cancelled";
   total: number;
   itemsCount: number;
   address?: AddressType;
   items?: Array<{
+    id?: string;
     name: string;
     quantity: number;
     size: string;
     color: string;
     price: number;
+    imageSrc?: string;
+    brand?: string;
+    discountPercent?: number;
   }>;
 }
 
@@ -153,7 +157,41 @@ const INITIAL_ORDERS: AdminOrder[] = [
     paymentMethod: "Credit Card",
     status: "Delivered",
     total: 820.00,
-    itemsCount: 2
+    itemsCount: 2,
+    address: {
+      firstName: "Sarah",
+      lastName: "Connor",
+      email: "sarah@sky.net",
+      phone: "9876543210",
+      addressLine1: "123 Resistance Way",
+      addressLine2: "",
+      city: "Los Angeles",
+      state: "California",
+      country: "USA",
+      postalCode: "90001"
+    },
+    items: [
+      {
+        id: "m1",
+        name: "Classic Cashmere Trench Coat",
+        quantity: 1,
+        size: "M",
+        color: "Beige",
+        price: 499,
+        imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
+        brand: "Certitude"
+      },
+      {
+        id: "w2",
+        name: "Oversized Merino Wool Sweater",
+        quantity: 1,
+        size: "S",
+        color: "Beige",
+        price: 195,
+        imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
+        brand: "EcoKnit"
+      }
+    ]
   },
   {
     orderId: "ORD-20260716-19283",
@@ -163,7 +201,31 @@ const INITIAL_ORDERS: AdminOrder[] = [
     paymentMethod: "UPI Payments",
     status: "Shipped",
     total: 350.00,
-    itemsCount: 1
+    itemsCount: 1,
+    address: {
+      firstName: "John",
+      lastName: "Doe",
+      email: "john@gmail.com",
+      phone: "9988776655",
+      addressLine1: "456 Fashion Blvd",
+      addressLine2: "Apt 4B",
+      city: "New Delhi",
+      state: "Delhi",
+      country: "India",
+      postalCode: "110001"
+    },
+    items: [
+      {
+        id: "m2",
+        name: "Minimalist Linen Utility Shirt",
+        quantity: 2,
+        size: "M",
+        color: "Cream",
+        price: 120,
+        imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
+        brand: "Atelier"
+      }
+    ]
   },
   {
     orderId: "ORD-20260717-57382",
@@ -173,7 +235,31 @@ const INITIAL_ORDERS: AdminOrder[] = [
     paymentMethod: "Cash on Delivery",
     status: "Processing",
     total: 120.00,
-    itemsCount: 1
+    itemsCount: 1,
+    address: {
+      firstName: "Amit",
+      lastName: "Sharma",
+      email: "amit@yahoo.in",
+      phone: "9988998899",
+      addressLine1: "12 Rose Garden Colony",
+      addressLine2: "",
+      city: "Mumbai",
+      state: "Maharashtra",
+      country: "India",
+      postalCode: "400001"
+    },
+    items: [
+      {
+        id: "m2",
+        name: "Minimalist Linen Utility Shirt",
+        quantity: 1,
+        size: "L",
+        color: "Cream",
+        price: 120,
+        imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
+        brand: "Atelier"
+      }
+    ]
   },
   {
     orderId: "ORD-20260717-90284",
@@ -183,7 +269,31 @@ const INITIAL_ORDERS: AdminOrder[] = [
     paymentMethod: "Debit Card",
     status: "Pending",
     total: 650.00,
-    itemsCount: 1
+    itemsCount: 1,
+    address: {
+      firstName: "Emma",
+      lastName: "Watson",
+      email: "emma@watson.co.uk",
+      phone: "8877665544",
+      addressLine1: "77 London Bridge Road",
+      addressLine2: "",
+      city: "London",
+      state: "Greater London",
+      country: "UK",
+      postalCode: "EC1A 1BB"
+    },
+    items: [
+      {
+        id: "w1",
+        name: "Silk Cocktail Evening Gown",
+        quantity: 1,
+        size: "S",
+        color: "Blush",
+        price: 650,
+        imageSrc: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop",
+        brand: "Certitude"
+      }
+    ]
   }
 ];
 
@@ -256,7 +366,6 @@ if (isBrowser) {
  * Returns all products.
  */
 export async function getProducts(): Promise<AdminProduct[]> {
-  // Local fallback
   return getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
 }
 
@@ -268,10 +377,8 @@ export async function saveProduct(product: AdminProduct): Promise<AdminProduct> 
   const index = products.findIndex((p) => p.id === product.id);
 
   if (index >= 0) {
-    // Edit existing product
     products[index] = product;
   } else {
-    // Add new product
     products.push(product);
   }
 
@@ -298,6 +405,7 @@ export async function getOrders(): Promise<AdminOrder[]> {
 
 /**
  * Updates the status of an order.
+ * Also registers an in-app notification for the customer.
  */
 export async function updateOrderStatus(
   orderId: string,
@@ -309,6 +417,21 @@ export async function updateOrderStatus(
   if (index >= 0) {
     orders[index].status = status;
     setLocalStorageItem("certitude_admin_orders", orders);
+
+    // Register Notification
+    const customerEmail = orders[index].customerEmail;
+    let message = "";
+    if (status === "Confirmed") message = `Your order ${orderId} has been confirmed.`;
+    else if (status === "Processing") message = `Your order ${orderId} is currently being processed.`;
+    else if (status === "Shipped") message = `Your order ${orderId} has been shipped.`;
+    else if (status === "Out for Delivery") message = `Your order ${orderId} is out for delivery!`;
+    else if (status === "Delivered") message = `Your order ${orderId} has been successfully delivered. Thank you!`;
+    else if (status === "Cancelled") message = `Your order ${orderId} has been cancelled.`;
+
+    if (message) {
+      registerNotification(customerEmail, message);
+    }
+
     return true;
   }
 
@@ -327,6 +450,10 @@ export interface DashboardStats {
   totalOrders: number;
   totalCustomers: number;
   totalRevenue: number;
+  pendingOrdersCount: number;
+  deliveredOrdersCount: number;
+  cancelledOrdersCount: number;
+  revenueToday: number;
 }
 
 /**
@@ -342,11 +469,26 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     .filter((o) => o.status !== "Cancelled")
     .reduce((sum, o) => sum + o.total, 0);
 
+  // Status-based counts
+  const pendingOrdersCount = orders.filter((o) => o.status === "Pending").length;
+  const deliveredOrdersCount = orders.filter((o) => o.status === "Delivered").length;
+  const cancelledOrdersCount = orders.filter((o) => o.status === "Cancelled").length;
+
+  // Revenue Today
+  const todayStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const revenueToday = orders
+    .filter((o) => o.status !== "Cancelled" && o.orderDate.startsWith(todayStr))
+    .reduce((sum, o) => sum + o.total, 0);
+
   return {
     totalProducts: products.length,
     totalOrders: orders.length,
     totalCustomers: customers.length,
     totalRevenue,
+    pendingOrdersCount,
+    deliveredOrdersCount,
+    cancelledOrdersCount,
+    revenueToday,
   };
 }
 
@@ -360,6 +502,8 @@ export function registerNewCheckoutOrder(params: {
   total: number;
   itemsCount: number;
   paymentMethod: string;
+  address?: AddressType;
+  items?: AdminOrder["items"];
 }) {
   if (!isBrowser) return;
 
@@ -386,6 +530,8 @@ export function registerNewCheckoutOrder(params: {
     status: "Pending",
     total: params.total,
     itemsCount: params.itemsCount,
+    address: params.address,
+    items: params.items,
   };
 
   orders.unshift(newOrder); // Add to top
@@ -405,4 +551,97 @@ export function registerNewCheckoutOrder(params: {
     });
   }
   setLocalStorageItem("certitude_admin_customers", customers);
+
+  // 3. Register Notification
+  registerNotification(params.customerEmail, `Your order ${params.orderId} was successfully placed!`);
+}
+
+/**
+ * Returns orders placed by a specific customer.
+ */
+export async function getOrdersByCustomerEmail(email: string): Promise<AdminOrder[]> {
+  const orders = await getOrders();
+  return orders.filter((o) => o.customerEmail.toLowerCase() === email.toLowerCase());
+}
+
+/**
+ * Cancels a customer's order if it is in Pending status.
+ */
+export async function cancelCustomerOrder(orderId: string): Promise<boolean> {
+  const orders = await getOrders();
+  const index = orders.findIndex((o) => o.orderId === orderId);
+
+  if (index >= 0) {
+    if (orders[index].status !== "Pending") {
+      throw new Error("Only pending orders can be cancelled.");
+    }
+    orders[index].status = "Cancelled";
+    setLocalStorageItem("certitude_admin_orders", orders);
+
+    // Register Notification
+    registerNotification(orders[index].customerEmail, `Your order ${orderId} has been successfully cancelled.`);
+    return true;
+  }
+  return false;
+}
+
+// ─── Notification System ────────────────────────────────────────────────────
+
+export interface InAppNotification {
+  id: string;
+  message: string;
+  timestamp: string;
+  isRead: boolean;
+}
+
+/**
+ * Returns all notifications for a specific user.
+ */
+export function getUserNotifications(email: string): InAppNotification[] {
+  const key = `certitude_notifications_${email.toLowerCase()}`;
+  return getLocalStorageItem<InAppNotification[]>(key, []);
+}
+
+/**
+ * Pushes a new notification to a user's feed.
+ */
+export function registerNotification(email: string, message: string) {
+  if (!isBrowser) return;
+
+  const key = `certitude_notifications_${email.toLowerCase()}`;
+  const notifications = getLocalStorageItem<InAppNotification[]>(key, []);
+  
+  const newNotif: InAppNotification = {
+    id: `notif_${Date.now()}`,
+    message,
+    timestamp: new Date().toLocaleString("en-US", {
+      month: "short",
+      day: "numeric",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }),
+    isRead: false,
+  };
+
+  notifications.unshift(newNotif);
+  setLocalStorageItem(key, notifications);
+  
+  // Custom event to sync notification bells across the client UI
+  window.dispatchEvent(new Event("certitude_notifications_updated"));
+}
+
+/**
+ * Marks all notifications as read.
+ */
+export function markNotificationsAsRead(email: string) {
+  if (!isBrowser) return;
+
+  const key = `certitude_notifications_${email.toLowerCase()}`;
+  const notifications = getLocalStorageItem<InAppNotification[]>(key, []);
+  
+  const updated = notifications.map((n) => ({ ...n, isRead: true }));
+  setLocalStorageItem(key, updated);
+
+  window.dispatchEvent(new Event("certitude_notifications_updated"));
 }

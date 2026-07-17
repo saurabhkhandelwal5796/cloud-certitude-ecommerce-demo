@@ -6,6 +6,11 @@ import { useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import CartBadge from "@/components/ui/CartBadge";
 import WishlistBadge from "@/components/ui/WishlistBadge";
+import {
+  getUserNotifications,
+  markNotificationsAsRead,
+  InAppNotification,
+} from "@/services/AdminService";
 
 interface NavbarClientProps {
   user: {
@@ -18,7 +23,7 @@ interface NavbarClientProps {
  * NavbarClient Component
  *
  * Premium light glassmorphic navigation header styled for "Cloud Certitude Fashion".
- * Features warm charcoal text, rose gold buttons, and elegant visual states.
+ * Features warm charcoal text, rose gold buttons, interactive notifications, and order links.
  */
 export default function NavbarClient({ user }: NavbarClientProps) {
   const router = useRouter();
@@ -27,8 +32,11 @@ export default function NavbarClient({ user }: NavbarClientProps) {
   const [currentUser, setCurrentUser] = useState(user);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // In-App Notifications State
+  const [notifications, setNotifications] = useState<InAppNotification[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
 
-
+  // Sync auth state changes
   useEffect(() => {
     const supabase = getSupabaseClient();
 
@@ -56,6 +64,25 @@ export default function NavbarClient({ user }: NavbarClientProps) {
     };
   }, [router]);
 
+  // Sync notifications on user session changes or custom events
+  useEffect(() => {
+    const handleUpdate = () => {
+      if (currentUser && currentUser.email) {
+        setNotifications(getUserNotifications(currentUser.email));
+      } else {
+        setNotifications([]);
+      }
+    };
+
+    // Defer initialization to avoid synchronous setState inside the effect body
+    setTimeout(handleUpdate, 0);
+
+    window.addEventListener("certitude_notifications_updated", handleUpdate);
+    return () => {
+      window.removeEventListener("certitude_notifications_updated", handleUpdate);
+    };
+  }, [currentUser]);
+
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
@@ -78,6 +105,14 @@ export default function NavbarClient({ user }: NavbarClientProps) {
       alert(`Search feature is coming soon! Query: "${searchQuery}"`);
     }
   };
+
+  const handleMarkAllRead = () => {
+    if (currentUser && currentUser.email) {
+      markNotificationsAsRead(currentUser.email);
+    }
+  };
+
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
     <nav className="border-b border-stone-200/50 bg-white/70 backdrop-blur-md sticky top-0 z-50 text-stone-850 transition-all duration-300">
@@ -107,8 +142,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-xs font-bold uppercase tracking-wider transition-colors hover:text-stone-900 ${
-                    link.isSale ? "text-rose-500 hover:text-rose-600" : "text-stone-600 hover:text-stone-900"
+                  className={`text-[11px] font-extrabold uppercase tracking-widest hover:text-[#C68B7D] transition-colors ${
+                    link.isSale ? "text-rose-500" : "text-stone-600"
                   }`}
                 >
                   {link.name}
@@ -136,7 +171,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             </form>
 
             {/* Icons */}
-            <div className="flex items-center gap-4 flex-shrink-0">
+            <div className="flex items-center gap-4 flex-shrink-0 relative">
+              
               {/* Wishlist */}
               <Link
                 href="/wishlist"
@@ -160,6 +196,83 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 </svg>
                 <CartBadge />
               </Link>
+
+              {/* In-app Notification Bell (Visible if signed in) */}
+              {currentUser && (
+                <div className="relative">
+                  <button
+                    onClick={() => setShowNotifications(!showNotifications)}
+                    className="text-stone-600 hover:text-[#C68B7D] transition-colors relative p-1 cursor-pointer focus:outline-none"
+                    title="Notifications"
+                  >
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    {unreadCount > 0 && (
+                      <span className="absolute top-1 right-1 block h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
+                    )}
+                  </button>
+
+                  {/* Notification Dropdown Drawer */}
+                  {showNotifications && (
+                    <div className="absolute right-0 mt-3.5 w-80 bg-white border border-stone-200/50 shadow-2xl rounded-2xl p-4 z-50 backdrop-blur-md max-h-[350px] overflow-y-auto text-left animate-fade-in">
+                      <div className="flex items-center justify-between border-b border-stone-100 pb-2.5 mb-2.5">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-stone-900">
+                          In-App Notifications
+                        </span>
+                        {unreadCount > 0 && (
+                          <button
+                            onClick={handleMarkAllRead}
+                            className="text-[9px] font-extrabold text-[#E0A99E] hover:text-[#C68B7D] uppercase tracking-widest cursor-pointer"
+                          >
+                            Mark all read
+                          </button>
+                        )}
+                      </div>
+
+                      {notifications.length === 0 ? (
+                        <p className="text-stone-400 font-light text-center py-6 text-xs">
+                          No notifications yet.
+                        </p>
+                      ) : (
+                        <div className="space-y-3">
+                          {notifications.map((notif) => (
+                            <div
+                              key={notif.id}
+                              className={`p-2.5 rounded-xl border transition-all text-xs relative ${
+                                notif.isRead
+                                  ? "bg-stone-50/50 border-stone-100 text-stone-500 font-light"
+                                  : "bg-[#E0A99E]/5 border-[#E0A99E]/10 text-stone-900 font-medium"
+                              }`}
+                            >
+                              <p className="pr-4">{notif.message}</p>
+                              <span className="block text-[8px] text-stone-400 font-light mt-1 text-right">
+                                {notif.timestamp}
+                              </span>
+                              {!notif.isRead && (
+                                <span className="absolute top-3.5 right-2 block h-1.5 w-1.5 rounded-full bg-[#E0A99E]" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Customer Orders list link (Clipboard Icon) */}
+              {currentUser && (
+                <Link
+                  href="/orders"
+                  className="text-stone-600 hover:text-[#C68B7D] transition-colors relative p-1 cursor-pointer"
+                  title="My Orders"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                  </svg>
+                </Link>
+              )}
 
               {/* Profile / Auth Menu */}
               {currentUser ? (
@@ -265,6 +378,13 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
           {currentUser ? (
             <div className="border-t border-stone-200/50 mt-4 pt-4 space-y-1">
+              <Link
+                href="/orders"
+                onClick={() => setIsOpen(false)}
+                className="block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50"
+              >
+                My Orders
+              </Link>
               <Link
                 href="/profile"
                 onClick={() => setIsOpen(false)}

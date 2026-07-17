@@ -119,6 +119,59 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
+      {/* Order Pipeline Summary Metrics */}
+      {stats && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between transition-all duration-300 hover:shadow-md hover:border-stone-300/60 text-left">
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-amber-500">
+                Pending Orders
+              </span>
+              <h4 className="text-lg font-black text-stone-900 mt-1 leading-none">
+                {stats.pendingOrdersCount}
+              </h4>
+            </div>
+            <span className="text-xl">⏳</span>
+          </div>
+
+          <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between transition-all duration-300 hover:shadow-md hover:border-stone-300/60 text-left">
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-600">
+                Delivered Orders
+              </span>
+              <h4 className="text-lg font-black text-stone-900 mt-1 leading-none">
+                {stats.deliveredOrdersCount}
+              </h4>
+            </div>
+            <span className="text-xl">✓</span>
+          </div>
+
+          <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between transition-all duration-300 hover:shadow-md hover:border-stone-300/60 text-left">
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-rose-500">
+                Cancelled Orders
+              </span>
+              <h4 className="text-lg font-black text-stone-900 mt-1 leading-none">
+                {stats.cancelledOrdersCount}
+              </h4>
+            </div>
+            <span className="text-xl">✕</span>
+          </div>
+
+          <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between transition-all duration-300 hover:shadow-md hover:border-stone-300/60 text-left">
+            <div>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-blue-600">
+                Revenue Today
+              </span>
+              <h4 className="text-lg font-black text-stone-900 mt-1 leading-none">
+                {formatPrice(stats.revenueToday)}
+              </h4>
+            </div>
+            <span className="text-xl">📈</span>
+          </div>
+        </div>
+      )}
+
       {/* Grid: Recent Orders & Recent Customers */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
