@@ -1,5 +1,13 @@
 import React from "react";
 import CollectionTemplate from "@/components/ui/CollectionTemplate";
+import { getMetadata } from "@/utils/seo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = getMetadata(
+  "Kids Sustainable Collection",
+  "Explore kids organic cotton rompers, fleece jackets and knit canvas sneakers.",
+  "/kids"
+);
 
 const PRODUCTS = [
   {

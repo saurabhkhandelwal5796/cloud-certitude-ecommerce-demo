@@ -37,8 +37,10 @@ export default function CustomerOrdersPage() {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const loadCustomerOrders = async (email: string) => {
+    console.log("[Orders] Loading orders for email:", email);
     try {
       const list = await getOrdersByCustomerEmail(email);
+      console.log("[Orders] Retrieved orders:", list.length, list.map(o => o.orderId));
       setOrders(list);
     } catch (err) {
       console.error("[Orders] Error fetching details:", err);
@@ -52,6 +54,8 @@ export default function CustomerOrdersPage() {
         const {
           data: { user },
         } = await supabase.auth.getUser();
+
+        console.log("[Orders] Auth user:", user?.email ?? "not authenticated");
 
         if (!user) {
           // Redirect to sign in page if guest

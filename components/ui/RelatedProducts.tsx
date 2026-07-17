@@ -8,6 +8,7 @@ interface ProductType {
   imageSrc: string;
   discountPercent?: number;
   rating: number;
+  reviewCount?: number;
   category: string;
   brand?: string;
   description?: string;
@@ -40,6 +41,7 @@ export default function RelatedProducts({ products }: RelatedProductsProps) {
             imageSrc={p.imageSrc}
             discountPercent={p.discountPercent}
             rating={p.rating}
+            reviewCount={p.reviewCount}
             category={p.category}
             brand={p.brand}
             description={p.description}

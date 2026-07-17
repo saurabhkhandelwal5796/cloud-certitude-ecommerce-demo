@@ -5,6 +5,12 @@ import DeliveryChecker from "@/components/ui/DeliveryChecker";
 import ProductReviews from "@/components/ui/ProductReviews";
 import RelatedProducts from "@/components/ui/RelatedProducts";
 import RecentlyViewed from "@/components/ui/RecentlyViewed";
+import ViewTracker from "@/components/ui/ViewTracker";
+import SimilarProducts from "@/components/ui/SimilarProducts";
+import CompleteTheLook from "@/components/ui/CompleteTheLook";
+import FrequentlyBoughtTogether from "@/components/ui/FrequentlyBoughtTogether";
+import { getMetadata, getProductSchema, getBreadcrumbSchema } from "@/utils/seo";
+import SocialShare from "@/components/ui/SocialShare";
 
 // All catalog products combined for details lookup
 const ALL_PRODUCTS = [
@@ -136,40 +142,6 @@ const DEFAULT_FALLBACK_PRODUCT = {
   ],
 };
 
-// 5 Placeholder Customer Reviews
-const MOCK_REVIEWS = [
-  {
-    name: "Eleanor Vance",
-    rating: 5,
-    review: "Absolutely stunning quality. The cashmere feels exceptionally soft and heavy. The drape is elegant and tailored to perfection.",
-    date: "July 12, 2026",
-  },
-  {
-    name: "Julian Brooks",
-    rating: 5,
-    review: "Highly recommend this piece. Fits perfectly across the shoulders, and the fabric breathes well in warm environments.",
-    date: "June 30, 2026",
-  },
-  {
-    name: "Saskia Sterling",
-    rating: 4,
-    review: "Exquisite details. The buttons feel solid and high-end. Deducted one star only because shipping took an extra day.",
-    date: "June 14, 2026",
-  },
-  {
-    name: "Dimitri Mercer",
-    rating: 5,
-    review: "An essential addition to my capsule wardrobe. Minimalist, premium, and holds its shape well after cleaning.",
-    date: "May 28, 2026",
-  },
-  {
-    name: "Clarissa Finch",
-    rating: 5,
-    review: "The material texture is beautiful. You can tell this is crafted with care from sustainable organic fabrics.",
-    date: "May 10, 2026",
-  },
-];
-
 // Related products
 const RELATED_PRODUCTS = [
   {
@@ -258,6 +230,19 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params;
+  const product = ALL_PRODUCTS.find((p) => p.id === id) || {
+    ...DEFAULT_FALLBACK_PRODUCT,
+    id,
+  };
+  return getMetadata(
+    product.name,
+    product.description,
+    `/products/${product.id}`
+  );
+}
+
 export default async function ProductDetailsPage({ params }: PageProps) {
   const { id } = await params;
 
@@ -268,8 +253,40 @@ export default async function ProductDetailsPage({ params }: PageProps) {
       id,
     };
 
+  const productSchema = getProductSchema({
+    id: product.id,
+    name: product.name,
+    description: product.description,
+    brand: product.brand,
+    price: product.price,
+    rating: product.rating,
+    imageSrc: product.imageSrc,
+    sku: product.sku,
+  });
+
+  const breadcrumbs = [
+    { name: "Home", url: "/" },
+    { name: product.category || "Fashion", url: `/${(product.category || "Fashion").toLowerCase()}` },
+    { name: product.name, url: `/products/${product.id}` },
+  ];
+
+  const breadcrumbSchema = getBreadcrumbSchema(breadcrumbs);
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-[#FAF9F6]">
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+
+      {/* Client-side View tracker */}
+      <ViewTracker productId={product.id} />
+
       {/* 2-Column Desktop Grid (Gallery + Details) */}
       <div className="flex flex-col lg:flex-row gap-12 items-start">
         {/* Left Column: Image Viewport + Delivery Checker */}
@@ -292,14 +309,29 @@ export default async function ProductDetailsPage({ params }: PageProps) {
             sku={product.sku}
             description={product.description}
           />
+
+          {/* Social Sharing block */}
+          <SocialShare
+            url={`https://cloudcertitudefashion.com/products/${product.id}`}
+            title={product.name}
+          />
         </div>
       </div>
 
+      {/* Frequently Bought Together Bundle Package */}
+      <FrequentlyBoughtTogether productId={product.id} />
+
+      {/* Complete The Look styling picks */}
+      <CompleteTheLook productId={product.id} />
+
+      {/* Similar Products Carousel */}
+      <SimilarProducts productId={product.id} />
+
       {/* Reviews feed breakdown (Section 7) */}
       <ProductReviews
-        rating={product.rating}
-        reviewCount={product.reviewCount}
-        reviews={MOCK_REVIEWS}
+        productId={product.id}
+        initialRating={product.rating}
+        initialReviewCount={product.reviewCount}
       />
 
       {/* Related Products carousel (Section 8) */}

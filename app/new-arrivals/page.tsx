@@ -1,5 +1,13 @@
 import React from "react";
 import CollectionTemplate from "@/components/ui/CollectionTemplate";
+import { getMetadata } from "@/utils/seo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = getMetadata(
+  "New Arrivals",
+  "Discover the latest premium fashion additions freshly cataloged.",
+  "/new-arrivals"
+);
 
 const PRODUCTS = [
   {

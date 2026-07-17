@@ -1,36 +1,182 @@
-import React from "react";
+/* eslint-disable react-hooks/set-state-in-effect */
+"use client";
 
-interface ReviewType {
-  name: string;
-  rating: number;
-  review: string;
-  date: string;
-}
+import React, { useState, useEffect, useCallback } from "react";
+import RatingBreakdown from "./RatingBreakdown";
+import ReviewCard from "./ReviewCard";
+import ReviewForm from "./ReviewForm";
+import { getSupabaseClient } from "@/lib/supabase/client";
+import { User } from "@supabase/supabase-js";
+import {
+  ProductReview,
+  getReviewsByProductId,
+  submitReview,
+  editReview,
+  deleteReview,
+  voteHelpful,
+  reportReview,
+  checkHasPurchased,
+  checkHasReviewed,
+} from "@/services/ReviewService";
 
 interface ProductReviewsProps {
-  rating: number;
-  reviewCount: number;
-  reviews: ReviewType[];
+  productId: string;
+  initialRating?: number;
+  initialReviewCount?: number;
 }
 
-/**
- * ProductReviews Component
- *
- * Renders the rating summary charts and detailed verified customer review listings.
- * Styled in warm cream, soft borders, and gold star details.
- */
-export default function ProductReviews({ rating, reviewCount, reviews }: ProductReviewsProps) {
-  // Mock distributions for stars
-  const distributions = [
-    { stars: 5, percentage: 75 },
-    { stars: 4, percentage: 15 },
-    { stars: 3, percentage: 6 },
-    { stars: 2, percentage: 3 },
-    { stars: 1, percentage: 1 },
-  ];
+type SortOption = "recent" | "highest" | "lowest" | "helpful";
+
+export default function ProductReviews({
+  productId,
+  initialRating = 0,
+  initialReviewCount = 0,
+}: ProductReviewsProps) {
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [sortBy, setSortBy] = useState<SortOption>("recent");
+  const [user, setUser] = useState<User | null>(null);
+  
+  // Status check variables
+  const [hasPurchased, setHasPurchased] = useState(false);
+  const [hasReviewed, setHasReviewed] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [editingReview, setEditingReview] = useState<ProductReview | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load reviews and user session state
+  const loadData = useCallback(async () => {
+    try {
+      const list = await getReviewsByProductId(productId);
+      setReviews(list);
+
+      const supabase = getSupabaseClient();
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+
+      if (currentUser && currentUser.email) {
+        setUser(currentUser);
+        const purchased = await checkHasPurchased(currentUser.email, productId);
+        const reviewed = await checkHasReviewed(currentUser.email, productId);
+        setHasPurchased(purchased);
+        setHasReviewed(reviewed);
+      } else {
+        setUser(null);
+        setHasPurchased(false);
+        setHasReviewed(false);
+      }
+    } catch (err) {
+      console.error("[ProductReviews] Load error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Handle Sort
+  const getSortedReviews = () => {
+    const list = [...reviews];
+    if (sortBy === "recent") {
+      return list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+    if (sortBy === "highest") {
+      return list.sort((a, b) => b.rating - a.rating);
+    }
+    if (sortBy === "lowest") {
+      return list.sort((a, b) => a.rating - b.rating);
+    }
+    if (sortBy === "helpful") {
+      return list.sort((a, b) => b.helpfulCount - a.helpfulCount);
+    }
+    return list;
+  };
+
+  const handleReviewSubmit = async (data: { rating: number; title: string; reviewText: string }) => {
+    if (!user) return;
+
+    if (editingReview) {
+      // Edit mode
+      await editReview(editingReview.id, {
+        rating: data.rating,
+        title: data.title,
+        reviewText: data.reviewText,
+      });
+      setEditingReview(null);
+    } else {
+      // Create mode
+      const rawMeta = user.user_metadata || {};
+      const customerEmail = user.email || "anonymous@cloudcertitude.com";
+      const customerName = rawMeta.full_name || rawMeta.name || customerEmail.split("@")[0];
+      await submitReview({
+        productId,
+        customerName,
+        customerEmail,
+        rating: data.rating,
+        title: data.title,
+        reviewText: data.reviewText,
+      });
+    }
+
+    setIsFormOpen(false);
+    await loadData();
+  };
+
+  const handleReviewDelete = async (reviewId: string) => {
+    await deleteReview(reviewId);
+    await loadData();
+  };
+
+  const handleHelpful = async (reviewId: string) => {
+    if (!user) return;
+    await voteHelpful(reviewId, user.email!);
+  };
+
+  const handleReport = async (reviewId: string) => {
+    await reportReview(reviewId);
+  };
+
+  // Compute breakdown stats dynamically
+  const totalReviews = reviews.length;
+  const avgRating = totalReviews > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+    : initialRating;
+
+  const distribution: { [key: number]: number } = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+  reviews.forEach((r) => {
+    if (distribution[r.rating] !== undefined) {
+      distribution[r.rating] += 1;
+    }
+  });
+
+  // If there are no reviews, fallback to dynamic initial count distributions
+  const finalTotalCount = totalReviews > 0 ? totalReviews : initialReviewCount;
+  const finalAvgRating = totalReviews > 0 ? avgRating : initialRating;
+
+  const fallbackDistribution: { [key: number]: number } = {
+    5: Math.round(finalTotalCount * 0.70),
+    4: Math.round(finalTotalCount * 0.18),
+    3: Math.round(finalTotalCount * 0.08),
+    2: Math.round(finalTotalCount * 0.03),
+    1: Math.round(finalTotalCount * 0.01),
+  };
+
+  const currentDistribution = totalReviews > 0 ? distribution : fallbackDistribution;
+
+  const sortedReviewsList = getSortedReviews();
+
+  if (isLoading) {
+    return (
+      <div className="border-t border-stone-200/50 py-16 text-center text-stone-500 text-xs">
+        🔄 Loading customer reviews...
+      </div>
+    );
+  }
 
   return (
-    <div className="border-t border-stone-200/50 py-16">
+    <div className="border-t border-stone-200/50 py-16" id="product-reviews-section">
       <h2 className="text-xl font-black text-stone-900 tracking-wider uppercase mb-10 text-left">
         Customer Reviews
       </h2>
@@ -38,94 +184,120 @@ export default function ProductReviews({ rating, reviewCount, reviews }: Product
       <div className="flex flex-col lg:flex-row gap-12 items-start">
         {/* Left: Star stats overview breakdown */}
         <div className="w-full lg:w-1/3 flex flex-col gap-6 text-left">
-          <div>
-            <h3 className="text-sm font-bold text-stone-700 uppercase tracking-widest">
-              Review Summary
-            </h3>
-            <div className="flex items-baseline gap-2.5 mt-2">
-              <span className="text-4xl font-extrabold text-stone-900">{rating.toFixed(1)}</span>
-              <span className="text-sm text-stone-400 font-light">out of 5.0</span>
-            </div>
-            {/* Stars */}
-            <div className="flex text-amber-400 mt-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg
-                  key={i}
-                  className={`h-5 w-5 ${
-                    i < Math.floor(rating) ? "fill-current" : "text-stone-200"
-                  }`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
-            </div>
-            <p className="mt-2 text-xs text-stone-400 font-light">Based on {reviewCount} ratings</p>
-          </div>
+          <RatingBreakdown
+            rating={finalAvgRating}
+            totalReviews={finalTotalCount}
+            distribution={currentDistribution}
+          />
 
-          {/* Star breakdown bar charts */}
-          <div className="space-y-3">
-            {distributions.map((d) => (
-              <div key={d.stars} className="flex items-center gap-4 text-xs">
-                <span className="w-12 text-stone-500 font-semibold">{d.stars} Stars</span>
-                {/* Bar */}
-                <div className="flex-1 h-2 bg-stone-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-[#E0A99E] rounded-full"
-                    style={{ width: `${d.percentage}%` }}
-                  />
-                </div>
-                <span className="w-8 text-right text-stone-400 font-bold">{d.percentage}%</span>
-              </div>
-            ))}
+          {/* Verification / Review Submission Options */}
+          <div className="p-6 rounded-3xl border border-stone-250 bg-stone-50/50 space-y-4">
+            <h4 className="text-xs font-black text-stone-900 uppercase tracking-widest">
+              Review this product
+            </h4>
+            
+            {!user ? (
+              <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                Please sign in to write a review. Only verified purchasers can review.
+              </p>
+            ) : !hasPurchased ? (
+              <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                🔒 Reviews are restricted to verified purchasers of this item.
+              </p>
+            ) : hasReviewed && !editingReview ? (
+              <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                You have already submitted a review for this product. You can edit your existing review if you want to make changes.
+              </p>
+            ) : (
+              <p className="text-[11px] text-stone-500 font-light leading-relaxed">
+                You purchased this item! Share your feedback with other customers.
+              </p>
+            )}
+
+            {user && hasPurchased && (!hasReviewed || editingReview) && !isFormOpen && (
+              <button
+                type="button"
+                onClick={() => setIsFormOpen(true)}
+                className="w-full rounded-full bg-stone-900 py-3 text-[10px] font-black uppercase tracking-widest text-white hover:bg-stone-850 transition-colors shadow-md h-11 flex items-center justify-center cursor-pointer"
+              >
+                Write a Review
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Right: Customer reviews list (5 reviews) */}
+        {/* Right: Reviews List & Input Form */}
         <div className="w-full lg:w-2/3 flex flex-col gap-8 text-left">
-          {reviews.map((r, idx) => (
-            <div
-              key={idx}
-              className={`flex flex-col gap-3 pb-8 ${
-                idx < reviews.length - 1 ? "border-b border-stone-100" : ""
-              }`}
-            >
-              {/* Stars & verified buyer badge */}
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex text-amber-400">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <svg
-                      key={i}
-                      className={`h-4.5 w-4.5 ${i < r.rating ? "fill-current" : "text-stone-250"}`}
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                    </svg>
-                  ))}
-                </div>
-                <span className="text-[10px] font-extrabold text-[#E0A99E] uppercase tracking-wider flex items-center gap-1">
-                  <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  Verified Buyer
-                </span>
-              </div>
-
-              {/* Customer details */}
-              <div className="flex items-center gap-2 text-xs">
-                <span className="font-extrabold text-stone-850">{r.name}</span>
-                <span className="text-stone-300">&middot;</span>
-                <span className="text-stone-400 font-light">{r.date}</span>
-              </div>
-
-              {/* Review text */}
-              <p className="text-xs md:text-sm text-stone-600 leading-relaxed font-light">
-                &ldquo;{r.review}&rdquo;
-              </p>
+          {/* Write/Edit Review Form container */}
+          {isFormOpen && (
+            <div className="animate-fadeIn">
+              <ReviewForm
+                initialRating={editingReview?.rating}
+                initialTitle={editingReview?.title}
+                initialReviewText={editingReview?.reviewText}
+                isEditing={!!editingReview}
+                onSubmit={handleReviewSubmit}
+                onCancel={() => {
+                  setIsFormOpen(false);
+                  setEditingReview(null);
+                }}
+              />
             </div>
-          ))}
+          )}
+
+          {/* Sorting panel */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b border-stone-100 pb-4 gap-3">
+            <h3 className="text-xs font-black text-stone-750 uppercase tracking-widest">
+              Verified Shopper Reviews ({totalReviews})
+            </h3>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-extrabold uppercase tracking-widest text-stone-400">
+                Sort by:
+              </span>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="bg-white border border-stone-200/60 rounded-xl px-2.5 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-stone-700 focus:outline-none cursor-pointer"
+              >
+                <option value="recent">Most Recent</option>
+                <option value="highest">Highest Rated</option>
+                <option value="lowest">Lowest Rated</option>
+                <option value="helpful">Most Helpful</option>
+              </select>
+            </div>
+          </div>
+
+          {/* List display */}
+          <div className="space-y-8">
+            {sortedReviewsList.length > 0 ? (
+              sortedReviewsList.map((rev) => (
+                <ReviewCard
+                  key={rev.id}
+                  review={rev}
+                  currentUserEmail={user?.email}
+                  onEdit={(r) => {
+                    setEditingReview(r);
+                    setIsFormOpen(true);
+                    // scroll to form
+                    document.getElementById("product-reviews-section")?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  onDelete={handleReviewDelete}
+                  onHelpfulClick={handleHelpful}
+                  onReportClick={handleReport}
+                />
+              ))
+            ) : (
+              <div className="py-12 border border-dashed border-stone-200 rounded-3xl text-center bg-white/50">
+                <span className="block text-2xl mb-3">💬</span>
+                <h4 className="text-xs font-extrabold uppercase tracking-wider text-stone-700">
+                  No Written Reviews Yet
+                </h4>
+                <p className="mt-1 text-[10px] text-stone-400 font-light uppercase tracking-widest">
+                  Be the first verified buyer to share your feedback!
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -16,6 +16,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { name: "Products", href: "/admin/products", icon: "👗" },
   { name: "Orders", href: "/admin/orders", icon: "📦" },
   { name: "Customers", href: "/admin/customers", icon: "👥" },
+  { name: "Reviews", href: "/admin/reviews", icon: "💬" },
+  { name: "AI Recommendations", href: "/admin/recommendations", icon: "✨" },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
   { name: "Settings", href: "/admin/settings", icon: "⚙️" },
 ];

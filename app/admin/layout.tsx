@@ -3,6 +3,14 @@ import AdminSidebar from "@/components/ui/AdminSidebar";
 import { createServerClient } from "@/lib/supabase/cookie-client";
 import { redirect } from "next/navigation";
 import { verifySupabaseConfig } from "@/utils";
+import { getMetadata } from "@/utils/seo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = getMetadata(
+  "Admin Portal",
+  "Cloud Certitude Fashion Internal Admin Dashboard.",
+  "/admin"
+);
 
 export const dynamic = "force-dynamic";
 

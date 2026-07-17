@@ -18,6 +18,7 @@ import {
   buildOrderPayload,
 } from "@/services/PaymentService";
 import { registerNewCheckoutOrder } from "@/services/AdminService";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const DEFAULT_ADDRESS: AddressType = {
   firstName: "",
@@ -57,13 +58,44 @@ export default function CheckoutPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState("");
   const [paymentError, setPaymentError] = useState<string | null>(null);
+  // Canonical authenticated user email — used as the order owner identifier
+  const [authUserEmail, setAuthUserEmail] = useState<string>("");
+  const [authUserName, setAuthUserName] = useState<string>("");
 
-  // ─── Load persisted checkout settings ────────────────────────────────────
+  // ─── Load persisted checkout settings + authenticated user ───────────────
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const storedAddr = localStorage.getItem("certitude_shipping_address");
-        if (storedAddr) setAddress(JSON.parse(storedAddr));
+        // 1. Fetch authenticated user from Supabase — email is the canonical order owner
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        if (user && user.email) {
+          setAuthUserEmail(user.email);
+          console.log("[Checkout] Authenticated user email:", user.email);
+
+          // Derive display name from user metadata or email
+          const rawMeta = user.user_metadata as Record<string, string> | undefined;
+          const displayName =
+            rawMeta?.full_name ||
+            rawMeta?.name ||
+            user.email.split("@")[0];
+          setAuthUserName(displayName);
+
+          // Pre-fill shipping form email with the auth user email if not already set
+          const storedAddr = localStorage.getItem("certitude_shipping_address");
+          if (storedAddr) {
+            const parsed = JSON.parse(storedAddr) as AddressType;
+            // Always overwrite the email field with the auth email
+            setAddress((prev) => ({ ...parsed, email: user.email ?? prev.email }));
+          } else {
+            setAddress((prev) => ({ ...prev, email: user.email ?? prev.email }));
+          }
+        } else {
+          // Guest — load shipping address as-is
+          const storedAddr = localStorage.getItem("certitude_shipping_address");
+          if (storedAddr) setAddress(JSON.parse(storedAddr));
+        }
 
         const storedDel = localStorage.getItem("certitude_delivery_option");
         if (storedDel) setSelectedDelivery(storedDel);
@@ -87,7 +119,7 @@ export default function CheckoutPage() {
           setAppliedCode(parsed.appliedCode);
         }
       } catch (err) {
-        console.error("[Checkout] Failed loading settings from localStorage:", err);
+        console.error("[Checkout] Failed loading settings:", err);
       }
     };
     loadSettings();
@@ -154,12 +186,28 @@ export default function CheckoutPage() {
     });
 
     localStorage.setItem("certitude_last_order", JSON.stringify(payload));
-    
-    // Sync with Admin Dashboard
+
+    // ─── CRITICAL: Use the authenticated user's email as the canonical order owner.
+    // The address.email (shipping form) can be any email; only authUserEmail matches
+    // what the /orders page queries by (user.email from Supabase session).
+    const canonicalEmail = authUserEmail || address.email;
+    const canonicalName =
+      `${address.firstName} ${address.lastName}`.trim() || authUserName || canonicalEmail.split("@")[0];
+
+    console.log("[Checkout] Persisting order:", {
+      orderId,
+      canonicalEmail,
+      canonicalName,
+      grandTotal,
+      itemsCount: cartItems.length,
+      paymentMethod: selectedPayment,
+    });
+
+    // Sync with Admin Dashboard + customer order history
     registerNewCheckoutOrder({
       orderId,
-      customerName: `${address.firstName} ${address.lastName}`.trim(),
-      customerEmail: address.email,
+      customerName: canonicalName,
+      customerEmail: canonicalEmail,
       total: grandTotal,
       itemsCount: cartItems.length,
       paymentMethod: selectedPayment,
@@ -176,6 +224,8 @@ export default function CheckoutPage() {
         discountPercent: item.discountPercent,
       })),
     });
+
+    console.log("[Checkout] Order registered. Clearing cart and redirecting...");
 
     clearCart();
 

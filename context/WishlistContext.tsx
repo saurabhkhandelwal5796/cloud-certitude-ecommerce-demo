@@ -9,6 +9,7 @@ export interface WishlistItemType {
   imageSrc: string;
   discountPercent?: number;
   rating: number;
+  reviewCount?: number;
   category: string;
   brand?: string;
   description?: string;

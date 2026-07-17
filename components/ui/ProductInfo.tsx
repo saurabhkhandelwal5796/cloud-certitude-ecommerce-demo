@@ -44,8 +44,8 @@ export default function ProductInfo({
   price,
   imageSrc,
   discountPercent,
-  rating,
-  reviewCount,
+  rating: initialRating,
+  reviewCount: initialReviewCount,
   sku,
   description,
   material = "100% Organic Egyptian Cotton",
@@ -60,6 +60,37 @@ export default function ProductInfo({
   const [activeTab, setActiveTab] = useState<string>("description");
   const [isAdding, setIsAdding] = useState(false);
   const [isBuying, setIsBuying] = useState(false);
+
+  // Dynamic reviews rating state
+  const [dynamicRating, setDynamicRating] = useState(initialRating);
+  const [dynamicReviewCount, setDynamicReviewCount] = useState(initialReviewCount);
+
+  React.useEffect(() => {
+    const loadDynamicRating = async () => {
+      try {
+        const { getReviewsByProductId } = await import("@/services/ReviewService");
+        const list = await getReviewsByProductId(id);
+        if (list.length > 0) {
+          const avg = list.reduce((sum, r) => sum + r.rating, 0) / list.length;
+          setDynamicRating(parseFloat(avg.toFixed(1)));
+          setDynamicReviewCount(list.length);
+        } else {
+          setDynamicRating(initialRating);
+          setDynamicReviewCount(initialReviewCount);
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic ratings in ProductInfo:", err);
+      }
+    };
+
+    loadDynamicRating();
+    
+    // Listen for storage changes or custom review events to auto-refresh
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", loadDynamicRating);
+      return () => window.removeEventListener("focus", loadDynamicRating);
+    }
+  }, [id, initialRating, initialReviewCount]);
 
   const discountedPrice = discountPercent
     ? price * (1 - discountPercent / 100)
@@ -93,7 +124,7 @@ export default function ProductInfo({
         price,
         imageSrc,
         discountPercent,
-        rating,
+        rating: dynamicRating,
         category: brand, // ProductInfo has no category prop; use brand as a display label
         brand,
         description,
@@ -119,7 +150,7 @@ export default function ProductInfo({
                 <svg
                   key={i}
                   className={`h-3.5 w-3.5 ${
-                    i < Math.floor(rating) ? "fill-current" : "text-stone-200"
+                    i < Math.floor(dynamicRating) ? "fill-current" : "text-stone-200"
                   }`}
                   viewBox="0 0 20 20"
                   fill="currentColor"
@@ -128,10 +159,10 @@ export default function ProductInfo({
                 </svg>
               ))}
             </div>
-            <span className="font-bold text-stone-700">{rating.toFixed(1)}</span>
+            <span className="font-bold text-stone-700">{dynamicRating.toFixed(1)}</span>
           </div>
           <span className="text-stone-400 font-light border-l border-stone-200 pl-4">
-            {reviewCount} Verified Purchaser Reviews
+            {dynamicReviewCount} Verified Purchaser Reviews
           </span>
           <span className="text-stone-400 font-light border-l border-stone-200 pl-4 select-all">
             SKU: {sku}

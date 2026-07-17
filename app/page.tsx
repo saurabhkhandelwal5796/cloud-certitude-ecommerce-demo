@@ -7,6 +7,8 @@ import { verifySupabaseConfig } from "@/utils";
 import CategoryCard from "@/components/ui/CategoryCard";
 import ProductCard from "@/components/ui/ProductCard";
 import TestimonialCard from "@/components/ui/TestimonialCard";
+import RecommendationCarousel from "@/components/ui/RecommendationCarousel";
+import { AdminProduct } from "@/services/AdminService";
 
 // Premium placeholder data for Categories
 const CATEGORIES = [
@@ -29,77 +31,6 @@ const CATEGORIES = [
     title: "Accessories",
     href: "#accessories",
     imageSrc: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=600&auto=format&fit=crop",
-  },
-];
-
-// Premium placeholder data for Featured Products
-const FEATURED_PRODUCTS = [
-  {
-    id: "fp1",
-    name: "Classic Cashmere Trench Coat",
-    price: 499,
-    discountPercent: 15,
-    rating: 4.8,
-    category: "Men",
-    imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp2",
-    name: "Silk Cocktail Evening Gown",
-    price: 650,
-    rating: 4.9,
-    category: "Women",
-    imageSrc: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp3",
-    name: "Suede Handcrafted Chelsea Boots",
-    price: 280,
-    discountPercent: 20,
-    rating: 4.6,
-    category: "Men",
-    imageSrc: "https://images.unsplash.com/photo-1520639888713-7851133b1ed0?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp4",
-    name: "Italian Leather Designer Handbag",
-    price: 890,
-    rating: 5.0,
-    category: "Accessories",
-    imageSrc: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp5",
-    name: "Kids Cotton Knit Romper Set",
-    price: 85,
-    rating: 4.7,
-    category: "Kids",
-    imageSrc: "https://images.unsplash.com/photo-1622290319146-7b63df48a635?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp6",
-    name: "Chronograph Gold Mesh Watch",
-    price: 350,
-    discountPercent: 10,
-    rating: 4.5,
-    category: "Accessories",
-    imageSrc: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp7",
-    name: "Kids Knit Canvas Sneakers",
-    price: 65,
-    rating: 4.4,
-    category: "Kids",
-    imageSrc: "https://images.unsplash.com/photo-1514989940723-e8e51635b782?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "fp8",
-    name: "Slim Fit Wool Tuxedo Jacket",
-    price: 520,
-    rating: 4.9,
-    category: "Men",
-    imageSrc: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=600&auto=format&fit=crop",
   },
 ];
 
@@ -178,10 +109,61 @@ export default function HomePage() {
   const [newsletterSubscribed, setNewsletterSubscribed] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Recommendations states
+  const [recommendedForYou, setRecommendedForYou] = useState<AdminProduct[]>([]);
+  const [trendingNow, setTrendingNow] = useState<AdminProduct[]>([]);
+  const [bestSellers, setBestSellers] = useState<AdminProduct[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<AdminProduct[]>([]);
+  const [customersAlsoBought, setCustomersAlsoBought] = useState<AdminProduct[]>([]);
+
   useEffect(() => {
     // Run Supabase verification silently in background for status logs
     const configStatus = verifySupabaseConfig();
     console.log("[System] Supabase Integration Status:", configStatus);
+
+    const loadRecommendations = async () => {
+      try {
+        const { getSupabaseClient } = await import("@/lib/supabase/client");
+        const {
+          getRecommendedForYou,
+          getTrendingNow,
+          getBestSellers,
+          getCustomersAlsoBought,
+          getCustomerProfile,
+        } = await import("@/services/RecommendationService");
+        const { getProducts } = await import("@/services/AdminService");
+
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const email = user?.email || undefined;
+
+        const recs = await getRecommendedForYou(email);
+        const trend = await getTrendingNow();
+        const best = await getBestSellers();
+
+        setRecommendedForYou(recs.slice(0, 8));
+        setTrendingNow(trend.slice(0, 8));
+        setBestSellers(best.slice(0, 8));
+
+        // Recently viewed products lookup
+        const profile = getCustomerProfile();
+        const allProducts = await getProducts();
+        const viewed = allProducts.filter((p) => profile.recentlyViewed.includes(p.id));
+        setRecentlyViewed(viewed);
+
+        // Association recommendations anchor
+        const lastViewedId = profile.recentlyViewed[0] || "m1"; // fallback to m1
+        const alsoBought = await getCustomersAlsoBought(lastViewedId);
+        setCustomersAlsoBought(alsoBought.slice(0, 8));
+      } catch (err) {
+        console.error("Failed to load recommendations on home page:", err);
+      }
+    };
+
+    loadRecommendations();
+
+    window.addEventListener("certitude_recommendations_updated", loadRecommendations);
+    return () => window.removeEventListener("certitude_recommendations_updated", loadRecommendations);
   }, []);
 
   const handleNewsletterSubmit = (e: React.FormEvent) => {
@@ -309,38 +291,59 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. FEATURED PRODUCTS SECTION */}
-      <section id="featured" className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-2xl font-black tracking-widest text-stone-900 uppercase sm:text-3xl">
-            Featured Masterpieces
-          </h2>
-          <p className="mt-2 text-sm text-stone-500 font-light max-w-lg mx-auto">
-            Browse our core catalog of top-rated accessories, outerwear, and dresses.
-          </p>
-        </div>
+      {/* 3. DYNAMIC AI RECOMMENDATIONS */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 space-y-12">
+        {/* Recommended For You */}
+        {recommendedForYou.length > 0 && (
+          <RecommendationCarousel
+            title="Recommended For You"
+            subtitle="Personalized styling picks based on your affinity"
+            products={recommendedForYou}
+          />
+        )}
 
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
-          {FEATURED_PRODUCTS.map((product) => (
-            <ProductCard
-              key={product.id}
-              id={product.id}
-              name={product.name}
-              price={product.price}
-              imageSrc={product.imageSrc}
-              discountPercent={product.discountPercent}
-              rating={product.rating}
-              category={product.category}
-            />
-          ))}
-        </div>
+        {/* Trending Now */}
+        {trendingNow.length > 0 && (
+          <RecommendationCarousel
+            title="Trending Now"
+            subtitle="Products generating maximum shopper velocity right now"
+            products={trendingNow}
+          />
+        )}
+
+        {/* Best Sellers */}
+        {bestSellers.length > 0 && (
+          <RecommendationCarousel
+            title="Best Sellers"
+            subtitle="Top volume releases loved by our global clientele"
+            products={bestSellers}
+          />
+        )}
+
+        {/* Customers Also Bought */}
+        {customersAlsoBought.length > 0 && (
+          <RecommendationCarousel
+            title="Customers Also Bought"
+            subtitle="Often purchased alongside your browsing preferences"
+            products={customersAlsoBought}
+          />
+        )}
+
+        {/* Recently Viewed */}
+        {recentlyViewed.length > 0 && (
+          <RecommendationCarousel
+            title="Recently Viewed Products"
+            subtitle="Items you viewed during this session"
+            products={recentlyViewed}
+          />
+        )}
       </section>
 
       {/* 4. NEW ARRIVALS SECTION */}
-      <section id="new-arrivals" className="bg-[#FAF6F0]/40 border-t border-stone-200/40 py-20">
+      <section id="new-arrivals" className="bg-[#FAF6F0]/40 border-t border-stone-200/40 py-20 text-left">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between mb-12">
-            <div className="text-left">
+            <div>
               <h2 className="text-2xl font-black tracking-widest text-stone-900 uppercase sm:text-3xl">
                 New Arrivals
               </h2>
@@ -348,7 +351,6 @@ export default function HomePage() {
                 Discover the latest trending releases freshly cataloged.
               </p>
             </div>
-            {/* Horizontal scroll indicator */}
             <div className="hidden sm:flex gap-1.5 text-xs text-stone-400 items-center mt-4 sm:mt-0 uppercase tracking-widest font-bold">
               Swipe to explore
               <svg className="h-4 w-4 text-[#E0A99E] animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -357,7 +359,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Horizontal Scrolling wrapper for mobile & tablet */}
           <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent -mx-4 px-4 sm:mx-0 sm:px-0">
             {NEW_ARRIVALS.map((product) => (
               <div key={product.id} className="w-[280px] flex-shrink-0">

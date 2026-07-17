@@ -14,6 +14,7 @@ interface ProductCardProps {
   imageSrc: string;
   discountPercent?: number;
   rating: number;
+  reviewCount?: number;
   category: string;
   brand?: string;
   description?: string;
@@ -24,6 +25,7 @@ interface ProductCardProps {
     imageSrc: string;
     discountPercent?: number;
     rating: number;
+    reviewCount?: number;
     category: string;
     brand?: string;
     description?: string;
@@ -44,6 +46,7 @@ export default function ProductCard({
   imageSrc,
   discountPercent,
   rating,
+  reviewCount,
   category,
   brand = "Atelier",
   description,
@@ -75,7 +78,7 @@ export default function ProductCard({
     if (isWishlisted) {
       removeFromWishlist(id);
     } else {
-      addToWishlist({ id, name, price, imageSrc, discountPercent, rating, category, brand, description });
+      addToWishlist({ id, name, price, imageSrc, discountPercent, rating, reviewCount, category, brand, description });
     }
   };
 
@@ -83,7 +86,7 @@ export default function ProductCard({
     e.preventDefault();
     e.stopPropagation();
     if (onQuickView) {
-      onQuickView({ id, name, price, imageSrc, discountPercent, rating, category, brand, description });
+      onQuickView({ id, name, price, imageSrc, discountPercent, rating, reviewCount, category, brand, description });
     }
   };
 
@@ -177,7 +180,14 @@ export default function ProductCard({
               </svg>
             ))}
           </div>
-          <span className="text-[10px] font-semibold text-stone-400">({rating.toFixed(1)})</span>
+          <span className="text-[10px] font-semibold text-stone-400">
+            ({rating.toFixed(1)})
+            {reviewCount !== undefined && (
+              <span className="text-[#E0A99E] ml-1 font-bold">
+                &middot; {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
+              </span>
+            )}
+          </span>
         </div>
 
         {/* Pricing tag */}

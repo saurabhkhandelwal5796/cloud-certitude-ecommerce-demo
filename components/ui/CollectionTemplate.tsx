@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import HeroBanner from "./HeroBanner";
 import FilterSidebar from "./FilterSidebar";
 import ProductCard from "./ProductCard";
@@ -14,6 +14,7 @@ interface ProductType {
   imageSrc: string;
   discountPercent?: number;
   rating: number;
+  reviewCount?: number;
   category: string;
   brand?: string;
   color?: string;
@@ -47,6 +48,39 @@ export default function CollectionTemplate({
   imageSrc,
   initialProducts,
 }: CollectionTemplateProps) {
+  // Dynamic products to pull updated ratings and review counts from catalog storage
+  const [dynamicProducts, setDynamicProducts] = useState<ProductType[]>(initialProducts);
+
+  useEffect(() => {
+    const loadDynamicProducts = async () => {
+      try {
+        const { getProducts } = await import("@/services/AdminService");
+        const list = await getProducts();
+        const initialIds = new Set(initialProducts.map((p) => p.id));
+        const filtered = list.filter((p) => initialIds.has(p.id)).map((p) => ({
+          id: p.id,
+          name: p.name,
+          price: p.price,
+          imageSrc: p.imageSrc,
+          discountPercent: p.discountPercent,
+          rating: p.rating || 0,
+          reviewCount: p.reviewCount || 0,
+          category: p.category,
+          brand: p.brand,
+          description: p.description,
+          color: p.color?.[0], // fallback
+          size: p.size,
+        }));
+        if (filtered.length > 0) {
+          setDynamicProducts(filtered);
+        }
+      } catch (err) {
+        console.error("Failed to load dynamic ratings in CollectionTemplate:", err);
+      }
+    };
+    loadDynamicProducts();
+  }, [initialProducts]);
+
   // Filters & State
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
@@ -71,7 +105,7 @@ export default function CollectionTemplate({
 
   // Filtered & Sorted Products
   const processedProducts = useMemo(() => {
-    let result = [...initialProducts];
+    let result = [...dynamicProducts];
 
     // 1. Search Query
     if (searchQuery.trim()) {
@@ -120,12 +154,11 @@ export default function CollectionTemplate({
     } else if (sortOption === "highest-rated") {
       result.sort((a, b) => b.rating - a.rating);
     } else if (sortOption === "best-selling") {
-      // Dummy sort option: reverse order for mock purpose
       result.reverse();
     }
 
     return result;
-  }, [initialProducts, searchQuery, selectedSizes, selectedColors, selectedBrands, priceRange, sortOption]);
+  }, [dynamicProducts, searchQuery, selectedSizes, selectedColors, selectedBrands, priceRange, sortOption]);
 
   // Paginated Products
   const totalPages = Math.ceil(processedProducts.length / ITEMS_PER_PAGE);
@@ -231,6 +264,7 @@ export default function CollectionTemplate({
                   imageSrc={product.imageSrc}
                   discountPercent={product.discountPercent}
                   rating={product.rating}
+                  reviewCount={product.reviewCount}
                   category={product.category}
                   brand={product.brand}
                   description={product.description}
