@@ -35,9 +35,9 @@ const DEFAULT_ADDRESS: AddressType = {
  * CheckoutPage Component
  *
  * Coordinates shipping forms, delivery selections, payment methods, and promo calculations.
- * Validates fields on submit, then either:
- *   - Opens the Razorpay modal (if Razorpay is selected)
- *   - Simulates payment (for all other payment methods — existing behaviour preserved)
+ * Validates fields on submit, then:
+ *   - For online payments (Credit, Debit, UPI, Net Banking), triggers the simulated premium payment gateway modal.
+ *   - For Cash on Delivery (COD), skips processing and places the order immediately.
  * Stores the order in localStorage and redirects to /order-confirmation on success.
  */
 export default function CheckoutPage() {
@@ -55,9 +55,6 @@ export default function CheckoutPage() {
   const [isPlacing, setIsPlacing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successOrderId, setSuccessOrderId] = useState("");
-
-  // Razorpay-specific state
-  const [showRazorpayButton, setShowRazorpayButton] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   // ─── Load persisted checkout settings ────────────────────────────────────
@@ -71,7 +68,15 @@ export default function CheckoutPage() {
         if (storedDel) setSelectedDelivery(storedDel);
 
         const storedPay = localStorage.getItem("certitude_payment_selection");
-        if (storedPay) setSelectedPayment(storedPay);
+        if (storedPay) {
+          const parsedPay = storedPay;
+          // Ensure we don't restore deprecated "razorpay" payment method
+          if (parsedPay === "razorpay") {
+            setSelectedPayment("credit");
+          } else {
+            setSelectedPayment(parsedPay);
+          }
+        }
 
         const storedPromo = localStorage.getItem("certitude_applied_promo");
         if (storedPromo) {
@@ -123,23 +128,28 @@ export default function CheckoutPage() {
     }
 
     setErrors(errs);
-    return Object.keys(errs).length === 0;
+    const isValid = Object.keys(errs).length === 0;
+    if (!isValid) {
+      window.scrollTo({ top: 100, behavior: "smooth" });
+    }
+    return isValid;
   };
 
   /**
    * Finalises the order: saves to localStorage, clears cart, redirects.
-   * Called by both the Razorpay success handler and the simulated payment path.
+   * Called by both the payment success handler and the simulated COD path.
    */
-  const finaliseOrder = (orderId: string, razorpayPaymentId?: string) => {
+  const finaliseOrder = (orderId: string, transactionId?: string, paymentTimestamp?: string) => {
     const payload = buildOrderPayload({
       orderId,
+      transactionId,
+      paymentTimestamp,
       cartItems,
       address,
       deliveryOption: selectedDelivery,
       deliveryFee,
       selectedPayment,
       discountPercent,
-      razorpayPaymentId,
     });
 
     localStorage.setItem("certitude_last_order", JSON.stringify(payload));
@@ -153,38 +163,27 @@ export default function CheckoutPage() {
     }, 1500);
   };
 
-  // ─── Razorpay success / failure callbacks ─────────────────────────────────
-  const handleRazorpaySuccess = (paymentId: string) => {
-    setShowRazorpayButton(false);
+  // ─── Payment success / failure callbacks ─────────────────────────────────
+  const handlePaymentSuccess = (details: { transactionId: string; orderId: string; timestamp: string }) => {
     setPaymentError(null);
-    const orderId = generateOrderId();
-    finaliseOrder(orderId, paymentId);
+    finaliseOrder(details.orderId, details.transactionId, details.timestamp);
   };
 
-  const handleRazorpayFailure = (error: string) => {
-    setShowRazorpayButton(false);
+  const handlePaymentFailure = (error: string) => {
     setPaymentError(error);
   };
 
-  // ─── Primary "Place Order" handler ───────────────────────────────────────
+  // ─── Primary COD "Place Order" handler ───────────────────────────────────
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
-      window.scrollTo({ top: 100, behavior: "smooth" });
       return;
     }
 
     setPaymentError(null);
 
-    // ── Razorpay path ──────────────────────────────────────────────────────
-    if (selectedPayment === "razorpay") {
-      // Show the RazorpayButton and trigger it programmatically via state
-      setShowRazorpayButton(true);
-      return;
-    }
-
-    // ── Legacy simulation path (all other payment methods) ─────────────────
+    // Cash on Delivery - Skip payment processing and place order immediately
     setIsPlacing(true);
 
     setTimeout(() => {
@@ -283,28 +282,26 @@ export default function CheckoutPage() {
               />
             )}
 
-            {/* Razorpay payment button — shown after form validation passes */}
-            {showRazorpayButton && selectedPayment === "razorpay" ? (
+            {/* Simulated Payment Gateway Button for all online methods */}
+            {selectedPayment !== "cod" ? (
               <RazorpayButton
                 amountInRupees={grandTotal}
                 customerName={`${address.firstName} ${address.lastName}`.trim()}
                 customerEmail={address.email}
                 customerPhone={address.phone}
-                onSuccess={handleRazorpaySuccess}
-                onFailure={handleRazorpayFailure}
+                beforePay={validateForm}
+                onSuccess={handlePaymentSuccess}
+                onFailure={handlePaymentFailure}
+                disabled={isPlacing || isSuccess}
               />
             ) : (
-              /* Standard Place Order button (all non-Razorpay methods + pre-validation) */
+              /* Place Order button (Cash on Delivery path) */
               <button
                 type="submit"
                 disabled={isPlacing || isSuccess}
-                className="w-full rounded-full bg-stone-900 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-stone-800 transition-colors shadow-md h-12 flex items-center justify-center cursor-pointer disabled:opacity-50"
+                className="w-full rounded-full bg-stone-900 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-stone-850 transition-colors shadow-md h-12 flex items-center justify-center cursor-pointer disabled:opacity-50"
               >
-                {isPlacing
-                  ? "Processing..."
-                  : selectedPayment === "razorpay"
-                  ? "Continue to Payment"
-                  : "Place Order"}
+                {isPlacing ? "Processing Order..." : "Place Order"}
               </button>
             )}
 
@@ -315,10 +312,10 @@ export default function CheckoutPage() {
               Back to Cart
             </Link>
 
-            {/* Razorpay test mode notice */}
-            {selectedPayment === "razorpay" && (
+            {/* Test mode notice */}
+            {selectedPayment !== "cod" && (
               <p className="text-center text-[10px] text-stone-400 font-light leading-relaxed pt-1">
-                🔒 Secured by Razorpay · TEST MODE · No real money charged
+                🔒 Secured Simulated payment gateway · No real money charged
               </p>
             )}
           </div>

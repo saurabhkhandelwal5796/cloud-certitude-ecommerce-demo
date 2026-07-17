@@ -16,7 +16,6 @@ export const PAYMENT_OPTIONS: PaymentOptionType[] = [
   { id: "upi", name: "UPI (GPay / PhonePe)", icon: "📱" },
   { id: "netbanking", name: "Net Banking", icon: "🏦" },
   { id: "cod", name: "Cash on Delivery", icon: "💵" },
-  { id: "razorpay", name: "Razorpay", icon: "🔒", isFeatured: true },
 ];
 
 interface PaymentSelectorProps {

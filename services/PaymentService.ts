@@ -1,36 +1,58 @@
 /**
  * PaymentService.ts
  *
- * Pure TypeScript service module for Razorpay TEST MODE integration.
- * Contains no React dependencies — safe to call from any component or context.
+ * Pure TypeScript service module for simulated payment processing.
+ * Contains no external dependencies.
  *
  * Exports:
- *   - generateOrderId()         → CC-XXXXXXXX style order IDs
+ *   - generateOrderId()         → ORD-YYYYMMDD-XXXXX style order IDs
+ *   - generateTransactionId()   → TXN-YYYYMMDD-XXXXX style transaction IDs
+ *   - generatePaymentTimestamp()→ human-readable transaction timestamp
  *   - computeDeliveryDate()     → human-readable estimated delivery string
- *   - loadRazorpayScript()      → dynamically injects the Razorpay CDN script
- *   - openRazorpayCheckout()    → opens the Razorpay modal and returns a Promise
+ *   - buildOrderPayload(...)    → packages the order payload for localStorage
  */
 
 import type { CartItemType } from "@/context/CartContext";
 import type { AddressType } from "@/components/ui/ShippingForm";
 
-// ---------------------------------------------------------------------------
-// Order ID generator
-// ---------------------------------------------------------------------------
-
 /**
- * Generates a unique order ID in the format CC-XXXXXXXX.
- * Prefixed with "CC" for Cloud Certitude.
+ * Generates an Order ID in the format ORD-YYYYMMDD-XXXXX.
  */
 export function generateOrderId(): string {
-  const timestamp = Date.now().toString(36).toUpperCase();
-  const random = Math.floor(100000 + Math.random() * 900000).toString();
-  return `CC-${timestamp}${random.slice(0, 4)}`;
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const random = Math.floor(10000 + Math.random() * 90000).toString();
+  return `ORD-${yyyy}${mm}${dd}-${random}`;
 }
 
-// ---------------------------------------------------------------------------
-// Delivery date calculator
-// ---------------------------------------------------------------------------
+/**
+ * Generates a Transaction ID in the format TXN-YYYYMMDD-XXXXX.
+ */
+export function generateTransactionId(): string {
+  const date = new Date();
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, '0');
+  const dd = String(date.getDate()).padStart(2, '0');
+  const random = Math.floor(10000 + Math.random() * 90000).toString();
+  return `TXN-${yyyy}${mm}${dd}-${random}`;
+}
+
+/**
+ * Generates a formatted payment timestamp.
+ * Example: "Jul 17, 2026, 10:45 AM"
+ */
+export function generatePaymentTimestamp(): string {
+  return new Date().toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
 
 /**
  * Computes a human-readable estimated delivery string based on delivery option.
@@ -52,16 +74,13 @@ export function computeDeliveryDate(deliveryOption: string): string {
   });
 }
 
-// ---------------------------------------------------------------------------
-// Order payload builder
-// ---------------------------------------------------------------------------
-
 export interface OrderPayload {
   orderId: string;
+  transactionId?: string;
+  paymentTimestamp?: string;
   deliveryDate: string;
   address: AddressType;
   paymentMethod: string;
-  razorpayPaymentId?: string;
   itemsCount: number;
   items: Array<{
     name: string;
@@ -80,27 +99,29 @@ export interface OrderPayload {
 }
 
 /**
- * Builds the complete order payload for localStorage storage.
+ * Builds the complete order payload for localStorage.
  */
 export function buildOrderPayload(params: {
   orderId: string;
+  transactionId?: string;
+  paymentTimestamp?: string;
   cartItems: CartItemType[];
   address: AddressType;
   deliveryOption: string;
   deliveryFee: number;
   selectedPayment: string;
   discountPercent: number;
-  razorpayPaymentId?: string;
 }): OrderPayload {
   const {
     orderId,
+    transactionId,
+    paymentTimestamp,
     cartItems,
     address,
     deliveryOption,
     deliveryFee,
     selectedPayment,
     discountPercent,
-    razorpayPaymentId,
   } = params;
 
   const subtotal = cartItems.reduce(
@@ -119,10 +140,11 @@ export function buildOrderPayload(params: {
 
   return {
     orderId,
+    transactionId,
+    paymentTimestamp,
     deliveryDate: computeDeliveryDate(deliveryOption),
     address,
     paymentMethod: selectedPayment,
-    razorpayPaymentId,
     itemsCount: cartItems.length,
     items: cartItems.map((item) => ({
       name: item.name,
@@ -139,141 +161,4 @@ export function buildOrderPayload(params: {
       grandTotal,
     },
   };
-}
-
-// ---------------------------------------------------------------------------
-// Razorpay script loader
-// ---------------------------------------------------------------------------
-
-const RAZORPAY_SCRIPT_URL = "https://checkout.razorpay.com/v1/checkout.js";
-
-/**
- * Dynamically injects the Razorpay Checkout script into the document.
- * Resolves to true if the script loaded successfully, false otherwise.
- * Safe to call multiple times — will not duplicate the script tag.
- */
-export function loadRazorpayScript(): Promise<boolean> {
-  return new Promise((resolve) => {
-    // Already loaded
-    if (typeof window !== "undefined" && window.Razorpay) {
-      resolve(true);
-      return;
-    }
-
-    // Check if script tag already exists (e.g. still loading)
-    const existingScript = document.querySelector(
-      `script[src="${RAZORPAY_SCRIPT_URL}"]`
-    );
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(true));
-      existingScript.addEventListener("error", () => resolve(false));
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = RAZORPAY_SCRIPT_URL;
-    script.async = true;
-    script.onload = () => resolve(true);
-    script.onerror = () => resolve(false);
-    document.body.appendChild(script);
-  });
-}
-
-// ---------------------------------------------------------------------------
-// Razorpay checkout opener
-// ---------------------------------------------------------------------------
-
-export interface RazorpayCheckoutParams {
-  /** Razorpay Key ID — from NEXT_PUBLIC_RAZORPAY_KEY_ID */
-  keyId: string;
-  /** Grand total in INR (will be converted to paise: × 100) */
-  amountInRupees: number;
-  /** Pre-fill customer name */
-  customerName: string;
-  /** Pre-fill customer email */
-  customerEmail: string;
-  /** Pre-fill customer phone */
-  customerPhone: string;
-  /** Pre-created Razorpay order ID from backend (optional) */
-  razorpayOrderId?: string;
-}
-
-export interface RazorpayCheckoutResult {
-  success: true;
-  paymentId: string;
-}
-
-export interface RazorpayCheckoutFailure {
-  success: false;
-  error: string;
-}
-
-/**
- * Opens the Razorpay payment modal.
- * Returns a Promise that resolves when the modal is closed (success or failure).
- *
- * In TEST MODE:
- *   - Use test cards:  4111 1111 1111 1111  (Visa success)
- *                      5104 0600 0000 0008  (Mastercard success)
- *   - Use test UPI:    success@razorpay     (success)
- *                      failure@razorpay     (failure)
- */
-export function openRazorpayCheckout(
-  params: RazorpayCheckoutParams
-): Promise<RazorpayCheckoutResult | RazorpayCheckoutFailure> {
-  return new Promise((resolve) => {
-    if (typeof window === "undefined" || !window.Razorpay) {
-      resolve({ success: false, error: "Razorpay SDK not loaded." });
-      return;
-    }
-
-    const options: RazorpayOptions = {
-      key: params.keyId,
-      // Razorpay expects amount in paise (1 INR = 100 paise)
-      amount: Math.round(params.amountInRupees * 100),
-      currency: "INR",
-      name: "Cloud Certitude Fashion",
-      description: "Premium Fashion — TEST MODE",
-      order_id: params.razorpayOrderId,
-      prefill: {
-        name: params.customerName,
-        email: params.customerEmail,
-        contact: params.customerPhone,
-      },
-      theme: {
-        color: "#E0A99E",
-      },
-      modal: {
-        confirm_close: true,
-        ondismiss: () => {
-          resolve({
-            success: false,
-            error: "Payment was cancelled. Please try again.",
-          });
-        },
-      },
-      handler: (response: RazorpayPaymentResponse) => {
-        resolve({
-          success: true,
-          paymentId: response.razorpay_payment_id,
-        });
-      },
-    };
-
-    try {
-      const rzp = new window.Razorpay(options);
-      rzp.on("payment.failed", () => {
-        resolve({
-          success: false,
-          error: "Payment Failed. Please try again.",
-        });
-      });
-      rzp.open();
-    } catch (err) {
-      resolve({
-        success: false,
-        error: err instanceof Error ? err.message : "Unexpected payment error.",
-      });
-    }
-  });
 }

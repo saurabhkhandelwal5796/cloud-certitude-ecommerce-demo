@@ -11,6 +11,8 @@ interface OrderDetailType {
   address: AddressType;
   paymentMethod: string;
   razorpayPaymentId?: string;
+  transactionId?: string;
+  paymentTimestamp?: string;
   itemsCount: number;
   items: Array<{
     name: string;
@@ -143,7 +145,18 @@ export default function OrderConfirmationPage() {
               <p className="text-stone-600 font-light mt-1">
                 Method: <strong className="font-semibold text-stone-850">{formatPaymentName(order.paymentMethod)}</strong>
               </p>
-              {order.razorpayPaymentId && (
+              {order.transactionId && (
+                <p className="text-stone-500 font-light text-[10px] mt-1 break-all">
+                  Transaction ID:{" "}
+                  <span className="font-mono text-stone-700 select-all">{order.transactionId}</span>
+                </p>
+              )}
+              {order.paymentTimestamp && (
+                <p className="text-stone-500 font-light text-[10px] mt-0.5">
+                  Paid On: <span className="text-stone-700">{order.paymentTimestamp}</span>
+                </p>
+              )}
+              {order.razorpayPaymentId && !order.transactionId && (
                 <p className="text-stone-500 font-light text-[10px] mt-1 break-all">
                   Payment ID:{" "}
                   <span className="font-mono text-stone-700 select-all">{order.razorpayPaymentId}</span>
