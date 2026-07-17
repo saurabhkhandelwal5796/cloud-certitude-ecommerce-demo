@@ -10,6 +10,7 @@ interface OrderDetailType {
   deliveryDate: string;
   address: AddressType;
   paymentMethod: string;
+  razorpayPaymentId?: string;
   itemsCount: number;
   items: Array<{
     name: string;
@@ -21,6 +22,7 @@ interface OrderDetailType {
   totals: {
     subtotal: number;
     shipping: number;
+    tax?: number;
     discountPercent: number;
     grandTotal: number;
   };
@@ -66,12 +68,13 @@ export default function OrderConfirmationPage() {
     );
   }
 
-  // Format Payment ID string
+  // Format Payment method display name
   const formatPaymentName = (method: string) => {
     if (method === "credit") return "Credit Card";
     if (method === "debit") return "Debit Card";
     if (method === "upi") return "UPI Payments";
     if (method === "netbanking") return "Net Banking";
+    if (method === "razorpay") return "Razorpay (Test)";
     return "Cash on Delivery";
   };
 
@@ -140,6 +143,12 @@ export default function OrderConfirmationPage() {
               <p className="text-stone-600 font-light mt-1">
                 Method: <strong className="font-semibold text-stone-850">{formatPaymentName(order.paymentMethod)}</strong>
               </p>
+              {order.razorpayPaymentId && (
+                <p className="text-stone-500 font-light text-[10px] mt-1 break-all">
+                  Payment ID:{" "}
+                  <span className="font-mono text-stone-700 select-all">{order.razorpayPaymentId}</span>
+                </p>
+              )}
             </div>
 
             {/* Calculations summaries */}

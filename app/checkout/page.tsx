@@ -9,7 +9,14 @@ import DeliveryOptions, { DELIVERY_OPTIONS } from "@/components/ui/DeliveryOptio
 import PaymentSelector from "@/components/ui/PaymentSelector";
 import PromoCode from "@/components/ui/PromoCode";
 import OrderSummary from "@/components/ui/OrderSummary";
+import RazorpayButton from "@/components/ui/RazorpayButton";
+import PaymentFailure from "@/components/ui/PaymentFailure";
+import PaymentSuccess from "@/components/ui/PaymentSuccess";
 import { isValidEmail } from "@/utils";
+import {
+  generateOrderId,
+  buildOrderPayload,
+} from "@/services/PaymentService";
 
 const DEFAULT_ADDRESS: AddressType = {
   firstName: "",
@@ -28,13 +35,16 @@ const DEFAULT_ADDRESS: AddressType = {
  * CheckoutPage Component
  *
  * Coordinates shipping forms, delivery selections, payment methods, and promo calculations.
- * Validates fields on submit, clears the cart, and redirects to the confirmation view.
+ * Validates fields on submit, then either:
+ *   - Opens the Razorpay modal (if Razorpay is selected)
+ *   - Simulates payment (for all other payment methods — existing behaviour preserved)
+ * Stores the order in localStorage and redirects to /order-confirmation on success.
  */
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, clearCart } = useCart();
+  const { cartItems, cartSubtotal, clearCart } = useCart();
 
-  // State
+  // ─── State ────────────────────────────────────────────────────────────────
   const [address, setAddress] = useState<AddressType>(DEFAULT_ADDRESS);
   const [selectedDelivery, setSelectedDelivery] = useState("standard");
   const [selectedPayment, setSelectedPayment] = useState("credit");
@@ -44,23 +54,25 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof AddressType, string>>>({});
   const [isPlacing, setIsPlacing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [successOrderId, setSuccessOrderId] = useState("");
 
-  // 1. Safe hydration mount loader from localStorage
+  // Razorpay-specific state
+  const [showRazorpayButton, setShowRazorpayButton] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+
+  // ─── Load persisted checkout settings ────────────────────────────────────
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const storedAddr = localStorage.getItem("certitude_shipping_address");
-        if (storedAddr) {
-          setAddress(JSON.parse(storedAddr));
-        }
+        if (storedAddr) setAddress(JSON.parse(storedAddr));
+
         const storedDel = localStorage.getItem("certitude_delivery_option");
-        if (storedDel) {
-          setSelectedDelivery(storedDel);
-        }
+        if (storedDel) setSelectedDelivery(storedDel);
+
         const storedPay = localStorage.getItem("certitude_payment_selection");
-        if (storedPay) {
-          setSelectedPayment(storedPay);
-        }
+        if (storedPay) setSelectedPayment(storedPay);
+
         const storedPromo = localStorage.getItem("certitude_applied_promo");
         if (storedPromo) {
           const parsed = JSON.parse(storedPromo);
@@ -75,15 +87,18 @@ export default function CheckoutPage() {
     loadSettings();
   }, []);
 
-  // Compute active delivery fee
+  // ─── Helpers ──────────────────────────────────────────────────────────────
   const deliveryFee = DELIVERY_OPTIONS.find((o) => o.id === selectedDelivery)?.price || 0;
+  const tax = cartSubtotal * 0.08;
+  const discountAmount = cartSubtotal * (discountPercent / 100);
+  const grandTotal = cartSubtotal + tax + deliveryFee - discountAmount;
 
   const validateForm = (): boolean => {
     const errs: Partial<Record<keyof AddressType, string>> = {};
 
     if (!address.firstName.trim()) errs.firstName = "First name is required.";
     if (!address.lastName.trim()) errs.lastName = "Last name is required.";
-    
+
     if (!address.email.trim()) {
       errs.email = "Email address is required.";
     } else if (!isValidEmail(address.email)) {
@@ -111,74 +126,75 @@ export default function CheckoutPage() {
     return Object.keys(errs).length === 0;
   };
 
+  /**
+   * Finalises the order: saves to localStorage, clears cart, redirects.
+   * Called by both the Razorpay success handler and the simulated payment path.
+   */
+  const finaliseOrder = (orderId: string, razorpayPaymentId?: string) => {
+    const payload = buildOrderPayload({
+      orderId,
+      cartItems,
+      address,
+      deliveryOption: selectedDelivery,
+      deliveryFee,
+      selectedPayment,
+      discountPercent,
+      razorpayPaymentId,
+    });
+
+    localStorage.setItem("certitude_last_order", JSON.stringify(payload));
+    clearCart();
+
+    setSuccessOrderId(orderId);
+    setIsSuccess(true);
+
+    setTimeout(() => {
+      router.push("/order-confirmation");
+    }, 1500);
+  };
+
+  // ─── Razorpay success / failure callbacks ─────────────────────────────────
+  const handleRazorpaySuccess = (paymentId: string) => {
+    setShowRazorpayButton(false);
+    setPaymentError(null);
+    const orderId = generateOrderId();
+    finaliseOrder(orderId, paymentId);
+  };
+
+  const handleRazorpayFailure = (error: string) => {
+    setShowRazorpayButton(false);
+    setPaymentError(error);
+  };
+
+  // ─── Primary "Place Order" handler ───────────────────────────────────────
   const handlePlaceOrder = (e: React.FormEvent) => {
     e.preventDefault();
+
     if (!validateForm()) {
-      // Scroll to errors
       window.scrollTo({ top: 100, behavior: "smooth" });
       return;
     }
 
+    setPaymentError(null);
+
+    // ── Razorpay path ──────────────────────────────────────────────────────
+    if (selectedPayment === "razorpay") {
+      // Show the RazorpayButton and trigger it programmatically via state
+      setShowRazorpayButton(true);
+      return;
+    }
+
+    // ── Legacy simulation path (all other payment methods) ─────────────────
     setIsPlacing(true);
 
-    // Simulate order placement
     setTimeout(() => {
       setIsPlacing(false);
-      setIsSuccess(true);
-
-      // Generate order detail payload
-      const orderId = `CC-${Math.floor(100000 + Math.random() * 900000)}`;
-      // Calculate timeframe
-      const deliveryDate = new Date();
-      if (selectedDelivery === "sameday") {
-        // Today
-      } else if (selectedDelivery === "express") {
-        deliveryDate.setDate(deliveryDate.getDate() + 2);
-      } else {
-        deliveryDate.setDate(deliveryDate.getDate() + 5);
-      }
-
-      const formattedDeliveryDate = deliveryDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      });
-
-      const orderPayload = {
-        orderId,
-        deliveryDate: selectedDelivery === "sameday" ? "Today by 9 PM" : formattedDeliveryDate,
-        address,
-        paymentMethod: selectedPayment,
-        itemsCount: cartItems.length,
-        items: cartItems.map(item => ({
-          name: item.name,
-          quantity: item.quantity,
-          size: item.selectedSize,
-          color: item.selectedColor,
-          price: item.price,
-        })),
-        totals: {
-          subtotal: cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0),
-          shipping: deliveryFee,
-          discountPercent,
-          grandTotal: cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0) + (cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0) * 0.08) + deliveryFee - (cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0) * (discountPercent / 100)),
-        }
-      };
-
-      // Save order to localStorage so the confirmation page can display it
-      localStorage.setItem("certitude_last_order", JSON.stringify(orderPayload));
-
-      // Clear the global shopping bag
-      clearCart();
-
-      // Route to confirmation sheet
-      setTimeout(() => {
-        router.push("/order-confirmation");
-      }, 1500);
+      const orderId = generateOrderId();
+      finaliseOrder(orderId);
     }, 1200);
   };
 
-  // If cart is empty, redirect back to cart
+  // ─── Empty cart guard ─────────────────────────────────────────────────────
   if (cartItems.length === 0 && !isSuccess) {
     return (
       <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 bg-[#FAF9F6] text-center">
@@ -198,24 +214,11 @@ export default function CheckoutPage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-[#FAF9F6] text-stone-800 relative">
-      {/* Success Loading Screen */}
-      {isSuccess && (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md transition-all duration-300">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-500 mb-6 scale-110 animate-bounce">
-            <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-black text-stone-900 uppercase tracking-wide">
-            Order Placed Successfully!
-          </h2>
-          <p className="mt-2 text-xs text-stone-500 font-light leading-relaxed">
-            Redirecting to order confirmation page...
-          </p>
-        </div>
-      )}
 
-      {/* Title */}
+      {/* ── Payment Success Overlay ────────────────────────────────────────── */}
+      {isSuccess && <PaymentSuccess orderId={successOrderId} />}
+
+      {/* ── Page Title ────────────────────────────────────────────────────── */}
       <div className="border-b border-stone-200/50 pb-6 mb-8 text-left">
         <h1 className="text-2xl md:text-3xl font-black text-stone-900 tracking-wider uppercase">
           Checkout
@@ -225,10 +228,12 @@ export default function CheckoutPage() {
         </p>
       </div>
 
-      {/* Main Grid: Form Sections + Sidebar */}
+      {/* ── Main Grid ─────────────────────────────────────────────────────── */}
       <form onSubmit={handlePlaceOrder} className="flex flex-col lg:flex-row gap-8 items-start">
-        {/* Left Column: Form Sheets (takes 2/3 of desktop width) */}
+
+        {/* Left Column: Form Sections */}
         <div className="w-full lg:w-2/3 space-y-10">
+
           {/* Section 1: Shipping Address */}
           <div className="rounded-2xl border border-stone-200/50 bg-white p-6 shadow-sm">
             <ShippingForm address={address} setAddress={setAddress} errors={errors} />
@@ -245,9 +250,10 @@ export default function CheckoutPage() {
           </div>
         </div>
 
-        {/* Right Column: Order Summary Sidebar (takes 1/3 of desktop width) */}
+        {/* Right Column: Order Summary Sidebar */}
         <div className="w-full lg:w-1/3 lg:sticky lg:top-24 space-y-6">
-          {/* Summary Details */}
+
+          {/* Summary + Promo */}
           <div className="rounded-2xl border border-stone-200/50 bg-white p-6 shadow-sm">
             <OrderSummary
               deliveryFee={deliveryFee}
@@ -257,7 +263,6 @@ export default function CheckoutPage() {
 
             <hr className="border-stone-105 my-6" />
 
-            {/* Promo Code section */}
             <PromoCode
               discountPercent={discountPercent}
               setDiscountPercent={setDiscountPercent}
@@ -270,13 +275,38 @@ export default function CheckoutPage() {
 
           {/* Actions */}
           <div className="space-y-3">
-            <button
-              type="submit"
-              disabled={isPlacing || isSuccess}
-              className="w-full rounded-full bg-stone-900 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-stone-800 transition-colors shadow-md h-12 flex items-center justify-center cursor-pointer disabled:opacity-50"
-            >
-              {isPlacing ? "Processing..." : "Place Order"}
-            </button>
+            {/* Payment failure banner */}
+            {paymentError && (
+              <PaymentFailure
+                message={paymentError}
+                onDismiss={() => setPaymentError(null)}
+              />
+            )}
+
+            {/* Razorpay payment button — shown after form validation passes */}
+            {showRazorpayButton && selectedPayment === "razorpay" ? (
+              <RazorpayButton
+                amountInRupees={grandTotal}
+                customerName={`${address.firstName} ${address.lastName}`.trim()}
+                customerEmail={address.email}
+                customerPhone={address.phone}
+                onSuccess={handleRazorpaySuccess}
+                onFailure={handleRazorpayFailure}
+              />
+            ) : (
+              /* Standard Place Order button (all non-Razorpay methods + pre-validation) */
+              <button
+                type="submit"
+                disabled={isPlacing || isSuccess}
+                className="w-full rounded-full bg-stone-900 py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-stone-800 transition-colors shadow-md h-12 flex items-center justify-center cursor-pointer disabled:opacity-50"
+              >
+                {isPlacing
+                  ? "Processing..."
+                  : selectedPayment === "razorpay"
+                  ? "Continue to Payment"
+                  : "Place Order"}
+              </button>
+            )}
 
             <Link
               href="/cart"
@@ -284,6 +314,13 @@ export default function CheckoutPage() {
             >
               Back to Cart
             </Link>
+
+            {/* Razorpay test mode notice */}
+            {selectedPayment === "razorpay" && (
+              <p className="text-center text-[10px] text-stone-400 font-light leading-relaxed pt-1">
+                🔒 Secured by Razorpay · TEST MODE · No real money charged
+              </p>
+            )}
           </div>
         </div>
       </form>

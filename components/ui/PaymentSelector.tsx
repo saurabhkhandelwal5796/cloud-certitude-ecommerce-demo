@@ -6,6 +6,7 @@ export interface PaymentOptionType {
   id: string;
   name: string;
   comingSoon?: boolean;
+  isFeatured?: boolean;
   icon: string;
 }
 
@@ -15,7 +16,7 @@ export const PAYMENT_OPTIONS: PaymentOptionType[] = [
   { id: "upi", name: "UPI (GPay / PhonePe)", icon: "📱" },
   { id: "netbanking", name: "Net Banking", icon: "🏦" },
   { id: "cod", name: "Cash on Delivery", icon: "💵" },
-  { id: "razorpay", name: "Razorpay", comingSoon: true, icon: "🚀" },
+  { id: "razorpay", name: "Razorpay", icon: "🔒", isFeatured: true },
 ];
 
 interface PaymentSelectorProps {
@@ -69,6 +70,11 @@ export default function PaymentSelector({ selectedPayment, setSelectedPayment }:
                   {disabled && (
                     <span className="block text-[8px] font-extrabold text-[#E0A99E] uppercase tracking-widest mt-0.5">
                       Coming Soon
+                    </span>
+                  )}
+                  {pay.isFeatured && (
+                    <span className="block text-[8px] font-extrabold text-emerald-600 uppercase tracking-widest mt-0.5">
+                      ✓ Secure · Test Mode
                     </span>
                   )}
                 </div>
