@@ -17,6 +17,7 @@ import {
   generateOrderId,
   buildOrderPayload,
 } from "@/services/PaymentService";
+import { registerNewCheckoutOrder } from "@/services/AdminService";
 
 const DEFAULT_ADDRESS: AddressType = {
   firstName: "",
@@ -153,6 +154,17 @@ export default function CheckoutPage() {
     });
 
     localStorage.setItem("certitude_last_order", JSON.stringify(payload));
+    
+    // Sync with Admin Dashboard
+    registerNewCheckoutOrder({
+      orderId,
+      customerName: `${address.firstName} ${address.lastName}`.trim(),
+      customerEmail: address.email,
+      total: grandTotal,
+      itemsCount: cartItems.length,
+      paymentMethod: selectedPayment,
+    });
+
     clearCart();
 
     setSuccessOrderId(orderId);
