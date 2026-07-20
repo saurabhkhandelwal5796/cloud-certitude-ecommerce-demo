@@ -62,7 +62,8 @@ export default function AdminUsersPage() {
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from("profiles")
-      .update({ status: newStatus })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update({ status: newStatus } as any)
       .eq("id", userId);
 
     if (error) {
