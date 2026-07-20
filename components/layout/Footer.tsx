@@ -56,11 +56,11 @@ export default function Footer() {
                 </h3>
                 <ul role="list" className="mt-4 space-y-3">
                   {[
-                    { name: "Men's Collection", href: "#men" },
-                    { name: "Women's Collection", href: "#women" },
-                    { name: "Kids' Collection", href: "#kids" },
-                    { name: "New Arrivals", href: "#new-arrivals" },
-                    { name: "Sales & Discounts", href: "#sale" },
+                    { name: "Men's Collection", href: "/men" },
+                    { name: "Women's Collection", href: "/women" },
+                    { name: "Kids' Collection", href: "/kids" },
+                    { name: "New Arrivals", href: "/new-arrivals" },
+                    { name: "Sales & Discounts", href: "/sale" },
                   ].map((item) => (
                     <li key={item.name}>
                       <a href={item.href} className="text-sm text-stone-600 hover:text-[#C68B7D] transition-colors font-light">
