@@ -11,6 +11,7 @@
  */
 
 import type { AddressType } from "@/components/ui/ShippingForm";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export interface AdminProduct {
   id: string;
@@ -396,10 +397,75 @@ export async function deleteProduct(id: string): Promise<boolean> {
   return true;
 }
 
-/**
- * Returns all orders.
- */
+interface CustomSupabaseClient {
+  from: (table: string) => {
+    insert: (data: Record<string, unknown>) => {
+      then: (callback: (result: { error: { message: string } | null }) => void) => void;
+    };
+    select: (columns?: string) => {
+      order: (column: string, options: { ascending: boolean }) => Promise<{
+        error: { message: string } | null;
+        data: Record<string, unknown>[] | null;
+      }>;
+    };
+  };
+  auth: {
+    getUser: () => Promise<{ data: { user: { id: string; email?: string } | null } }>;
+  };
+}
+
 export async function getOrders(): Promise<AdminOrder[]> {
+  if (isBrowser) {
+    try {
+      const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+      const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      if (!error && data && data.length > 0) {
+        const mappedOrders: AdminOrder[] = data.map((row: Record<string, unknown>) => {
+          const orderIdVal = (row.order_id as string) || (row.id as string);
+          const customerEmailVal = (row.customer_email as string) || "";
+          const customerNameVal = (row.customer_name as string) || customerEmailVal.split('@')[0] || "Customer";
+          const paymentMethodVal = (row.payment_method as string) || "Credit Card";
+          const totalVal = Number(row.total_amount);
+          const statusStr = (row.status as string) || "Pending";
+          const statusVal = (statusStr.charAt(0).toUpperCase() + statusStr.slice(1)) as AdminOrder["status"];
+          const addressVal = row.shipping_address as unknown as AddressType;
+          const itemsVal = row.items as unknown as AdminOrder["items"];
+          
+          return {
+            orderId: orderIdVal,
+            customerName: customerNameVal,
+            customerEmail: customerEmailVal,
+            orderDate: row.created_at ? new Date(row.created_at as string).toLocaleString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
+            }) : new Date().toLocaleString(),
+            paymentMethod: paymentMethodVal,
+            status: statusVal,
+            total: totalVal,
+            itemsCount: itemsVal?.length || 0,
+            address: addressVal,
+            items: itemsVal,
+          };
+        });
+        
+        const localOrders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
+        const merged = [...mappedOrders];
+        localOrders.forEach(lo => {
+          if (!merged.some(mo => mo.orderId === lo.orderId)) {
+            merged.push(lo);
+          }
+        });
+        setLocalStorageItem("certitude_admin_orders", merged);
+        return merged;
+      }
+    } catch (err) {
+      console.error("[AdminService] Supabase fetch orders error:", err);
+    }
+  }
   return getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
 }
 
@@ -492,9 +558,6 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   };
 }
 
-/**
- * Syncs a newly placed order from checkout page into the admin store.
- */
 export function registerNewCheckoutOrder(params: {
   orderId: string;
   customerName: string;
@@ -510,6 +573,11 @@ export function registerNewCheckoutOrder(params: {
   const orders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
   const customers = getLocalStorageItem<AdminCustomer[]>("certitude_admin_customers", INITIAL_CUSTOMERS);
 
+  const formattedPayment = params.paymentMethod === "credit" ? "Credit Card" :
+                           params.paymentMethod === "debit" ? "Debit Card" :
+                           params.paymentMethod === "upi" ? "UPI Payments" :
+                           params.paymentMethod === "netbanking" ? "Net Banking" : "Cash on Delivery";
+
   // 1. Add new order
   const newOrder: AdminOrder = {
     orderId: params.orderId,
@@ -523,10 +591,7 @@ export function registerNewCheckoutOrder(params: {
       minute: "2-digit",
       hour12: true,
     }),
-    paymentMethod: params.paymentMethod === "credit" ? "Credit Card" :
-                   params.paymentMethod === "debit" ? "Debit Card" :
-                   params.paymentMethod === "upi" ? "UPI Payments" :
-                   params.paymentMethod === "netbanking" ? "Net Banking" : "Cash on Delivery",
+    paymentMethod: formattedPayment,
     status: "Pending",
     total: params.total,
     itemsCount: params.itemsCount,
@@ -537,13 +602,40 @@ export function registerNewCheckoutOrder(params: {
   orders.unshift(newOrder); // Add to top
   setLocalStorageItem("certitude_admin_orders", orders);
 
-  console.log("[AdminService] Order registered:", {
+  console.log("[AdminService] Order registered locally:", {
     orderId: newOrder.orderId,
     customerEmail: newOrder.customerEmail,
     total: newOrder.total,
     status: newOrder.status,
     totalOrdersNow: orders.length,
   });
+
+  // Attempt to write to Supabase if it's configured
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user) {
+        supabase.from('orders').insert({
+          order_id: params.orderId,
+          user_id: user.id,
+          customer_email: params.customerEmail,
+          items: params.items as unknown as Record<string, unknown>[],
+          total_amount: params.total,
+          status: "pending",
+          payment_method: formattedPayment,
+          shipping_address: params.address as unknown as Record<string, unknown>,
+        }).then(({ error }) => {
+          if (error) {
+            console.error("[AdminService] Supabase order insert error:", error);
+          } else {
+            console.log("[AdminService] Supabase order insert success");
+          }
+        });
+      }
+    });
+  } catch (err) {
+    console.error("[AdminService] Supabase operation failed:", err);
+  }
 
   // 2. Add or update Customer
   const custIndex = customers.findIndex((c) => c.email.toLowerCase() === params.customerEmail.toLowerCase());
@@ -572,6 +664,180 @@ export async function getOrdersByCustomerEmail(email: string): Promise<AdminOrde
   const matched = orders.filter((o) => o.customerEmail.toLowerCase() === email.toLowerCase());
   console.log(`[AdminService] getOrdersByCustomerEmail("${email}"): ${matched.length} of ${orders.length} orders matched`);
   return matched;
+}
+
+/**
+ * Seeds historical orders for a user email if they don't have any orders yet.
+ */
+export async function seedMissingHistoricalOrders(email: string): Promise<void> {
+  if (!isBrowser) return;
+
+  const orders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
+  const userOrders = orders.filter(o => o.customerEmail.toLowerCase() === email.toLowerCase());
+
+  if (userOrders.length === 0) {
+    console.log(`[AdminService] Seeding mock historical orders for: ${email}`);
+    
+    const mockOrders: AdminOrder[] = [
+      {
+        orderId: `ORD-${new Date().getFullYear()}0715-49271`,
+        customerName: email.split("@")[0],
+        customerEmail: email,
+        orderDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }),
+        paymentMethod: "Credit Card",
+        status: "Delivered",
+        total: 619,
+        itemsCount: 2,
+        address: {
+          firstName: "Saurabh",
+          lastName: "Khandelwal",
+          email: email,
+          phone: "9876543210",
+          addressLine1: "123 luxury lane",
+          addressLine2: "Atelier Suite 4",
+          city: "New Delhi",
+          state: "Delhi",
+          country: "India",
+          postalCode: "110001"
+        },
+        items: [
+          {
+            id: "m1",
+            name: "Classic Cashmere Trench Coat",
+            quantity: 1,
+            size: "M",
+            color: "Beige",
+            price: 499,
+            imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
+            brand: "Certitude"
+          },
+          {
+            id: "m2",
+            name: "Minimalist Linen Utility Shirt",
+            quantity: 1,
+            size: "L",
+            color: "Cream",
+            price: 120,
+            imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
+            brand: "Atelier"
+          }
+        ]
+      },
+      {
+        orderId: `ORD-${new Date().getFullYear()}0718-88123`,
+        customerName: email.split("@")[0],
+        customerEmail: email,
+        orderDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }),
+        paymentMethod: "UPI Payments",
+        status: "Shipped",
+        total: 195,
+        itemsCount: 1,
+        address: {
+          firstName: "Saurabh",
+          lastName: "Khandelwal",
+          email: email,
+          phone: "9876543210",
+          addressLine1: "123 luxury lane",
+          addressLine2: "Atelier Suite 4",
+          city: "New Delhi",
+          state: "Delhi",
+          country: "India",
+          postalCode: "110001"
+        },
+        items: [
+          {
+            id: "w2",
+            name: "Oversized Merino Wool Sweater",
+            quantity: 1,
+            size: "S",
+            color: "Beige",
+            price: 195,
+            imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
+            brand: "EcoKnit"
+          }
+        ]
+      },
+      {
+        orderId: `ORD-${new Date().getFullYear()}0720-11234`,
+        customerName: email.split("@")[0],
+        customerEmail: email,
+        orderDate: new Date().toLocaleString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+          hour: "numeric",
+          minute: "2-digit",
+          hour12: true,
+        }),
+        paymentMethod: "Cash on Delivery",
+        status: "Pending",
+        total: 245,
+        itemsCount: 1,
+        address: {
+          firstName: "Saurabh",
+          lastName: "Khandelwal",
+          email: email,
+          phone: "9876543210",
+          addressLine1: "123 luxury lane",
+          addressLine2: "Atelier Suite 4",
+          city: "New Delhi",
+          state: "Delhi",
+          country: "India",
+          postalCode: "110001"
+        },
+        items: [
+          {
+            id: "w3",
+            name: "Bohemian Embroidered Blouse",
+            quantity: 1,
+            size: "M",
+            color: "White",
+            price: 245,
+            imageSrc: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400&auto=format&fit=crop",
+            brand: "Sustaina"
+          }
+        ]
+      }
+    ];
+
+    const updatedOrders = [...mockOrders, ...orders];
+    setLocalStorageItem("certitude_admin_orders", updatedOrders);
+    
+    // Also try to seed to Supabase if configured (silently ignore failures)
+    try {
+      const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+      supabase.auth.getUser().then(({ data: { user } }) => {
+        if (user) {
+          mockOrders.forEach(o => {
+            supabase.from('orders').insert({
+              order_id: o.orderId,
+              user_id: user.id,
+              customer_email: o.customerEmail,
+              items: o.items as unknown as Record<string, unknown>[],
+              total_amount: o.total,
+              status: o.status.toLowerCase() as unknown as string,
+              payment_method: o.paymentMethod,
+              shipping_address: o.address as unknown as Record<string, unknown>,
+            }).then(() => {});
+          });
+        }
+      });
+    } catch {}
+  }
 }
 
 /**
