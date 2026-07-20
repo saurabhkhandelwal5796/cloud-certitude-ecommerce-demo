@@ -32,8 +32,22 @@ export default async function AdminLayout({
       data: { user },
     } = await supabase.auth.getUser();
 
-    // Enforce admin permission constraint (admin@cloudcertitude.com only)
-    if (!user || user.email !== "admin@cloudcertitude.com") {
+    if (!user) {
+      redirect("/signin");
+    }
+
+    // Check role in profiles table
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    // Fallback: also allow the hardcoded admin email
+    const isAdmin =
+      profile?.role === "admin" || user.email === "admin@cloudcertitude.com";
+
+    if (!isAdmin) {
       redirect("/");
     }
   } catch (err) {

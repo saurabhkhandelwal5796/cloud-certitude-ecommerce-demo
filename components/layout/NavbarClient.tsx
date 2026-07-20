@@ -32,6 +32,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [currentUser, setCurrentUser] = useState(user);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userRole, setUserRole] = useState<"admin" | "customer">("customer");
 
   // In-App Notifications State
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
@@ -43,7 +44,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log(`[Auth Navbar] Auth State Changed Event: ${event}`);
 
       if (session) {
@@ -51,8 +52,17 @@ export default function NavbarClient({ user }: NavbarClientProps) {
           id: session.user.id,
           email: session.user.email,
         });
+        // Fetch role
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", session.user.id)
+          .single();
+        const role = profile?.role || (session.user.email === "admin@cloudcertitude.com" ? "admin" : "customer");
+        setUserRole(role as "admin" | "customer");
       } else {
         setCurrentUser(null);
+        setUserRole("customer");
       }
 
       if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "TOKEN_REFRESHED") {
@@ -60,10 +70,18 @@ export default function NavbarClient({ user }: NavbarClientProps) {
       }
     });
 
+    // Fetch role on initial mount if user already logged in
+    if (user) {
+      supabase.from("profiles").select("role").eq("id", user.id).single().then(({ data }) => {
+        const role = data?.role || (user.email === "admin@cloudcertitude.com" ? "admin" : "customer");
+        setUserRole(role as "admin" | "customer");
+      });
+    }
+
     return () => {
       subscription.unsubscribe();
     };
-  }, [router]);
+  }, [router, user]);
 
   // Sync notifications on user session changes or custom events
   useEffect(() => {
@@ -139,13 +157,22 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 { name: "Kids", href: "/kids" },
                 { name: "New Arrivals", href: "/new-arrivals" },
                 { name: "Sale", href: "/sale", isSale: true },
+                ...(userRole === "admin" ? [
+                  { name: "Customer View", href: "/", isAdmin: true },
+                  { name: "Admin Portal", href: "/admin", isAdmin: true },
+                  { name: "Users", href: "/admin/users", isAdmin: true },
+                ] : []),
               ].map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
                   className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                    link.isSale
+                    (link as {isSale?:boolean}).isSale
                       ? "text-rose-500 hover:text-rose-600"
+                      : (link as {isAdmin?:boolean}).isAdmin
+                      ? pathname === link.href
+                        ? "text-violet-600 border-b-2 border-violet-400 pb-0.5"
+                        : "text-violet-500 hover:text-violet-700"
                       : pathname === link.href
                       ? "text-[#C68B7D] border-b-2 border-[#C68B7D] pb-0.5"
                       : "text-stone-600 hover:text-[#C68B7D]"
@@ -368,14 +395,21 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             { name: "Kids", href: "/kids" },
             { name: "New Arrivals", href: "/new-arrivals" },
             { name: "Sale", href: "/sale", isSale: true },
+            ...(userRole === "admin" ? [
+              { name: "Customer View", href: "/", isAdmin: true },
+              { name: "Admin Portal", href: "/admin", isAdmin: true },
+              { name: "Users", href: "/admin/users", isAdmin: true },
+            ] : []),
           ].map((link) => (
             <Link
               key={link.name}
               href={link.href}
               onClick={() => setIsOpen(false)}
               className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider ${
-                link.isSale
+                (link as {isSale?:boolean}).isSale
                   ? "text-rose-500 hover:bg-rose-50"
+                  : (link as {isAdmin?:boolean}).isAdmin
+                  ? "text-violet-600 hover:bg-violet-50"
                   : pathname === link.href
                   ? "text-[#C68B7D] bg-[#E0A99E]/10"
                   : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
