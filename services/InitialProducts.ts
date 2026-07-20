@@ -23,7 +23,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-M-001",
     "tags": [],
     "stockQuantity": 59
@@ -50,7 +50,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-002",
     "tags": [],
     "stockQuantity": 98
@@ -77,7 +77,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-M-003",
     "tags": [],
     "stockQuantity": 129
@@ -104,7 +104,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-M-004",
     "tags": [
       "New Arrival"
@@ -133,7 +133,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-005",
     "tags": [
       "Best Seller",
@@ -163,7 +163,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-M-006",
     "tags": [],
     "stockQuantity": 15
@@ -190,7 +190,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-007",
     "tags": [],
     "stockQuantity": 109
@@ -217,7 +217,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-008",
     "tags": [
       "New Arrival"
@@ -246,7 +246,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-009",
     "tags": [],
     "stockQuantity": 68
@@ -273,7 +273,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-M-010",
     "tags": [
       "Best Seller",
@@ -303,7 +303,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-011",
     "tags": [],
     "stockQuantity": 56
@@ -330,7 +330,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-M-012",
     "tags": [
       "New Arrival"
@@ -359,7 +359,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-M-013",
     "tags": [],
     "stockQuantity": 157
@@ -386,7 +386,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-014",
     "tags": [],
     "stockQuantity": 102
@@ -413,7 +413,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-M-015",
     "tags": [
       "Best Seller",
@@ -443,7 +443,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-016",
     "tags": [
       "New Arrival"
@@ -472,7 +472,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-M-017",
     "tags": [],
     "stockQuantity": 101
@@ -499,7 +499,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-018",
     "tags": [],
     "stockQuantity": 38
@@ -526,7 +526,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-019",
     "tags": [],
     "stockQuantity": 125
@@ -553,7 +553,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-020",
     "tags": [
       "New Arrival"
@@ -582,7 +582,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-M-021",
     "tags": [],
     "stockQuantity": 96
@@ -609,7 +609,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-M-022",
     "tags": [],
     "stockQuantity": 64
@@ -636,7 +636,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-M-023",
     "tags": [],
     "stockQuantity": 32
@@ -663,7 +663,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-M-024",
     "tags": [
       "New Arrival"
@@ -692,7 +692,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-M-025",
     "tags": [
       "Best Seller",
@@ -722,7 +722,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-001",
     "tags": [],
     "stockQuantity": 78
@@ -749,7 +749,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-002",
     "tags": [],
     "stockQuantity": 116
@@ -776,7 +776,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-003",
     "tags": [],
     "stockQuantity": 34
@@ -803,7 +803,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-W-004",
     "tags": [
       "New Arrival"
@@ -832,7 +832,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-005",
     "tags": [
       "Best Seller",
@@ -862,7 +862,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-006",
     "tags": [],
     "stockQuantity": 106
@@ -889,7 +889,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-007",
     "tags": [],
     "stockQuantity": 62
@@ -916,7 +916,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-008",
     "tags": [
       "New Arrival"
@@ -945,7 +945,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-009",
     "tags": [],
     "stockQuantity": 47
@@ -972,7 +972,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-010",
     "tags": [
       "Best Seller",
@@ -1002,7 +1002,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-011",
     "tags": [],
     "stockQuantity": 81
@@ -1029,7 +1029,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-012",
     "tags": [
       "New Arrival"
@@ -1058,7 +1058,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-013",
     "tags": [],
     "stockQuantity": 42
@@ -1085,7 +1085,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-014",
     "tags": [],
     "stockQuantity": 108
@@ -1112,7 +1112,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-W-015",
     "tags": [
       "Best Seller",
@@ -1142,7 +1142,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-W-016",
     "tags": [
       "New Arrival"
@@ -1171,7 +1171,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-017",
     "tags": [],
     "stockQuantity": 123
@@ -1198,7 +1198,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-018",
     "tags": [],
     "stockQuantity": 39
@@ -1225,7 +1225,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-W-019",
     "tags": [],
     "stockQuantity": 33
@@ -1252,7 +1252,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-W-020",
     "tags": [
       "New Arrival"
@@ -1281,7 +1281,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-W-021",
     "tags": [],
     "stockQuantity": 121
@@ -1308,7 +1308,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-022",
     "tags": [],
     "stockQuantity": 112
@@ -1335,7 +1335,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-023",
     "tags": [],
     "stockQuantity": 60
@@ -1362,7 +1362,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-W-024",
     "tags": [
       "New Arrival"
@@ -1391,7 +1391,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-W-025",
     "tags": [
       "Best Seller",
@@ -1420,7 +1420,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-K-001",
     "tags": [],
     "stockQuantity": 27
@@ -1446,7 +1446,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-002",
     "tags": [],
     "stockQuantity": 103
@@ -1472,7 +1472,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-003",
     "tags": [],
     "stockQuantity": 101
@@ -1498,7 +1498,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-004",
     "tags": [
       "New Arrival"
@@ -1526,7 +1526,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-005",
     "tags": [
       "Best Seller",
@@ -1555,7 +1555,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-006",
     "tags": [],
     "stockQuantity": 98
@@ -1581,7 +1581,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-K-007",
     "tags": [],
     "stockQuantity": 141
@@ -1607,7 +1607,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-K-008",
     "tags": [
       "New Arrival"
@@ -1635,7 +1635,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-K-009",
     "tags": [],
     "stockQuantity": 42
@@ -1661,7 +1661,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-K-010",
     "tags": [
       "Best Seller",
@@ -1690,7 +1690,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-011",
     "tags": [],
     "stockQuantity": 156
@@ -1716,7 +1716,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-K-012",
     "tags": [
       "New Arrival"
@@ -1744,7 +1744,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-K-013",
     "tags": [],
     "stockQuantity": 157
@@ -1770,7 +1770,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-014",
     "tags": [],
     "stockQuantity": 54
@@ -1796,7 +1796,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-K-015",
     "tags": [
       "Best Seller",
@@ -1825,7 +1825,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-016",
     "tags": [
       "New Arrival"
@@ -1853,7 +1853,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-017",
     "tags": [],
     "stockQuantity": 93
@@ -1879,7 +1879,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-018",
     "tags": [],
     "stockQuantity": 88
@@ -1905,7 +1905,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-019",
     "tags": [],
     "stockQuantity": 152
@@ -1931,7 +1931,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-020",
     "tags": [
       "New Arrival"
@@ -1959,7 +1959,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-021",
     "tags": [],
     "stockQuantity": 40
@@ -1985,7 +1985,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-022",
     "tags": [],
     "stockQuantity": 58
@@ -2011,7 +2011,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-K-023",
     "tags": [],
     "stockQuantity": 146
@@ -2037,7 +2037,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-024",
     "tags": [
       "New Arrival"
@@ -2065,7 +2065,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "S",
       "M"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-K-025",
     "tags": [
       "Best Seller",
@@ -2095,7 +2095,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-001",
     "tags": [],
     "stockQuantity": 36
@@ -2122,7 +2122,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-002",
     "tags": [],
     "stockQuantity": 124
@@ -2149,7 +2149,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-A-003",
     "tags": [],
     "stockQuantity": 112
@@ -2176,7 +2176,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-004",
     "tags": [
       "New Arrival"
@@ -2205,7 +2205,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-005",
     "tags": [
       "Best Seller",
@@ -2235,7 +2235,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-A-006",
     "tags": [],
     "stockQuantity": 16
@@ -2262,7 +2262,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-A-007",
     "tags": [],
     "stockQuantity": 80
@@ -2289,7 +2289,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-A-008",
     "tags": [
       "New Arrival"
@@ -2318,7 +2318,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-A-009",
     "tags": [],
     "stockQuantity": 159
@@ -2345,7 +2345,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-A-010",
     "tags": [
       "Best Seller",
@@ -2375,7 +2375,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-011",
     "tags": [],
     "stockQuantity": 139
@@ -2402,7 +2402,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-012",
     "tags": [
       "New Arrival"
@@ -2431,7 +2431,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-A-013",
     "tags": [],
     "stockQuantity": 27
@@ -2458,7 +2458,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-A-014",
     "tags": [],
     "stockQuantity": 82
@@ -2485,7 +2485,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-A-015",
     "tags": [
       "Best Seller",
@@ -2515,7 +2515,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-F-001",
     "tags": [],
     "stockQuantity": 112
@@ -2542,7 +2542,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-F-002",
     "tags": [],
     "stockQuantity": 20
@@ -2569,7 +2569,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-F-003",
     "tags": [],
     "stockQuantity": 28
@@ -2596,7 +2596,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-F-004",
     "tags": [
       "New Arrival"
@@ -2625,7 +2625,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Cream",
+    "color": ["Cream"],
     "sku": "CC-F-005",
     "tags": [
       "Best Seller",
@@ -2655,7 +2655,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-F-006",
     "tags": [],
     "stockQuantity": 89
@@ -2682,7 +2682,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Charcoal",
+    "color": ["Charcoal"],
     "sku": "CC-F-007",
     "tags": [],
     "stockQuantity": 125
@@ -2709,7 +2709,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-F-008",
     "tags": [
       "New Arrival"
@@ -2738,7 +2738,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Beige",
+    "color": ["Beige"],
     "sku": "CC-F-009",
     "tags": [],
     "stockQuantity": 96
@@ -2765,7 +2765,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
       "L",
       "XL"
     ],
-    "color": "Olive",
+    "color": ["Olive"],
     "sku": "CC-F-010",
     "tags": [
       "Best Seller",
