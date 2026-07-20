@@ -80,9 +80,24 @@ export default function SignInForm() {
       setSuccessMsg("Logged in successfully! Redirecting...");
 
       // Role-based redirect
-      setTimeout(() => {
-        router.push(nextRoute);
-        router.refresh();
+      setTimeout(async () => {
+        try {
+          const supabase = getSupabaseClient();
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("role")
+            .eq("id", data.user!.id)
+            .single();
+          if (profile?.role === "admin" || data.user!.email === "admin@cloudcertitude.com") {
+            router.push("/admin");
+          } else {
+            router.push("/");
+          }
+          router.refresh();
+        } catch {
+          router.push("/");
+          router.refresh();
+        }
       }, 800);
     } catch {
       console.error("[Auth SignIn] Unexpected error during login process");
