@@ -10,34 +10,29 @@ import TestimonialCard from "@/components/ui/TestimonialCard";
 import RecommendationCarousel from "@/components/ui/RecommendationCarousel";
 import { AdminProduct } from "@/services/AdminService";
 
-// Premium placeholder data for Categories
 const CATEGORIES = [
   {
     title: "Women",
-    href: "#women",
+    href: "/women",
     imageSrc: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=600&auto=format&fit=crop",
   },
   {
     title: "Men",
-    href: "#men",
+    href: "/men",
     imageSrc: "https://images.unsplash.com/photo-1488161628813-04466f872be2?q=80&w=600&auto=format&fit=crop",
   },
   {
     title: "Kids",
-    href: "#kids",
+    href: "/kids",
     imageSrc: "https://images.unsplash.com/photo-1519457431-44ccd64a579b?q=80&w=600&auto=format&fit=crop",
   },
   {
     title: "Accessories",
-    href: "#accessories",
+    href: "/sale",
     imageSrc: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=600&auto=format&fit=crop",
   },
 ];
 
-// Premium placeholder data for New Arrivals
-
-
-// Premium Customer Reviews
 const TESTIMONIALS = [
   {
     name: "Sarah Jenkins",
@@ -48,18 +43,56 @@ const TESTIMONIALS = [
   },
   {
     name: "David Miller",
-    review: "Purchased the Italian leather bag and mesh chronograph. Truly premium products that make a clear statement. The transaction was effortless, and the packaging felt incredibly high-end.",
+    review: "Purchased the Italian leather bag and mesh chronograph. Truly premium products that make a statement. The transaction was effortless, and the packaging felt incredibly high-end.",
     rating: 5,
     avatarSrc: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
     role: "Elite Tier Member"
   },
   {
     name: "Emma Thompson",
-    review: "Finding high-quality organic cotton clothing for kids that looks contemporary can be hard. The Certitude kids knit romper is gorgeous, soft, and holds up perfectly after multiple washes.",
+    review: "Finding high-quality organic cotton clothing for kids that looks contemporary can be hard. The kids knit romper is gorgeous, soft, and holds up perfectly after multiple washes.",
     rating: 4,
     avatarSrc: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop",
     role: "Verified Purchaser"
   },
+];
+
+const HERO_SLIDES = [
+  {
+    title: "Summer Collection",
+    subtitle: "Modern Essentials for Warm Seasons",
+    cta: "Shop Women",
+    href: "/women",
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1600&auto=format&fit=crop"
+  },
+  {
+    title: "Flat 50% OFF",
+    subtitle: "Premium Fashion at Half Price",
+    cta: "Shop Sale",
+    href: "/sale",
+    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?q=80&w=1600&auto=format&fit=crop"
+  },
+  {
+    title: "New Arrivals",
+    subtitle: "Freshly Cataloged Luxury Essentials",
+    cta: "Shop New",
+    href: "/new-arrivals",
+    image: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=1600&auto=format&fit=crop"
+  },
+  {
+    title: "Kids Collection",
+    subtitle: "Playful Comfort for Little Ones",
+    cta: "Shop Kids",
+    href: "/kids",
+    image: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=1600&auto=format&fit=crop"
+  },
+  {
+    title: "Luxury Fashion",
+    subtitle: "Sartorial Collections for Men",
+    cta: "Shop Men",
+    href: "/men",
+    image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?q=80&w=1600&auto=format&fit=crop"
+  }
 ];
 
 export default function HomePage() {
@@ -75,10 +108,11 @@ export default function HomePage() {
   const [customersAlsoBought, setCustomersAlsoBought] = useState<AdminProduct[]>([]);
   const [newArrivals, setNewArrivals] = useState<AdminProduct[]>([]);
 
+  // Hero Carousel State
+  const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
+
   useEffect(() => {
-    // Run Supabase verification silently in background for status logs
-    const configStatus = verifySupabaseConfig();
-    console.log("[System] Supabase Integration Status:", configStatus);
+    verifySupabaseConfig();
 
     const loadRecommendations = async () => {
       try {
@@ -104,17 +138,15 @@ export default function HomePage() {
         setTrendingNow(trend.slice(0, 8));
         setBestSellers(best.slice(0, 8));
 
-        // Recently viewed products lookup
         const profile = getCustomerProfile();
         const allProducts = await getProducts();
         const viewed = allProducts.filter((p) => profile.recentlyViewed.includes(p.id));
         setRecentlyViewed(viewed);
 
-        // Association recommendations anchor
-        const lastViewedId = profile.recentlyViewed[0] || "m1"; // fallback to m1
+        const lastViewedId = profile.recentlyViewed[0] || "m1";
         const alsoBought = await getCustomersAlsoBought(lastViewedId);
         setCustomersAlsoBought(alsoBought.slice(0, 8));
-        // Dynamic new arrivals
+
         const newArrList = allProducts.filter((p) => p.tags?.includes("New Arrival") || p.id.startsWith("new") || p.id.startsWith("na"));
         setNewArrivals(newArrList.slice(0, 8));
       } catch (err) {
@@ -128,6 +160,22 @@ export default function HomePage() {
     return () => window.removeEventListener("certitude_recommendations_updated", loadRecommendations);
   }, []);
 
+  // Auto-rotating Hero Carousel timer
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleNextSlide = () => {
+    setCurrentHeroSlide((prev) => (prev + 1) % HERO_SLIDES.length);
+  };
+
+  const handlePrevSlide = () => {
+    setCurrentHeroSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+  };
+
   const handleNewsletterSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsletterEmail) return;
@@ -140,73 +188,100 @@ export default function HomePage() {
   };
 
   return (
-    <div className="bg-[#FAF9F6] text-stone-800 min-h-screen transition-colors duration-500">
-      {/* 1. HERO SECTION */}
-      <section className="relative h-[80vh] w-full flex items-center justify-center overflow-hidden bg-[#FAF9F6]">
-        <Image
-          src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=1600&auto=format&fit=crop"
-          alt="Luxury Fashion Hero Background"
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover opacity-85 scale-100 select-none"
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-[#FAF9F6]/30 to-[#FAF9F6]" />
-
-        <div className="relative z-10 mx-auto max-w-4xl px-4 text-center">
-          <span className="text-[10px] sm:text-xs md:text-sm font-extrabold uppercase tracking-[0.3em] text-[#E0A99E] animate-pulse">
-            Introducing Autumn/Winter &apos;26
-          </span>
-          <h1 className="mt-4 text-4xl font-extrabold tracking-widest text-stone-900 uppercase sm:text-6xl md:text-7xl lg:text-8xl">
-            LUXURY REDEFINED
-          </h1>
-          <p className="mt-6 text-sm sm:text-base md:text-lg text-stone-700 font-light max-w-2xl mx-auto leading-relaxed">
-            Discover timeless fashion curated for every occasion. Exquisite tailoring, sustainably made, made to last.
-          </p>
-          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link
-              href="#men"
-              className="w-full sm:w-auto rounded-full bg-[#E0A99E] px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] transition-colors shadow-md hover:shadow-[#E0A99E]/20"
-            >
-              Shop Men
-            </Link>
-            <Link
-              href="#women"
-              className="w-full sm:w-auto rounded-full border border-stone-250 bg-white/80 px-8 py-3.5 text-xs font-bold uppercase tracking-wider text-stone-700 hover:bg-white hover:border-stone-400 transition-colors backdrop-blur-sm shadow-sm"
-            >
-              Shop Women
-            </Link>
+    <div className="bg-[#FAF9F6] text-stone-855 min-h-screen transition-colors duration-500">
+      {/* 1. AUTO-ROTATING HERO CAROUSEL */}
+      <section className="relative h-[65vh] sm:h-[80vh] w-full flex items-center overflow-hidden bg-stone-900">
+        {HERO_SLIDES.map((slide, idx) => (
+          <div
+            key={idx}
+            className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+              idx === currentHeroSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
+            }`}
+          >
+            <Image
+              src={slide.image}
+              alt={slide.title}
+              fill
+              priority={idx === 0}
+              className="object-cover opacity-75 object-center"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-stone-950/70 via-stone-900/30 to-transparent" />
+            
+            {/* Slide Content */}
+            <div className="absolute inset-0 flex items-center z-20">
+              <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 text-left">
+                <div className="max-w-xl space-y-4 sm:space-y-6">
+                  <span className="inline-block text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-[#E0A99E]">
+                    {slide.subtitle}
+                  </span>
+                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wider text-white uppercase leading-none">
+                    {slide.title}
+                  </h1>
+                  <p className="text-stone-300 font-light text-xs sm:text-sm max-w-sm sm:max-w-md">
+                    Experience state-of-the-art sustainable tailoring designed to represent modern values, luxury, and prestige.
+                  </p>
+                  <div>
+                    <Link
+                      href={slide.href}
+                      className="inline-block bg-white text-stone-900 rounded-full px-6 sm:px-8 py-3 text-xs font-extrabold uppercase tracking-widest hover:bg-[#E0A99E] hover:text-white transition-all shadow-lg transform hover:-translate-y-0.5 duration-300"
+                    >
+                      {slide.cta}
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        ))}
 
-        {/* Scroll bottom indicator */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-stone-400 text-[10px] uppercase tracking-widest font-semibold">
-          Scroll Down
-          <svg className="h-4 w-4 animate-bounce text-[#E0A99E]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7-7-7" />
+        {/* Carousel Left/Right navigation arrows */}
+        <button
+          onClick={handlePrevSlide}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
+          aria-label="Previous Slide"
+        >
+          <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
           </svg>
+        </button>
+        <button
+          onClick={handleNextSlide}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
+          aria-label="Next Slide"
+        >
+          <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+
+        {/* Carousel Indicators / Dots */}
+        <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2.5 z-20">
+          {HERO_SLIDES.map((_, idx) => (
+            <button
+              key={idx}
+              onClick={() => setCurrentHeroSlide(idx)}
+              className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none ${
+                idx === currentHeroSlide ? "w-6 bg-[#E0A99E]" : "w-1.5 bg-white/40 hover:bg-white/60"
+              }`}
+              aria-label={`Slide index ${idx + 1}`}
+            />
+          ))}
         </div>
       </section>
 
-      {/* 2. FEATURED CATEGORIES SECTION */}
-      <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="text-center md:text-left mb-12">
+      {/* 2. CATEGORY CARDS SECTION */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+        <div className="text-center mb-12">
           <h2 className="text-2xl font-black tracking-widest text-stone-900 uppercase sm:text-3xl">
-            Curated Collections
+            Shop By Category
           </h2>
           <p className="mt-2 text-sm text-stone-500 font-light">
-            Select standard categories designed with luxurious precision.
+            Refined collection spaces tailored to match your specific essentials.
           </p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {CATEGORIES.map((category) => (
-            <CategoryCard
-              key={category.title}
-              title={category.title}
-              href={category.href}
-              imageSrc={category.imageSrc}
-            />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6">
+          {CATEGORIES.map((cat, idx) => (
+            <CategoryCard key={idx} title={cat.title} href={cat.href} imageSrc={cat.imageSrc} />
           ))}
         </div>
       </section>
@@ -390,7 +465,7 @@ export default function HomePage() {
                   placeholder="Enter your email address"
                   value={newsletterEmail}
                   onChange={(e) => setNewsletterEmail(e.target.value)}
-                  className="w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm text-stone-850 placeholder-stone-400 shadow-sm focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50"
+                  className="w-full rounded-full border border-stone-200 bg-white px-5 py-3 text-sm text-stone-850 placeholder-stone-400 shadow-sm focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50 text-stone-800"
                 />
                 <button
                   type="submit"
