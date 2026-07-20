@@ -59,7 +59,12 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isProfileRoute = request.nextUrl.pathname.startsWith("/profile");
+  const isProtectedRoute =
+    request.nextUrl.pathname.startsWith("/checkout") ||
+    request.nextUrl.pathname.startsWith("/orders") ||
+    request.nextUrl.pathname.startsWith("/profile") ||
+    request.nextUrl.pathname.startsWith("/admin");
+
   const isAuthRoute = [
     "/signin",
     "/signup",
@@ -68,7 +73,7 @@ export async function updateSession(request: NextRequest) {
   ].includes(request.nextUrl.pathname);
 
   // Route Protection Logic
-  if (isProfileRoute && !user) {
+  if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     // Keep track of the original destination to redirect back after sign in if needed

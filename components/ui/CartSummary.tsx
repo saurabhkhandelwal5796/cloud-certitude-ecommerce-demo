@@ -1,16 +1,18 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 /**
  * CartSummary Component
  *
  * Renders the checkout calculation card for the Shopping Cart page.
  * Displays tax (8%), shipping fees, and grand totals with a Checkout CTA button.
+ * Enforces guest sign-in checks and warnings.
  */
 export default function CartSummary() {
   const router = useRouter();
@@ -19,6 +21,20 @@ export default function CartSummary() {
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = getSupabaseClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        setIsAuthenticated(!!user);
+      } catch {
+        setIsAuthenticated(false);
+      }
+    };
+    checkAuth();
+  }, []);
 
   // Est Tax is 8% of subtotal
   const tax = cartSubtotal * 0.08;
@@ -43,7 +59,11 @@ export default function CartSummary() {
   const grandTotal = cartSubtotal + tax + shipping - discountAmount;
 
   const handleCheckout = () => {
-    router.push("/checkout");
+    if (isAuthenticated === false) {
+      router.push("/signin?next=/checkout");
+    } else {
+      router.push("/checkout");
+    }
   };
 
   return (
@@ -140,6 +160,28 @@ export default function CartSummary() {
 
       {/* Checkout button */}
       <div className="space-y-3 pt-2">
+        {isAuthenticated === false && (
+          <div className="rounded-xl border border-amber-250 bg-amber-50 p-4 text-xs space-y-3">
+            <p className="text-amber-800 font-medium leading-relaxed">
+              Please sign in to continue with checkout.
+            </p>
+            <div className="flex gap-2">
+              <Link
+                href="/signin?next=/checkout"
+                className="flex-grow rounded-full bg-stone-900 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-white hover:bg-stone-850 transition-all cursor-pointer shadow-sm"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/signup?next=/checkout"
+                className="flex-grow rounded-full border border-stone-250 bg-white py-2 text-center text-[10px] font-bold uppercase tracking-wider text-stone-700 hover:bg-stone-50 transition-all cursor-pointer shadow-sm"
+              >
+                Create Account
+              </Link>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleCheckout}
           className="w-full rounded-full bg-[#E0A99E] py-3 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] transition-colors shadow-md hover:shadow-[#E0A99E]/20 h-12 flex items-center justify-center cursor-pointer"

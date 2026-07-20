@@ -35,49 +35,7 @@ const CATEGORIES = [
 ];
 
 // Premium placeholder data for New Arrivals
-const NEW_ARRIVALS = [
-  {
-    id: "na1",
-    name: "Oversized Merino Wool Sweater",
-    price: 195,
-    rating: 4.7,
-    category: "Women",
-    imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "na2",
-    name: "Modern Pilot Gold Sunglasses",
-    price: 220,
-    discountPercent: 10,
-    rating: 4.8,
-    category: "Accessories",
-    imageSrc: "https://images.unsplash.com/photo-1511556532299-8f662fc26c06?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "na3",
-    name: "Minimalist Linen Utility Shirt",
-    price: 120,
-    rating: 4.5,
-    category: "Men",
-    imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "na4",
-    name: "Kids Organic Fleece Jacket",
-    price: 98,
-    rating: 4.6,
-    category: "Kids",
-    imageSrc: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=600&auto=format&fit=crop",
-  },
-  {
-    id: "na5",
-    name: "Luxury Silk Square Scarf",
-    price: 145,
-    rating: 4.9,
-    category: "Accessories",
-    imageSrc: "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?q=80&w=600&auto=format&fit=crop",
-  },
-];
+
 
 // Premium Customer Reviews
 const TESTIMONIALS = [
@@ -115,6 +73,7 @@ export default function HomePage() {
   const [bestSellers, setBestSellers] = useState<AdminProduct[]>([]);
   const [recentlyViewed, setRecentlyViewed] = useState<AdminProduct[]>([]);
   const [customersAlsoBought, setCustomersAlsoBought] = useState<AdminProduct[]>([]);
+  const [newArrivals, setNewArrivals] = useState<AdminProduct[]>([]);
 
   useEffect(() => {
     // Run Supabase verification silently in background for status logs
@@ -155,6 +114,9 @@ export default function HomePage() {
         const lastViewedId = profile.recentlyViewed[0] || "m1"; // fallback to m1
         const alsoBought = await getCustomersAlsoBought(lastViewedId);
         setCustomersAlsoBought(alsoBought.slice(0, 8));
+        // Dynamic new arrivals
+        const newArrList = allProducts.filter((p) => p.tags?.includes("New Arrival") || p.id.startsWith("new") || p.id.startsWith("na"));
+        setNewArrivals(newArrList.slice(0, 8));
       } catch (err) {
         console.error("Failed to load recommendations on home page:", err);
       }
@@ -360,7 +322,7 @@ export default function HomePage() {
           </div>
 
           <div className="flex gap-6 overflow-x-auto pb-6 scrollbar-thin scrollbar-thumb-stone-200 scrollbar-track-transparent -mx-4 px-4 sm:mx-0 sm:px-0">
-            {NEW_ARRIVALS.map((product) => (
+            {newArrivals.map((product) => (
               <div key={product.id} className="w-[280px] flex-shrink-0">
                 <ProductCard
                   id={product.id}
@@ -368,7 +330,7 @@ export default function HomePage() {
                   price={product.price}
                   imageSrc={product.imageSrc}
                   discountPercent={product.discountPercent}
-                  rating={product.rating}
+                  rating={product.rating || 4.5}
                   category={product.category}
                 />
               </div>

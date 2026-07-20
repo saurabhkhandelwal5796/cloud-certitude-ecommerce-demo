@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { isValidEmail } from "@/utils";
 
@@ -15,6 +15,8 @@ import { isValidEmail } from "@/utils";
  */
 export default function SignUpForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextRoute = searchParams.get("next") || "/";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -100,13 +102,13 @@ export default function SignUpForm() {
 
       if (currentSession) {
         console.log("[Auth SignUp] Session established and persisted in cookies:", currentSession.user.id);
-        setSuccessMsg("Account created! Redirecting to homepage...");
+        setSuccessMsg("Account created! Redirecting...");
         setEmail("");
         setPassword("");
         setConfirmPassword("");
 
         setTimeout(() => {
-          router.push("/");
+          router.push(nextRoute);
           router.refresh();
         }, 1500);
       } else {

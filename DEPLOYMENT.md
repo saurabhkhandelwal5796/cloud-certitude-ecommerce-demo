@@ -96,6 +96,52 @@ CREATE POLICY "Allow insert orders" ON public.orders FOR INSERT WITH CHECK (true
 CREATE POLICY "Allow update orders" ON public.orders FOR UPDATE USING (true);
 ```
 
+### Products Table Setup
+```sql
+CREATE TABLE IF NOT EXISTS public.products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    price NUMERIC NOT NULL,
+    images TEXT[] NOT NULL,
+    category TEXT NOT NULL,
+    stock INTEGER DEFAULT 0 NOT NULL,
+    brand TEXT,
+    discount_percent NUMERIC DEFAULT 0 NOT NULL,
+    rating NUMERIC DEFAULT 4.5 NOT NULL,
+    review_count INTEGER DEFAULT 0 NOT NULL,
+    size TEXT[] DEFAULT '{}'::text[] NOT NULL,
+    color TEXT[] DEFAULT '{}'::text[] NOT NULL,
+    sku TEXT,
+    tags TEXT[] DEFAULT '{}'::text[] NOT NULL,
+    is_active BOOLEAN DEFAULT true NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE
+);
+
+-- Enable RLS and set public policies
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read products" ON public.products FOR SELECT USING (true);
+CREATE POLICY "Allow insert products" ON public.products FOR INSERT WITH CHECK (true);
+CREATE POLICY "Allow update products" ON public.products FOR UPDATE USING (true);
+CREATE POLICY "Allow delete products" ON public.products FOR DELETE USING (true);
+```
+
+### Categories Table Setup
+```sql
+CREATE TABLE IF NOT EXISTS public.categories (
+    id TEXT PRIMARY KEY,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Enable RLS and set public policies
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public read categories" ON public.categories FOR SELECT USING (true);
+CREATE POLICY "Allow insert categories" ON public.categories FOR INSERT WITH CHECK (true);
+```
+
 ---
 
 ## 5. Troubleshooting Guide

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import AuthLayout from "@/components/layout/AuthLayout";
 import SignUpForm from "@/components/ui/SignUpForm";
 import { Metadata } from "next";
@@ -13,7 +14,9 @@ export default function SignUpPage() {
       title="Create your account"
       subtitle="Join Certitude Atelier to track orders, manage your profile, and receive updates."
     >
-      <SignUpForm />
+      <Suspense fallback={<div className="text-center text-xs text-stone-500 font-light py-8">Loading form...</div>}>
+        <SignUpForm />
+      </Suspense>
     </AuthLayout>
   );
 }

@@ -26,7 +26,7 @@ interface CollectionTemplateProps {
   title: string;
   description: string;
   imageSrc: string;
-  initialProducts: ProductType[];
+  categoryFilter: "Men" | "Women" | "Kids" | "New Arrival" | "Sale" | "Accessories" | "Footwear" | "All";
 }
 
 const ITEMS_PER_PAGE = 8;
@@ -46,40 +46,48 @@ export default function CollectionTemplate({
   title,
   description,
   imageSrc,
-  initialProducts,
+  categoryFilter,
 }: CollectionTemplateProps) {
   // Dynamic products to pull updated ratings and review counts from catalog storage
-  const [dynamicProducts, setDynamicProducts] = useState<ProductType[]>(initialProducts);
+  const [dynamicProducts, setDynamicProducts] = useState<ProductType[]>([]);
 
   useEffect(() => {
     const loadDynamicProducts = async () => {
       try {
         const { getProducts } = await import("@/services/AdminService");
         const list = await getProducts();
-        const initialIds = new Set(initialProducts.map((p) => p.id));
-        const filtered = list.filter((p) => initialIds.has(p.id)).map((p) => ({
+        
+        let filteredList = list;
+        if (categoryFilter === "Men" || categoryFilter === "Women" || categoryFilter === "Kids" || categoryFilter === "Accessories" || categoryFilter === "Footwear") {
+          filteredList = list.filter((p) => p.category === categoryFilter);
+        } else if (categoryFilter === "New Arrival") {
+          filteredList = list.filter((p) => p.tags?.includes("New Arrival") || p.id.startsWith("new") || p.id.startsWith("na"));
+        } else if (categoryFilter === "Sale") {
+          filteredList = list.filter((p) => (p.discountPercent !== undefined && p.discountPercent > 0) || p.tags?.includes("Sale"));
+        }
+        
+        const mapped = filteredList.map((p) => ({
           id: p.id,
           name: p.name,
           price: p.price,
           imageSrc: p.imageSrc,
           discountPercent: p.discountPercent,
-          rating: p.rating || 0,
+          rating: p.rating || 4.5,
           reviewCount: p.reviewCount || 0,
           category: p.category,
           brand: p.brand,
           description: p.description,
-          color: p.color?.[0], // fallback
+          color: p.color?.[0] || "Beige",
           size: p.size,
         }));
-        if (filtered.length > 0) {
-          setDynamicProducts(filtered);
-        }
+        
+        setDynamicProducts(mapped);
       } catch (err) {
-        console.error("Failed to load dynamic ratings in CollectionTemplate:", err);
+        console.error("Failed to load products in CollectionTemplate:", err);
       }
     };
     loadDynamicProducts();
-  }, [initialProducts]);
+  }, [categoryFilter]);
 
   // Filters & State
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);

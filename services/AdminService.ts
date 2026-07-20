@@ -29,6 +29,7 @@ export interface AdminProduct {
   rating?: number;
   reviewCount?: number;
   sku?: string;
+  tags?: string[];
 }
 
 export interface AdminOrder {
@@ -63,91 +64,7 @@ export interface AdminCustomer {
 
 // ─── Default Initial Mock Datasets ──────────────────────────────────────────
 
-const INITIAL_PRODUCTS: AdminProduct[] = [
-  {
-    id: "m1",
-    name: "Classic Cashmere Trench Coat",
-    description: "Premium double-breasted coat made with pure organic cashmere and structured shoulders for an elegant silhouette.",
-    category: "Men",
-    brand: "Certitude",
-    price: 499,
-    discountPercent: 15,
-    stockQuantity: 45,
-    imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
-    images: ["https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop"],
-    size: ["M", "L", "XL"],
-    color: ["Beige", "Black", "Charcoal"],
-    rating: 4.8,
-    reviewCount: 124,
-    sku: "CC-M-TRENCH-01"
-  },
-  {
-    id: "m2",
-    name: "Minimalist Linen Utility Shirt",
-    description: "A breathable, lightweight utility shirt crafted from 100% fine French flax linen, featuring double patch pockets.",
-    category: "Men",
-    brand: "Atelier",
-    price: 120,
-    stockQuantity: 60,
-    imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
-    images: ["https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop"],
-    size: ["S", "M", "L"],
-    color: ["Cream", "White", "Blue"],
-    rating: 4.5,
-    reviewCount: 98,
-    sku: "CC-M-LINEN-02"
-  },
-  {
-    id: "w1",
-    name: "Silk Cocktail Evening Gown",
-    description: "Exquisite floor-length evening gown crafted from heavy 100% mulberry silk satin with a delicate drape back.",
-    category: "Women",
-    brand: "Certitude",
-    price: 650,
-    discountPercent: 10,
-    stockQuantity: 18,
-    imageSrc: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop",
-    images: ["https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop"],
-    size: ["S", "M", "L"],
-    color: ["Blush", "Black"],
-    rating: 4.9,
-    reviewCount: 240,
-    sku: "CC-W-SILK-01"
-  },
-  {
-    id: "w2",
-    name: "Oversized Merino Wool Sweater",
-    description: "Relaxed mock neck sweater chunky knit from responsibly sourced extra-fine Australian merino wool.",
-    category: "Women",
-    brand: "EcoKnit",
-    price: 195,
-    stockQuantity: 32,
-    imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
-    images: ["https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop"],
-    size: ["XS", "S", "M", "L"],
-    color: ["Beige", "Charcoal", "White"],
-    rating: 4.7,
-    reviewCount: 156,
-    sku: "CC-W-MERINO-02"
-  },
-  {
-    id: "k1",
-    name: "Kids Cotton Knit Romper Set",
-    description: "An incredibly soft, organic cotton pointelle knit romper set complete with matching booties.",
-    category: "Kids",
-    brand: "EcoKnit",
-    price: 85,
-    discountPercent: 10,
-    stockQuantity: 25,
-    imageSrc: "https://images.unsplash.com/photo-1622290319146-7b63df48a635?q=80&w=400&auto=format&fit=crop",
-    images: ["https://images.unsplash.com/photo-1622290319146-7b63df48a635?q=80&w=400&auto=format&fit=crop"],
-    size: ["S", "M"],
-    color: ["Beige", "Blush"],
-    rating: 4.7,
-    reviewCount: 42,
-    sku: "CC-K-ROMPER-01"
-  }
-];
+import { INITIAL_PRODUCTS } from "./InitialProducts";
 
 const INITIAL_ORDERS: AdminOrder[] = [
   {
@@ -363,10 +280,75 @@ if (isBrowser) {
 
 // ─── Public Service API ─────────────────────────────────────────────────────
 
+interface CustomSupabaseClient {
+  from: (table: string) => {
+    insert: (data: Record<string, unknown> | Record<string, unknown>[]) => {
+      then: (callback: (result: { error: { message: string } | null }) => void) => void;
+    };
+    select: (columns?: string) => {
+      order: (column: string, options: { ascending: boolean }) => Promise<{
+        error: { message: string } | null;
+        data: Record<string, unknown>[] | null;
+      }>;
+      eq?: (column: string, value: string) => Promise<{
+        error: { message: string } | null;
+        data: Record<string, unknown>[] | null;
+      }>;
+      then?: (callback: (result: { error: { message: string } | null; data: Record<string, unknown>[] | null }) => void) => void;
+    } & Promise<{
+      error: { message: string } | null;
+      data: Record<string, unknown>[] | null;
+    }>;
+    upsert: (data: Record<string, unknown> | Record<string, unknown>[]) => Promise<{
+      error: { message: string } | null;
+      data: Record<string, unknown>[] | null;
+    }>;
+    delete: () => {
+      eq: (column: string, value: string) => Promise<{
+        error: { message: string } | null;
+        data: Record<string, unknown>[] | null;
+      }>;
+    };
+  };
+  auth: {
+    getUser: () => Promise<{ data: { user: { id: string; email?: string } | null } }>;
+  };
+}
+
 /**
  * Returns all products.
  */
 export async function getProducts(): Promise<AdminProduct[]> {
+  if (isBrowser) {
+    try {
+      const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+      const { data, error } = await supabase.from('products').select('*');
+      if (!error && data && data.length > 0) {
+        const mapped: AdminProduct[] = data.map((p: Record<string, unknown>) => ({
+          id: String(p.id),
+          name: String(p.name),
+          description: String(p.description || ""),
+          category: String(p.category),
+          brand: String(p.brand || "Certitude"),
+          price: Number(p.price),
+          discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
+          stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
+          imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
+          images: Array.isArray(p.images) ? (p.images as string[]) : [],
+          size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
+          color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
+          rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+          reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
+          sku: String(p.sku || ""),
+          tags: Array.isArray(p.tags) ? (p.tags as string[]) : []
+        }));
+        setLocalStorageItem("certitude_admin_products", mapped);
+        return mapped;
+      }
+    } catch (err) {
+      console.error("[AdminService] Supabase getProducts error, falling back:", err);
+    }
+  }
   return getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
 }
 
@@ -384,6 +366,31 @@ export async function saveProduct(product: AdminProduct): Promise<AdminProduct> 
   }
 
   setLocalStorageItem("certitude_admin_products", products);
+
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    await supabase.from('products').upsert({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      price: product.price,
+      images: product.images,
+      category: product.category,
+      stock: product.stockQuantity,
+      brand: product.brand,
+      discount_percent: product.discountPercent || 0,
+      rating: product.rating || 4.5,
+      review_count: product.reviewCount || 0,
+      size: product.size,
+      color: product.color,
+      sku: product.sku || "",
+      is_active: true,
+      updated_at: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("[AdminService] Supabase saveProduct error:", err);
+  }
+
   return product;
 }
 
@@ -394,24 +401,15 @@ export async function deleteProduct(id: string): Promise<boolean> {
   const products = await getProducts();
   const filtered = products.filter((p) => p.id !== id);
   setLocalStorageItem("certitude_admin_products", filtered);
-  return true;
-}
 
-interface CustomSupabaseClient {
-  from: (table: string) => {
-    insert: (data: Record<string, unknown>) => {
-      then: (callback: (result: { error: { message: string } | null }) => void) => void;
-    };
-    select: (columns?: string) => {
-      order: (column: string, options: { ascending: boolean }) => Promise<{
-        error: { message: string } | null;
-        data: Record<string, unknown>[] | null;
-      }>;
-    };
-  };
-  auth: {
-    getUser: () => Promise<{ data: { user: { id: string; email?: string } | null } }>;
-  };
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    await supabase.from('products').delete().eq('id', id);
+  } catch (err) {
+    console.error("[AdminService] Supabase deleteProduct error:", err);
+  }
+
+  return true;
 }
 
 export async function getOrders(): Promise<AdminOrder[]> {

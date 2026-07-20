@@ -225,7 +225,7 @@ export default function SignInForm() {
       <div className="text-center text-xs text-stone-500 mt-4 font-light">
         New to Certitude Atelier?{" "}
         <Link
-          href="/signup"
+          href={`/signup${nextRoute !== "/" ? "?next=" + encodeURIComponent(nextRoute) : ""}`}
           className="font-semibold text-[#C68B7D] hover:text-[#B37A6D] transition-colors"
         >
           Create an account
