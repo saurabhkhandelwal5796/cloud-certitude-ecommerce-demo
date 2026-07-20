@@ -164,7 +164,7 @@ export default async function ProductDetailsPage({ params }: PageProps) {
     price: product.price,
     rating: product.rating || 4.5,
     imageSrc: product.imageSrc,
-    sku: product.sku,
+    sku: product.sku || "",
   });
 
   const breadcrumbs = [
