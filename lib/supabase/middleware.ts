@@ -59,6 +59,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  let isAdmin = false;
+  if (user) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+      isAdmin = profile?.role === "admin" || user.email === "admin@cloudcertitude.com";
+    } catch {
+      isAdmin = user.email === "admin@cloudcertitude.com";
+    }
+  }
+
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/checkout") ||
     request.nextUrl.pathname.startsWith("/orders") ||
@@ -72,12 +86,34 @@ export async function updateSession(request: NextRequest) {
     "/reset-password",
   ].includes(request.nextUrl.pathname);
 
+  const isCustomerProtectedRoute =
+    request.nextUrl.pathname.startsWith("/checkout") ||
+    request.nextUrl.pathname.startsWith("/orders") ||
+    request.nextUrl.pathname.startsWith("/profile");
+
+  const isHomepage = request.nextUrl.pathname === "/";
+  const hasPreviewParam = request.nextUrl.searchParams.has("preview");
+
   // Route Protection Logic
   if (isProtectedRoute && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/signin";
     // Keep track of the original destination to redirect back after sign in if needed
     url.searchParams.set("next", request.nextUrl.pathname);
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect admin trying to access customer protected routes
+  if (isCustomerProtectedRoute && user && isAdmin) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect admin trying to access homepage directly without preview
+  if (isHomepage && user && isAdmin && !hasPreviewParam) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/admin";
     return NextResponse.redirect(url);
   }
 
@@ -92,7 +128,7 @@ export async function updateSession(request: NextRequest) {
       }
     }
     const url = request.nextUrl.clone();
-    url.pathname = "/profile";
+    url.pathname = isAdmin ? "/admin" : "/profile";
     return NextResponse.redirect(url);
   }
 

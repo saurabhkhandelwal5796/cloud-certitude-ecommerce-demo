@@ -124,10 +124,12 @@ export default function AdminSidebar() {
         {/* Footer actions */}
         <div className="border-t border-stone-100 p-4 space-y-2">
           <Link
-            href="/"
+            href="/?preview=true"
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold text-stone-500 hover:bg-stone-50 hover:text-stone-900 transition-colors uppercase tracking-wider"
           >
-            <span className="text-sm">🏠</span> Storefront
+            <span className="text-sm">🏠</span> View Storefront
           </Link>
           <button
             onClick={handleLogout}

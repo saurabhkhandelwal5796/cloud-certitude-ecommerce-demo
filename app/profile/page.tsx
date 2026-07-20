@@ -28,6 +28,17 @@ export default async function ProfilePage() {
     redirect("/signin");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const isAdmin = profile?.role === "admin" || user.email === "admin@cloudcertitude.com";
+  if (isAdmin) {
+    redirect("/admin");
+  }
+
   return (
     <div className="flex-1 bg-slate-950 py-12 px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center min-h-[calc(100vh-4rem)]">
       <div className="w-full max-w-xl mb-8 text-center md:text-left">

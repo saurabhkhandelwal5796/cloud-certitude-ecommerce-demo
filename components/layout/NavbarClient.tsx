@@ -133,6 +133,10 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
+  if (userRole === "admin") {
+    return null;
+  }
+
   return (
     <nav className="border-b border-stone-200/50 bg-white/70 backdrop-blur-md sticky top-0 z-50 text-stone-850 transition-all duration-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -157,22 +161,13 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 { name: "Kids", href: "/kids" },
                 { name: "New Arrivals", href: "/new-arrivals" },
                 { name: "Sale", href: "/sale", isSale: true },
-                ...(userRole === "admin" ? [
-                  { name: "Customer View", href: "/", isAdmin: true },
-                  { name: "Admin Portal", href: "/admin", isAdmin: true },
-                  { name: "Users", href: "/admin/users", isAdmin: true },
-                ] : []),
               ].map((link) => (
                 <Link
                   key={link.name}
                   href={link.href}
                   className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                    (link as {isSale?:boolean}).isSale
+                    link.isSale
                       ? "text-rose-500 hover:text-rose-600"
-                      : (link as {isAdmin?:boolean}).isAdmin
-                      ? pathname === link.href
-                        ? "text-violet-600 border-b-2 border-violet-400 pb-0.5"
-                        : "text-violet-500 hover:text-violet-700"
                       : pathname === link.href
                       ? "text-[#C68B7D] border-b-2 border-[#C68B7D] pb-0.5"
                       : "text-stone-600 hover:text-[#C68B7D]"
@@ -395,21 +390,14 @@ export default function NavbarClient({ user }: NavbarClientProps) {
             { name: "Kids", href: "/kids" },
             { name: "New Arrivals", href: "/new-arrivals" },
             { name: "Sale", href: "/sale", isSale: true },
-            ...(userRole === "admin" ? [
-              { name: "Customer View", href: "/", isAdmin: true },
-              { name: "Admin Portal", href: "/admin", isAdmin: true },
-              { name: "Users", href: "/admin/users", isAdmin: true },
-            ] : []),
           ].map((link) => (
             <Link
               key={link.name}
               href={link.href}
               onClick={() => setIsOpen(false)}
               className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider ${
-                (link as {isSale?:boolean}).isSale
+                link.isSale
                   ? "text-rose-500 hover:bg-rose-50"
-                  : (link as {isAdmin?:boolean}).isAdmin
-                  ? "text-violet-600 hover:bg-violet-50"
                   : pathname === link.href
                   ? "text-[#C68B7D] bg-[#E0A99E]/10"
                   : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
