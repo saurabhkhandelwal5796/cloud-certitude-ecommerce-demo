@@ -93,7 +93,7 @@ export default function CollectionTemplate({
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
-  const [priceRange, setPriceRange] = useState<number>(1000);
+  const [priceRange, setPriceRange] = useState<number>(10000);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("newest");
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -106,7 +106,7 @@ export default function CollectionTemplate({
     setSelectedSizes([]);
     setSelectedColors([]);
     setSelectedBrands([]);
-    setPriceRange(1000);
+    setPriceRange(10000);
     setSearchQuery("");
     setCurrentPage(1);
   };

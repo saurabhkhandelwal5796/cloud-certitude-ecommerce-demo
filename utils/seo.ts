@@ -80,7 +80,7 @@ export function getProductSchema(product: {
     "offers": {
       "@type": "Offer",
       "url": `${SITE_URL}/products/${product.id}`,
-      "priceCurrency": "USD",
+      "priceCurrency": "INR",
       "price": product.price,
       "priceValidUntil": "2027-12-31",
       "itemCondition": "https://schema.org/NewCondition",

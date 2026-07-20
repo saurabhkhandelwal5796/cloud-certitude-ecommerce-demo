@@ -74,7 +74,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
     orderDate: "Jul 15, 2026, 02:30 PM",
     paymentMethod: "Credit Card",
     status: "Delivered",
-    total: 820.00,
+    total: 11898.00,
     itemsCount: 2,
     address: {
       firstName: "Sarah",
@@ -95,7 +95,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
         quantity: 1,
         size: "M",
         color: "Beige",
-        price: 499,
+        price: 6999,
         imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
         brand: "Certitude"
       },
@@ -105,7 +105,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
         quantity: 1,
         size: "S",
         color: "Beige",
-        price: 195,
+        price: 4899,
         imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
         brand: "EcoKnit"
       }
@@ -118,7 +118,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
     orderDate: "Jul 16, 2026, 11:15 AM",
     paymentMethod: "UPI Payments",
     status: "Shipped",
-    total: 350.00,
+    total: 4798.00,
     itemsCount: 1,
     address: {
       firstName: "John",
@@ -139,7 +139,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
         quantity: 2,
         size: "M",
         color: "Cream",
-        price: 120,
+        price: 2399,
         imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
         brand: "Atelier"
       }
@@ -152,7 +152,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
     orderDate: "Jul 17, 2026, 09:45 AM",
     paymentMethod: "Cash on Delivery",
     status: "Processing",
-    total: 120.00,
+    total: 2399.00,
     itemsCount: 1,
     address: {
       firstName: "Amit",
@@ -173,7 +173,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
         quantity: 1,
         size: "L",
         color: "Cream",
-        price: 120,
+        price: 2399,
         imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
         brand: "Atelier"
       }
@@ -186,7 +186,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
     orderDate: "Jul 17, 2026, 10:10 AM",
     paymentMethod: "Debit Card",
     status: "Pending",
-    total: 650.00,
+    total: 9999.00,
     itemsCount: 1,
     address: {
       firstName: "Emma",
@@ -207,7 +207,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
         quantity: 1,
         size: "S",
         color: "Blush",
-        price: 650,
+        price: 9999,
         imageSrc: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop",
         brand: "Certitude"
       }
@@ -220,25 +220,25 @@ const INITIAL_CUSTOMERS: AdminCustomer[] = [
     email: "sarah@sky.net",
     name: "Sarah Connor",
     ordersCount: 5,
-    totalSpend: 1840.00
+    totalSpend: 25000.00
   },
   {
     email: "john@gmail.com",
     name: "John Doe",
     ordersCount: 3,
-    totalSpend: 1250.00
+    totalSpend: 15000.00
   },
   {
     email: "amit@yahoo.in",
     name: "Amit Sharma",
     ordersCount: 2,
-    totalSpend: 4300.00
+    totalSpend: 45000.00
   },
   {
     email: "emma@watson.co.uk",
     name: "Emma Watson",
     ordersCount: 1,
-    totalSpend: 650.00
+    totalSpend: 12000.00
   }
 ];
 
@@ -315,6 +315,41 @@ interface CustomSupabaseClient {
   };
 }
 
+function cleanProductUrls(products: AdminProduct[]): { cleaned: AdminProduct[], updatedCount: number } {
+  let updatedCount = 0;
+  const placeholderImage = "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400&auto=format&fit=crop";
+  const invalidPattern = /https?:\/\/(www\.)?unsplash\.com\/photos\//;
+
+  const cleaned = products.map((product) => {
+    let modified = false;
+    let newImageSrc = product.imageSrc;
+    if (invalidPattern.test(product.imageSrc || "")) {
+      newImageSrc = placeholderImage;
+      modified = true;
+    }
+
+    const newImages = (product.images || []).map((img) => {
+      if (invalidPattern.test(img || "")) {
+        modified = true;
+        return placeholderImage;
+      }
+      return img;
+    });
+
+    if (modified) {
+      updatedCount++;
+      return {
+        ...product,
+        imageSrc: newImageSrc,
+        images: newImages,
+      };
+    }
+    return product;
+  });
+
+  return { cleaned, updatedCount };
+}
+
 /**
  * Returns all products.
  */
@@ -342,6 +377,37 @@ export async function getProducts(): Promise<AdminProduct[]> {
           sku: String(p.sku || ""),
           tags: Array.isArray(p.tags) ? (p.tags as string[]) : []
         }));
+
+        const { cleaned, updatedCount } = cleanProductUrls(mapped);
+        if (updatedCount > 0) {
+          setLocalStorageItem("certitude_admin_products", cleaned);
+          // Sync with Supabase asynchronously
+          for (const product of cleaned) {
+            const original = mapped.find(p => p.id === product.id);
+            if (original && (original.imageSrc !== product.imageSrc || JSON.stringify(original.images) !== JSON.stringify(product.images))) {
+              supabase.from('products').upsert({
+                id: product.id,
+                name: product.name,
+                description: product.description,
+                price: product.price,
+                images: product.images,
+                category: product.category,
+                stock: product.stockQuantity,
+                brand: product.brand,
+                discount_percent: product.discountPercent || 0,
+                rating: product.rating || 4.5,
+                review_count: product.reviewCount || 0,
+                size: product.size,
+                color: product.color,
+                sku: product.sku || "",
+                is_active: true,
+                updated_at: new Date().toISOString()
+              }).catch(err => console.error("[AdminService] Sync error:", err));
+            }
+          }
+          return cleaned;
+        }
+
         setLocalStorageItem("certitude_admin_products", mapped);
         return mapped;
       }
@@ -349,7 +415,13 @@ export async function getProducts(): Promise<AdminProduct[]> {
       console.error("[AdminService] Supabase getProducts error, falling back:", err);
     }
   }
-  return getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
+  const localProducts = getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
+  const { cleaned, updatedCount } = cleanProductUrls(localProducts);
+  if (updatedCount > 0) {
+    setLocalStorageItem("certitude_admin_products", cleaned);
+    return cleaned;
+  }
+  return localProducts;
 }
 
 /**

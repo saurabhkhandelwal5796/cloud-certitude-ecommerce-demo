@@ -83,8 +83,7 @@ export default function AdminSettingsPage() {
                 onChange={(e) => setCurrency(e.target.value)}
                 className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2.5 text-stone-850 focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50 font-bold"
               >
-                <option value="INR">Rupees (INR)</option>
-                <option value="USD">Dollars (USD)</option>
+                <option value="INR">Indian Rupees (INR)</option>
                 <option value="EUR">Euros (EUR)</option>
               </select>
             </div>

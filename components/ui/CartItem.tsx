@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
 import { CartItemType, useCart } from "@/context/CartContext";
 
 interface CartItemProps {
@@ -19,6 +19,11 @@ interface CartItemProps {
  */
 export default function CartItem({ item }: CartItemProps) {
   const { updateQuantity, removeFromCart } = useCart();
+  const [currentImage, setCurrentImage] = useState(item.imageSrc);
+
+  useEffect(() => {
+    setCurrentImage(item.imageSrc);
+  }, [item.imageSrc]);
 
   const discountedPrice = item.discountPercent
     ? item.price * (1 - item.discountPercent / 100)
@@ -32,11 +37,14 @@ export default function CartItem({ item }: CartItemProps) {
       <div className="flex items-center gap-4 flex-1">
         <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-stone-50 border border-stone-100">
           <Image
-            src={item.imageSrc}
+            src={currentImage}
             alt={item.name}
             fill
             sizes="80px"
             className="object-cover"
+            onError={() => {
+              setCurrentImage(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
+            }}
           />
         </div>
 

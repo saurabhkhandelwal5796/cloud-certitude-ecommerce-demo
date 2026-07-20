@@ -1,5 +1,51 @@
 /* eslint-disable */
 const { createClient } = require('@supabase/supabase-js');
+function getINRPrice(category, name, usdPrice) {
+  const lowercaseName = name.toLowerCase();
+  if (lowercaseName.includes("t-shirt") || lowercaseName.includes("tee")) {
+    const price = usdPrice * 25;
+    return Math.max(599, Math.min(1499, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("shirt") || lowercaseName.includes("blouse") || lowercaseName.includes("polo")) {
+    const price = usdPrice * 20;
+    return Math.max(999, Math.min(2499, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("jeans") || lowercaseName.includes("pants") || lowercaseName.includes("trousers") || lowercaseName.includes("chino") || lowercaseName.includes("skirt")) {
+    const price = usdPrice * 22;
+    return Math.max(1499, Math.min(3499, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("hoodie") || lowercaseName.includes("sweater") || lowercaseName.includes("cardigan") || lowercaseName.includes("knit")) {
+    const price = usdPrice * 25;
+    return Math.max(1999, Math.min(4999, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("jacket") || lowercaseName.includes("coat") || lowercaseName.includes("blazer") || lowercaseName.includes("trench")) {
+    const price = usdPrice * 18;
+    return Math.max(2499, Math.min(6999, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("dress") || lowercaseName.includes("gown") || lowercaseName.includes("sundress")) {
+    const price = usdPrice * 20;
+    return Math.max(1999, Math.min(9999, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("saree") || lowercaseName.includes("sari")) {
+    const price = usdPrice * 20;
+    return Math.max(1499, Math.min(9999, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("kurti") || lowercaseName.includes("kurta")) {
+    const price = usdPrice * 20;
+    return Math.max(899, Math.min(2499, Math.round(price / 100) * 100 - 1));
+  }
+  if (category === "Kids" || lowercaseName.includes("kid") || lowercaseName.includes("overall") || lowercaseName.includes("jumpsuit")) {
+    const price = usdPrice * 20;
+    return Math.max(499, Math.min(1499, Math.round(price / 100) * 100 - 1));
+  }
+  if (lowercaseName.includes("shoe") || lowercaseName.includes("boot") || lowercaseName.includes("sneaker") || lowercaseName.includes("loafer") || lowercaseName.includes("heel")) {
+    const price = usdPrice * 30;
+    return Math.max(1999, Math.min(7999, Math.round(price / 100) * 100 - 1));
+  }
+  const price = usdPrice * 20;
+  return Math.round(price / 100) * 100 - 1;
+}
+
 const fs = require('fs');
 
 // Deterministic mock data generation
@@ -116,7 +162,7 @@ async function run() {
       description: "Premium double-breasted coat made with pure organic cashmere and structured shoulders for an elegant silhouette.",
       category: "Men",
       brand: "Certitude",
-      price: 499,
+      price: 6999,
       discountPercent: 15,
       stockQuantity: 45,
       imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
@@ -134,7 +180,7 @@ async function run() {
       description: "A breathable, lightweight utility shirt crafted from 100% fine French flax linen, featuring double patch pockets.",
       category: "Men",
       brand: "Atelier",
-      price: 120,
+      price: 2399,
       discountPercent: 0,
       stockQuantity: 60,
       imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
@@ -152,7 +198,7 @@ async function run() {
       description: "An elegant wrap dress made from heavyweight mulberry silk, featuring a delicate self-tie belt and asymmetrical hem.",
       category: "Women",
       brand: "Certitude",
-      price: 380,
+      price: 7599,
       discountPercent: 10,
       stockQuantity: 30,
       imageSrc: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=400&auto=format&fit=crop",
@@ -170,7 +216,7 @@ async function run() {
       description: "Cozy, chunky-knit sweater crafted from extrafine Australian merino wool. Relaxed fit with ribbed cuffs and hem.",
       category: "Women",
       brand: "EcoKnit",
-      price: 195,
+      price: 4899,
       discountPercent: 0,
       stockQuantity: 50,
       imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
@@ -188,7 +234,7 @@ async function run() {
       description: "Artisanal blouse featuring hand-guided floral embroidery, balloon sleeves, and a split neckline with tassel ties.",
       category: "Women",
       brand: "Sustaina",
-      price: 245,
+      price: 2499,
       discountPercent: 20,
       stockQuantity: 15,
       imageSrc: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400&auto=format&fit=crop",
@@ -206,7 +252,7 @@ async function run() {
       description: "Durable classic denim overalls made with 100% organic cotton. Features adjustable shoulder straps and side button closures.",
       category: "Kids",
       brand: "Playwear",
-      price: 65,
+      price: 1299,
       discountPercent: 0,
       stockQuantity: 40,
       imageSrc: "https://images.unsplash.com/photo-1519457431-44cd6481697b?q=80&w=400&auto=format&fit=crop",
@@ -224,7 +270,7 @@ async function run() {
       description: "Ultra-soft brushed fleece pullover hoodie with a front kangaroo pocket and ribbed storm cuffs. Machine-wash safe.",
       category: "Kids",
       brand: "Playwear",
-      price: 45,
+      price: 1999,
       discountPercent: 10,
       stockQuantity: 70,
       imageSrc: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=400&auto=format&fit=crop",
@@ -242,7 +288,7 @@ async function run() {
       description: "Classic crewneck sweater in a premium cotton-acrylic knit. Features timeless Breton stripes and shoulder button detail.",
       category: "Kids",
       brand: "MiniKnit",
-      price: 55,
+      price: 1399,
       discountPercent: 0,
       stockQuantity: 25,
       imageSrc: "https://images.unsplash.com/photo-1519689680058-28751e9a3c10?q=80&w=400&auto=format&fit=crop",
@@ -285,7 +331,7 @@ async function run() {
       const description = `A premium quality ${adj.toLowerCase()} ${item.toLowerCase()} meticulously crafted by ${brand}. Features high-durability fabrics, luxury finish, and tailored sizing options. Perfect for seasonal style.`;
       
       // Real prices, stocks, ratings
-      const price = Math.floor(45 + (index * 7.5) % 450);
+      const price = getINRPrice(category, name, Math.floor(45 + (index * 7.5) % 450));
       const discountPercent = (index % 5 === 0) ? (10 + (index % 3) * 5) : 0;
       const rating = Number((4.1 + (index * 0.13) % 0.8).toFixed(1));
       const reviewCount = Math.floor(12 + (index * 13) % 240);

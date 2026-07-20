@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage } from "@/utils";
 import { useCart } from "@/context/CartContext";
 
 interface ProductType {
@@ -39,6 +39,13 @@ export default function ProductQuickViewModal({
   const [selectedColor, setSelectedColor] = useState("Beige");
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
+  const [currentImage, setCurrentImage] = useState(product?.imageSrc || "");
+
+  useEffect(() => {
+    if (product) {
+      setCurrentImage(product.imageSrc);
+    }
+  }, [product]);
 
   if (!isOpen || !product) return null;
 
@@ -86,11 +93,14 @@ export default function ProductQuickViewModal({
         {/* Left: Product Image */}
         <div className="relative w-full md:w-1/2 aspect-[4/5] bg-stone-50">
           <Image
-            src={product.imageSrc}
+            src={currentImage}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"
             className="object-cover"
+            onError={() => {
+              setCurrentImage(getCategoryFallbackImage(product.category));
+            }}
           />
           {product.discountPercent && (
             <span className="absolute top-4 left-4 rounded-full bg-[#E0A99E] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
@@ -138,7 +148,7 @@ export default function ProductQuickViewModal({
               <span className="text-xl font-extrabold text-stone-900">
                 {formatPrice(discountedPrice)}
               </span>
-              {product.discountPercent && (
+              {product.discountPercent !== undefined && product.discountPercent > 0 && (
                 <span className="text-sm font-semibold text-stone-400 line-through">
                   {formatPrice(product.price)}
                 </span>

@@ -50,7 +50,7 @@ export default function ProductInfo({
   description,
   material = "100% Organic Egyptian Cotton",
   careInstructions = "Machine wash cold with like colors. Dry flat in shade. Iron on low heat.",
-  shippingInfo = "Free standard shipping on orders over $150. Delivery within 3-5 business days.",
+  shippingInfo = "Free standard shipping on orders over ₹1,000. Delivery within 3-5 business days.",
   returnPolicy = "Hassle-free 30-day returns. Items must be unworn and contain original tags intact.",
 }: ProductInfoProps) {
   const { addToCart } = useCart();
@@ -178,7 +178,7 @@ export default function ProductInfo({
           <span className="text-2xl md:text-3xl font-extrabold text-stone-900">
             {formatPrice(discountedPrice)}
           </span>
-          {discountPercent && (
+          {discountPercent !== undefined && discountPercent > 0 && (
             <>
               <span className="text-sm font-semibold text-stone-400 line-through">
                 {formatPrice(price)}
@@ -189,7 +189,7 @@ export default function ProductInfo({
             </>
           )}
         </div>
-        {discountPercent && (
+        {discountPercent !== undefined && discountPercent > 0 && (
           <div className="inline-flex items-center gap-1 bg-[#E0A99E]/10 border border-[#E0A99E]/20 text-[#C68B7D] text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full shadow-sm">
             <svg className="h-3 w-3 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />

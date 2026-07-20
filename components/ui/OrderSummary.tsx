@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
+import { CartItemType } from "@/context/CartContext";
 import { useCart } from "@/context/CartContext";
 
 interface OrderSummaryProps {
@@ -16,6 +17,26 @@ interface OrderSummaryProps {
  *
  * Displays pricing calculations and lists preview details of active shopping items.
  */
+function SummaryItemImage({ item }: { item: CartItemType }) {
+  const [src, setSrc] = useState(item.imageSrc);
+  useEffect(() => {
+    setSrc(item.imageSrc);
+  }, [item.imageSrc]);
+
+  return (
+    <Image
+      src={src}
+      alt={item.name}
+      fill
+      sizes="40px"
+      className="object-cover"
+      onError={() => {
+        setSrc(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
+      }}
+    />
+  );
+}
+
 export default function OrderSummary({
   deliveryFee,
   discountPercent,
@@ -42,13 +63,7 @@ export default function OrderSummary({
           return (
             <div key={`${item.id}-${item.selectedSize}-${item.selectedColor}`} className="flex items-center gap-3">
               <div className="relative h-11 w-9 overflow-hidden rounded-lg bg-stone-50 border border-stone-100 flex-shrink-0">
-                <Image
-                  src={item.imageSrc}
-                  alt={item.name}
-                  fill
-                  sizes="40px"
-                  className="object-cover"
-                />
+                <SummaryItemImage item={item} />
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className="text-xs font-semibold text-stone-800 truncate uppercase tracking-wide">

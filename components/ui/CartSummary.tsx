@@ -39,8 +39,8 @@ export default function CartSummary() {
   // Est Tax is 8% of subtotal
   const tax = cartSubtotal * 0.08;
   
-  // Shipping is free if subtotal is over $150, else $15 flat rate
-  const shipping = cartSubtotal > 150 ? 0 : 15;
+  // Shipping is free if subtotal is over ₹1,000, else ₹100 flat rate
+  const shipping = cartSubtotal > 1000 ? 0 : 100;
 
   // Promo code discounts
   const handleApplyPromo = (e: React.FormEvent) => {
@@ -100,7 +100,7 @@ export default function CartSummary() {
 
         {shipping > 0 && (
           <p className="text-[10px] text-stone-400 font-light mt-0.5 leading-relaxed">
-            Spend {formatPrice(150 - cartSubtotal)} more for free express shipping.
+            Spend {formatPrice(1000 - cartSubtotal)} more for free express shipping.
           </p>
         )}
       </div>

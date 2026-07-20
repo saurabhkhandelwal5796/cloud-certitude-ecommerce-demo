@@ -194,7 +194,7 @@ export default async function ProductDetailsPage({ params }: PageProps) {
       <div className="flex flex-col lg:flex-row gap-12 items-start">
         {/* Left Column: Image Viewport + Delivery Checker */}
         <div className="w-full lg:w-1/2">
-          <ProductImageGallery images={product.images} />
+          <ProductImageGallery images={product.images} category={product.category} />
           <DeliveryChecker />
         </div>
 

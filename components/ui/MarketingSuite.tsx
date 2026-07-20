@@ -12,7 +12,7 @@ export function PromotionalBanner() {
       <p className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-[#E0A99E] leading-none flex items-center justify-center gap-1.5 flex-wrap">
         <span>✨ PRIVATE ATELIER SALE: UP TO 25% OFF APPLIED AT CHECKOUT</span>
         <span className="hidden sm:inline text-stone-700">&middot;</span>
-        <span className="text-white font-medium">FREE STANDARD SHIPPING ON ORDERS OVER $150</span>
+        <span className="text-white font-medium">FREE STANDARD SHIPPING ON ORDERS OVER ₹1,000</span>
       </p>
     </div>
   );

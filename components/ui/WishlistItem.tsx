@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
 import { WishlistItemType, useWishlist } from "@/context/WishlistContext";
 import MoveToCartButton from "./MoveToCartButton";
 
@@ -20,6 +20,11 @@ interface WishlistItemProps {
  */
 export default function WishlistItem({ item }: WishlistItemProps) {
   const { removeFromWishlist } = useWishlist();
+  const [currentImage, setCurrentImage] = useState(item.imageSrc);
+
+  useEffect(() => {
+    setCurrentImage(item.imageSrc);
+  }, [item.imageSrc]);
 
   const discountedPrice = item.discountPercent
     ? item.price * (1 - item.discountPercent / 100)
@@ -32,11 +37,14 @@ export default function WishlistItem({ item }: WishlistItemProps) {
         <Link href={`/products/${item.id}`} className="flex-shrink-0">
           <div className="relative h-20 w-16 overflow-hidden rounded-xl bg-stone-50 border border-stone-100">
             <Image
-              src={item.imageSrc}
+              src={currentImage}
               alt={item.name}
               fill
               sizes="80px"
               className="object-cover"
+              onError={() => {
+                setCurrentImage(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
+              }}
             />
           </div>
         </Link>
@@ -85,7 +93,7 @@ export default function WishlistItem({ item }: WishlistItemProps) {
           <span className="block text-sm font-extrabold text-stone-900">
             {formatPrice(discountedPrice)}
           </span>
-          {item.discountPercent && (
+          {item.discountPercent !== undefined && item.discountPercent > 0 && (
             <span className="block text-xs text-stone-400 line-through font-light">
               {formatPrice(item.price)}
             </span>

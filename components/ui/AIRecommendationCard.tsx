@@ -1,9 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage } from "@/utils";
 import { AdminProduct } from "@/services/AdminService";
 import RatingStars from "./RatingStars";
 
@@ -18,6 +18,12 @@ export default function AIRecommendationCard({
   reason = "Recommended for you",
   badgeText = "AI Pick",
 }: AIRecommendationCardProps) {
+  const [currentImage, setCurrentImage] = useState(product.imageSrc);
+
+  useEffect(() => {
+    setCurrentImage(product.imageSrc);
+  }, [product.imageSrc]);
+
   const discountedPrice = product.discountPercent
     ? product.price * (1 - product.discountPercent / 100)
     : product.price;
@@ -30,11 +36,14 @@ export default function AIRecommendationCard({
       {/* Product Image */}
       <div className="relative aspect-[4/5] bg-stone-50 overflow-hidden">
         <Image
-          src={product.imageSrc}
+          src={currentImage}
           alt={product.name}
           fill
           sizes="(max-width: 640px) 100vw, 30vw"
           className="object-cover group-hover:scale-105 transition-transform duration-500"
+          onError={() => {
+            setCurrentImage(getCategoryFallbackImage(product.category));
+          }}
         />
 
         {/* AI Pick Premium overlay glassmorphic badge */}
@@ -67,7 +76,7 @@ export default function AIRecommendationCard({
             <span className="text-xs font-black text-stone-900">
               {formatPrice(discountedPrice)}
             </span>
-            {product.discountPercent && (
+            {product.discountPercent !== undefined && product.discountPercent > 0 && (
               <span className="text-[10px] font-bold text-stone-400 line-through">
                 {formatPrice(product.price)}
               </span>

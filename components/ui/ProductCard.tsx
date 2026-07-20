@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage } from "@/utils";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 
@@ -55,6 +55,11 @@ export default function ProductCard({
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
   const [isAdding, setIsAdding] = useState(false);
+  const [currentImage, setCurrentImage] = useState(imageSrc);
+
+  useEffect(() => {
+    setCurrentImage(imageSrc);
+  }, [imageSrc]);
 
   const isWishlisted = isInWishlist(id);
 
@@ -98,11 +103,14 @@ export default function ProductCard({
       {/* Product Image and Overlay triggers */}
       <div className="relative aspect-[3/4] overflow-hidden bg-stone-50 z-0">
         <Image
-          src={imageSrc}
+          src={currentImage}
           alt={name}
           fill
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+          onError={() => {
+            setCurrentImage(getCategoryFallbackImage(category));
+          }}
         />
 
         {/* Discount Badge */}
@@ -195,7 +203,7 @@ export default function ProductCard({
           <span className="text-sm font-bold text-stone-900">
             {formatPrice(discountedPrice)}
           </span>
-          {discountPercent && (
+          {discountPercent !== undefined && discountPercent > 0 && (
             <span className="text-xs font-semibold text-stone-400 line-through">
               {formatPrice(price)}
             </span>

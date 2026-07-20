@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getCategoryFallbackImage } from "@/utils";
 import { getProducts, saveProduct, deleteProduct, AdminProduct } from "@/services/AdminService";
+import { ALLOWED_IMAGE_HOSTS } from "@/utils/imageConfig";
 
 const CATEGORIES = ["Men", "Women", "Kids", "New Arrivals", "Sale"];
 const SIZES = ["XS", "S", "M", "L", "XL", "XXL"];
@@ -15,6 +16,26 @@ const COLORS = ["Beige", "Black", "Charcoal", "Cream", "White", "Blue", "Olive",
  * Provides comprehensive product inventory management (CRUD).
  * Styled in matching premium cream aesthetics with glassmorphic modals.
  */
+function AdminProductImage({ product }: { product: AdminProduct }) {
+  const [src, setSrc] = useState(product.imageSrc);
+  useEffect(() => {
+    setSrc(product.imageSrc);
+  }, [product.imageSrc]);
+
+  return (
+    <Image
+      src={src}
+      alt={product.name}
+      width={40}
+      height={48}
+      className="h-12 w-10 object-cover rounded-lg border border-stone-100 bg-stone-50"
+      onError={() => {
+        setSrc(getCategoryFallbackImage(product.category));
+      }}
+    />
+  );
+}
+
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -118,8 +139,23 @@ export default function AdminProductsPage() {
     if (!stockQuantity || isNaN(Number(stockQuantity)) || Number(stockQuantity) < 0) {
       return setFormError("Stock quantity must be a non-negative number.");
     }
-    if (!imageSrc.trim() || !imageSrc.startsWith("http")) {
-      return setFormError("Please enter a valid product image URL.");
+    const validateImageSrc = (url: string): boolean => {
+      try {
+        const parsed = new URL(url);
+        if (
+          (parsed.hostname === "unsplash.com" || parsed.hostname === "www.unsplash.com") &&
+          parsed.pathname.startsWith("/photos")
+        ) {
+          return false;
+        }
+        return ALLOWED_IMAGE_HOSTS.includes(parsed.hostname);
+      } catch {
+        return false;
+      }
+    };
+
+    if (!imageSrc.trim() || !validateImageSrc(imageSrc.trim())) {
+      return setFormError("Please provide a direct image URL.");
     }
     if (selectedSizes.length === 0) {
       return setFormError("Please select at least one product size.");
@@ -208,13 +244,7 @@ export default function AdminProductsPage() {
               {products.map((p) => (
                 <tr key={p.id} className="hover:bg-stone-50/50 transition-colors">
                   <td className="py-3 px-6">
-                    <Image
-                      src={p.imageSrc}
-                      alt={p.name}
-                      width={40}
-                      height={48}
-                      className="h-12 w-10 object-cover rounded-lg border border-stone-100 bg-stone-50"
-                    />
+                    <AdminProductImage product={p} />
                   </td>
                   <td className="py-3 px-6">
                     <div>
@@ -230,7 +260,7 @@ export default function AdminProductsPage() {
                     {p.category}
                   </td>
                   <td className="py-3 px-6 font-bold text-stone-900">
-                    {p.discountPercent ? (
+                    {p.discountPercent !== undefined && p.discountPercent > 0 ? (
                       <div>
                         <span>{formatPrice(p.price * (1 - p.discountPercent / 100))}</span>
                         <span className="block text-[10px] text-stone-400 line-through font-light mt-0.5">
@@ -370,13 +400,13 @@ export default function AdminProductsPage() {
                 {/* Price */}
                 <div className="space-y-1.5">
                   <label className="block font-bold uppercase tracking-wider text-stone-500">
-                    Price (USD) *
+                    Price (INR) *
                   </label>
                   <input
                     type="number"
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
-                    placeholder="250"
+                    placeholder="1999"
                     className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50"
                   />
                 </div>

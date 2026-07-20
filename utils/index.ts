@@ -22,8 +22,8 @@
  */
 export function formatPrice(
   amount: number,
-  currency = "USD",
-  locale = "en-US"
+  currency = "INR",
+  locale = "en-IN"
 ): string {
   return new Intl.NumberFormat(locale, {
     style: "currency",
@@ -125,5 +125,28 @@ export function verifySupabaseConfig(): SupabaseConfigStatus {
     hasAnonKey,
     urlFormatValid,
   };
+}
+
+export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  Men: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
+  Women: "https://images.unsplash.com/photo-1483985988355-763728e1935b",
+  Kids: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea",
+  Accessories: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49",
+  Footwear: "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
+};
+
+export function getCategoryFallbackImage(category?: string): string {
+  if (!category) return CATEGORY_FALLBACK_IMAGES.Men;
+  const normalized = category.trim();
+  return CATEGORY_FALLBACK_IMAGES[normalized] || CATEGORY_FALLBACK_IMAGES.Men;
+}
+
+export function getCategoryFromProductId(id: string): string {
+  if (id.startsWith("m")) return "Men";
+  if (id.startsWith("w")) return "Women";
+  if (id.startsWith("k")) return "Kids";
+  if (id.startsWith("a")) return "Accessories";
+  if (id.startsWith("f")) return "Footwear";
+  return "Men";
 }
 
