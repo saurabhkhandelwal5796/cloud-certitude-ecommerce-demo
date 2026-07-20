@@ -80,26 +80,9 @@ export default function SignInForm() {
       setSuccessMsg("Logged in successfully! Redirecting...");
 
       // Role-based redirect
-      setTimeout(async () => {
-        try {
-          const supabase = getSupabaseClient();
-          const { data: profileData } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", data.user!.id)
-            .single();
-
-          const role = profileData?.role || "customer";
-          if (role === "admin") {
-            router.push("/admin");
-          } else {
-            router.push(nextRoute);
-          }
-          router.refresh();
-        } catch {
-          router.push(nextRoute);
-          router.refresh();
-        }
+      setTimeout(() => {
+        router.push(nextRoute);
+        router.refresh();
       }, 800);
     } catch {
       console.error("[Auth SignIn] Unexpected error during login process");

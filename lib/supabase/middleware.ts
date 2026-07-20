@@ -79,11 +79,13 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");
+
   const isProtectedRoute =
     request.nextUrl.pathname.startsWith("/checkout") ||
     request.nextUrl.pathname.startsWith("/orders") ||
     request.nextUrl.pathname.startsWith("/profile") ||
-    request.nextUrl.pathname.startsWith("/admin");
+    isAdminRoute;
 
   const isAuthRoute = [
     "/signin",
@@ -91,14 +93,6 @@ export async function updateSession(request: NextRequest) {
     "/forgot-password",
     "/reset-password",
   ].includes(request.nextUrl.pathname);
-
-  const isCustomerProtectedRoute =
-    request.nextUrl.pathname.startsWith("/checkout") ||
-    request.nextUrl.pathname.startsWith("/orders") ||
-    request.nextUrl.pathname.startsWith("/profile");
-
-  const isHomepage = request.nextUrl.pathname === "/";
-  const hasPreviewParam = request.nextUrl.searchParams.has("preview");
 
   // Route Protection Logic
   if (isProtectedRoute && !user) {
@@ -109,17 +103,10 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // Redirect admin trying to access customer protected routes
-  if (isCustomerProtectedRoute && user && isAdmin) {
+  // Protect admin routes from non-admin users
+  if (isAdminRoute && user && !isAdmin) {
     const url = request.nextUrl.clone();
-    url.pathname = "/admin";
-    return NextResponse.redirect(url);
-  }
-
-  // Redirect admin trying to access homepage directly without preview
-  if (isHomepage && user && isAdmin && !hasPreviewParam) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/admin";
+    url.pathname = "/";
     return NextResponse.redirect(url);
   }
 
@@ -134,7 +121,7 @@ export async function updateSession(request: NextRequest) {
       }
     }
     const url = request.nextUrl.clone();
-    url.pathname = isAdmin ? "/admin" : "/profile";
+    url.pathname = "/profile";
     return NextResponse.redirect(url);
   }
 
