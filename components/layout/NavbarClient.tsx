@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import CartBadge from "@/components/ui/CartBadge";
 import WishlistBadge from "@/components/ui/WishlistBadge";
@@ -27,6 +27,7 @@ interface NavbarClientProps {
  */
 export default function NavbarClient({ user }: NavbarClientProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [currentUser, setCurrentUser] = useState(user);
@@ -142,8 +143,12 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                 <Link
                   key={link.name}
                   href={link.href}
-                  className={`text-[11px] font-extrabold uppercase tracking-widest hover:text-[#C68B7D] transition-colors ${
-                    link.isSale ? "text-rose-500" : "text-stone-600"
+                  className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
+                    link.isSale
+                      ? "text-rose-500 hover:text-rose-600"
+                      : pathname === link.href
+                      ? "text-[#C68B7D] border-b-2 border-[#C68B7D] pb-0.5"
+                      : "text-stone-600 hover:text-[#C68B7D]"
                   }`}
                 >
                   {link.name}
@@ -368,8 +373,12 @@ export default function NavbarClient({ user }: NavbarClientProps) {
               key={link.name}
               href={link.href}
               onClick={() => setIsOpen(false)}
-              className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider hover:bg-stone-50 ${
-                link.isSale ? "text-rose-500" : "text-stone-600 hover:text-stone-900"
+              className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider ${
+                link.isSale
+                  ? "text-rose-500 hover:bg-rose-50"
+                  : pathname === link.href
+                  ? "text-[#C68B7D] bg-[#E0A99E]/10"
+                  : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
               }`}
             >
               {link.name}
