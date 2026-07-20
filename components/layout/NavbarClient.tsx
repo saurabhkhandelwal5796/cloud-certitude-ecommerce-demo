@@ -133,10 +133,6 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
-  if (userRole === "admin") {
-    return null;
-  }
-
   return (
     <nav className="border-b border-stone-200/50 bg-white/70 backdrop-blur-md sticky top-0 z-50 text-stone-850 transition-all duration-300">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

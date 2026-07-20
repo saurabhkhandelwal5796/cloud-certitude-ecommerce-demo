@@ -26,12 +26,17 @@ import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import SEOProvider from "@/components/ui/SEOProvider";
 import { PromotionalBanner } from "@/components/ui/MarketingSuite";
+import { headers } from "next/headers";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerList = await headers();
+  const pathname = headerList.get("x-pathname") || "";
+  const isAdminRoute = pathname.startsWith("/admin");
+
   const orgSchema = {
     "@context": "https://schema.org",
     "@type": "Organization",
@@ -64,14 +69,14 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col bg-[#FAF9F6] text-stone-800">
         <SEOProvider>
-          <PromotionalBanner />
+          {!isAdminRoute && <PromotionalBanner />}
           <CartProvider>
             <WishlistProvider>
-              <Navbar />
+              {!isAdminRoute && <Navbar />}
               <main className="flex-grow">
                 {children}
               </main>
-              <Footer />
+              {!isAdminRoute && <Footer />}
             </WishlistProvider>
           </CartProvider>
         </SEOProvider>
