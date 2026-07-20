@@ -414,6 +414,31 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* FEATURED BRANDS SECTION */}
+      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 border-t border-stone-200/40">
+        <div className="text-center mb-12">
+          <h2 className="text-2xl font-black tracking-widest text-stone-900 uppercase sm:text-3xl">
+            Featured Brands
+          </h2>
+          <p className="mt-2 text-sm text-stone-500 font-light">
+            Craftsmanship from our handpicked luxury designer labels.
+          </p>
+        </div>
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-6 items-center">
+          {["Nike", "Adidas", "Puma", "Zara", "Levi's", "Tommy Hilfiger"].map((brand, idx) => (
+            <Link
+              key={idx}
+              href="/men"
+              className="group relative flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-stone-200/45 shadow-sm hover:shadow-md hover:border-stone-300 transition-all duration-300 cursor-pointer"
+            >
+              <span className="text-sm font-extrabold uppercase tracking-widest text-stone-600 group-hover:text-stone-900">
+                {brand}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
       {/* 5. CUSTOMER TESTIMONIALS SECTION */}
       <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
         <div className="text-center mb-16">
