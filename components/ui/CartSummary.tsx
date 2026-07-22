@@ -62,7 +62,12 @@ export default function CartSummary() {
     if (isAuthenticated === false) {
       router.push("/signin?next=/checkout");
     } else {
-      router.push("/checkout");
+      // Encode cart-calculated values so checkout does not recalculate
+      const params = new URLSearchParams({
+        dp: String(discountPercent),
+        ship: String(shipping),
+      });
+      router.push(`/checkout?${params.toString()}`);
     }
   };
 

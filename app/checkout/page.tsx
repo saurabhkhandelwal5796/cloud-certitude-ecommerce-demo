@@ -2,12 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useCart } from "@/context/CartContext";
 import ShippingForm, { AddressType } from "@/components/ui/ShippingForm";
 import DeliveryOptions, { DELIVERY_OPTIONS } from "@/components/ui/DeliveryOptions";
 import PaymentSelector from "@/components/ui/PaymentSelector";
-import PromoCode from "@/components/ui/PromoCode";
 import OrderSummary from "@/components/ui/OrderSummary";
 import RazorpayButton from "@/components/ui/RazorpayButton";
 import PaymentFailure from "@/components/ui/PaymentFailure";
@@ -44,15 +43,17 @@ const DEFAULT_ADDRESS: AddressType = {
  */
 export default function CheckoutPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { cartItems, cartSubtotal, clearCart } = useCart();
+
+  // ─── Promo values passed from Cart (read-only) ────────────────────────────
+  const discountPercent = Number(searchParams.get("dp") ?? 0);
+  const promoApplied = discountPercent > 0;
 
   // ─── State ────────────────────────────────────────────────────────────────
   const [address, setAddress] = useState<AddressType>(DEFAULT_ADDRESS);
   const [selectedDelivery, setSelectedDelivery] = useState("standard");
   const [selectedPayment, setSelectedPayment] = useState("credit");
-  const [discountPercent, setDiscountPercent] = useState(0);
-  const [promoApplied, setPromoApplied] = useState(false);
-  const [appliedCode, setAppliedCode] = useState("");
   const [errors, setErrors] = useState<Partial<Record<keyof AddressType, string>>>({});
   const [isPlacing, setIsPlacing] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
@@ -110,14 +111,7 @@ export default function CheckoutPage() {
             setSelectedPayment(parsedPay);
           }
         }
-
-        const storedPromo = localStorage.getItem("certitude_applied_promo");
-        if (storedPromo) {
-          const parsed = JSON.parse(storedPromo);
-          setDiscountPercent(parsed.discountPercent);
-          setPromoApplied(true);
-          setAppliedCode(parsed.appliedCode);
-        }
+        // Note: promo is read from URL params (passed by Cart), not localStorage
       } catch (err) {
         console.error("[Checkout] Failed loading settings:", err);
       }
@@ -326,23 +320,12 @@ export default function CheckoutPage() {
         {/* Right Column: Order Summary Sidebar */}
         <div className="w-full lg:w-1/3 lg:sticky lg:top-24 space-y-6">
 
-          {/* Summary + Promo */}
+          {/* Summary (Read-Only) – values passed from Cart */}
           <div className="rounded-2xl border border-stone-200/50 bg-white p-6 shadow-sm">
             <OrderSummary
               deliveryFee={deliveryFee}
               discountPercent={discountPercent}
               promoApplied={promoApplied}
-            />
-
-            <hr className="border-stone-105 my-6" />
-
-            <PromoCode
-              discountPercent={discountPercent}
-              setDiscountPercent={setDiscountPercent}
-              promoApplied={promoApplied}
-              setPromoApplied={setPromoApplied}
-              appliedCode={appliedCode}
-              setAppliedCode={setAppliedCode}
             />
           </div>
 

@@ -270,9 +270,6 @@ if (isBrowser) {
   if (!localStorage.getItem("certitude_admin_products")) {
     setLocalStorageItem("certitude_admin_products", INITIAL_PRODUCTS);
   }
-  if (!localStorage.getItem("certitude_admin_orders")) {
-    setLocalStorageItem("certitude_admin_orders", INITIAL_ORDERS);
-  }
   if (!localStorage.getItem("certitude_admin_customers")) {
     setLocalStorageItem("certitude_admin_customers", INITIAL_CUSTOMERS);
   }
@@ -282,6 +279,12 @@ if (isBrowser) {
 
 interface CustomSupabaseClient {
   from: (table: string) => {
+    update: (data: Record<string, unknown>) => {
+      eq: (column: string, value: string) => Promise<{
+        error: { message: string } | null;
+        data: Record<string, unknown>[] | null;
+      }>;
+    };
     insert: (data: Record<string, unknown> | Record<string, unknown>[]) => {
       then: (callback: (result: { error: { message: string } | null }) => void) => void;
     };
@@ -290,11 +293,11 @@ interface CustomSupabaseClient {
         error: { message: string } | null;
         data: Record<string, unknown>[] | null;
       }>;
-      eq?: (column: string, value: string) => Promise<{
+      eq: (column: string, value: string) => Promise<{
         error: { message: string } | null;
         data: Record<string, unknown>[] | null;
       }>;
-      then?: (callback: (result: { error: { message: string } | null; data: Record<string, unknown>[] | null }) => void) => void;
+      then: (callback: (result: { error: { message: string } | null; data: Record<string, unknown>[] | null }) => void) => void;
     } & Promise<{
       error: { message: string } | null;
       data: Record<string, unknown>[] | null;
@@ -489,7 +492,7 @@ export async function getOrders(): Promise<AdminOrder[]> {
     try {
       const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
       const { data, error } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-      if (!error && data && data.length > 0) {
+      if (!error && data) {
         const mappedOrders: AdminOrder[] = data.map((row: Record<string, unknown>) => {
           const orderIdVal = (row.order_id as string) || (row.id as string);
           const customerEmailVal = (row.customer_email as string) || "";
@@ -521,22 +524,13 @@ export async function getOrders(): Promise<AdminOrder[]> {
             items: itemsVal,
           };
         });
-        
-        const localOrders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
-        const merged = [...mappedOrders];
-        localOrders.forEach(lo => {
-          if (!merged.some(mo => mo.orderId === lo.orderId)) {
-            merged.push(lo);
-          }
-        });
-        setLocalStorageItem("certitude_admin_orders", merged);
-        return merged;
+        return mappedOrders;
       }
     } catch (err) {
       console.error("[AdminService] Supabase fetch orders error:", err);
     }
   }
-  return getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
+  return INITIAL_ORDERS;
 }
 
 /**
@@ -547,28 +541,35 @@ export async function updateOrderStatus(
   orderId: string,
   status: AdminOrder["status"]
 ): Promise<boolean> {
-  const orders = await getOrders();
-  const index = orders.findIndex((o) => o.orderId === orderId);
+  // Persist status update to Supabase
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    const { error } = await supabase.from('orders').update({ status: status }).eq('order_id', orderId);
+    if (error) {
+      console.error("[AdminService] Supabase order status update error:", error);
+      return false;
+    }
 
-  if (index >= 0) {
-    orders[index].status = status;
-    setLocalStorageItem("certitude_admin_orders", orders);
+    // Register Notification by fetching email from Supabase order
+    const { data } = await supabase.from('orders').select('customer_email').eq('order_id', orderId);
+    if (data && data.length > 0) {
+      const customerEmail = data[0].customer_email as string;
+      let message = "";
+      if (status === "Confirmed") message = `Your order ${orderId} has been confirmed.`;
+      else if (status === "Processing") message = `Your order ${orderId} is currently being processed.`;
+      else if (status === "Shipped") message = `Your order ${orderId} has been shipped.`;
+      else if (status === "Out for Delivery") message = `Your order ${orderId} is out for delivery!`;
+      else if (status === "Delivered") message = `Your order ${orderId} has been successfully delivered. Thank you!`;
+      else if (status === "Cancelled") message = `Your order ${orderId} has been cancelled.`;
 
-    // Register Notification
-    const customerEmail = orders[index].customerEmail;
-    let message = "";
-    if (status === "Confirmed") message = `Your order ${orderId} has been confirmed.`;
-    else if (status === "Processing") message = `Your order ${orderId} is currently being processed.`;
-    else if (status === "Shipped") message = `Your order ${orderId} has been shipped.`;
-    else if (status === "Out for Delivery") message = `Your order ${orderId} is out for delivery!`;
-    else if (status === "Delivered") message = `Your order ${orderId} has been successfully delivered. Thank you!`;
-    else if (status === "Cancelled") message = `Your order ${orderId} has been cancelled.`;
-
-    if (message) {
-      registerNotification(customerEmail, message);
+      if (message) {
+        registerNotification(customerEmail, message);
+      }
     }
 
     return true;
+  } catch (err) {
+    console.error("[AdminService] Supabase updateOrderStatus failed:", err);
   }
 
   return false;
@@ -640,45 +641,12 @@ export function registerNewCheckoutOrder(params: {
 }) {
   if (!isBrowser) return;
 
-  const orders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
   const customers = getLocalStorageItem<AdminCustomer[]>("certitude_admin_customers", INITIAL_CUSTOMERS);
 
   const formattedPayment = params.paymentMethod === "credit" ? "Credit Card" :
                            params.paymentMethod === "debit" ? "Debit Card" :
                            params.paymentMethod === "upi" ? "UPI Payments" :
                            params.paymentMethod === "netbanking" ? "Net Banking" : "Cash on Delivery";
-
-  // 1. Add new order
-  const newOrder: AdminOrder = {
-    orderId: params.orderId,
-    customerName: params.customerName,
-    customerEmail: params.customerEmail,
-    orderDate: new Date().toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
-    paymentMethod: formattedPayment,
-    status: "Pending",
-    total: params.total,
-    itemsCount: params.itemsCount,
-    address: params.address,
-    items: params.items,
-  };
-
-  orders.unshift(newOrder); // Add to top
-  setLocalStorageItem("certitude_admin_orders", orders);
-
-  console.log("[AdminService] Order registered locally:", {
-    orderId: newOrder.orderId,
-    customerEmail: newOrder.customerEmail,
-    total: newOrder.total,
-    status: newOrder.status,
-    totalOrdersNow: orders.length,
-  });
 
   // Attempt to write to Supabase if it's configured
   try {
@@ -687,7 +655,6 @@ export function registerNewCheckoutOrder(params: {
       if (user) {
         supabase.from('orders').insert({
           order_id: params.orderId,
-          user_id: user.id,
           customer_email: params.customerEmail,
           items: params.items as unknown as Record<string, unknown>[],
           total_amount: params.total,
@@ -742,7 +709,7 @@ export async function getOrdersByCustomerEmail(email: string): Promise<AdminOrde
 export async function seedMissingHistoricalOrders(email: string): Promise<void> {
   if (!isBrowser) return;
 
-  const orders = getLocalStorageItem<AdminOrder[]>("certitude_admin_orders", INITIAL_ORDERS);
+  const orders = await getOrders();
   const userOrders = orders.filter(o => o.customerEmail.toLowerCase() === email.toLowerCase());
 
   if (userOrders.length === 0) {
@@ -884,10 +851,7 @@ export async function seedMissingHistoricalOrders(email: string): Promise<void> 
       }
     ];
 
-    const updatedOrders = [...mockOrders, ...orders];
-    setLocalStorageItem("certitude_admin_orders", updatedOrders);
-    
-    // Also try to seed to Supabase if configured (silently ignore failures)
+    // Seed to Supabase if configured (silently ignore failures)
     try {
       const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
       supabase.auth.getUser().then(({ data: { user } }) => {
@@ -895,11 +859,10 @@ export async function seedMissingHistoricalOrders(email: string): Promise<void> 
           mockOrders.forEach(o => {
             supabase.from('orders').insert({
               order_id: o.orderId,
-              user_id: user.id,
               customer_email: o.customerEmail,
               items: o.items as unknown as Record<string, unknown>[],
               total_amount: o.total,
-              status: o.status.toLowerCase() as unknown as string,
+              status: o.status,
               payment_method: o.paymentMethod,
               shipping_address: o.address as unknown as Record<string, unknown>,
             }).then(() => {});
@@ -914,19 +877,28 @@ export async function seedMissingHistoricalOrders(email: string): Promise<void> 
  * Cancels a customer's order if it is in Pending status.
  */
 export async function cancelCustomerOrder(orderId: string): Promise<boolean> {
-  const orders = await getOrders();
-  const index = orders.findIndex((o) => o.orderId === orderId);
-
-  if (index >= 0) {
-    if (orders[index].status !== "Pending") {
-      throw new Error("Only pending orders can be cancelled.");
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    const { data } = await supabase.from('orders').select('status, customer_email').eq('order_id', orderId);
+    if (data && data.length > 0) {
+      const statusStr = (data[0].status as string) || "Pending";
+      const statusVal = statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
+      if (statusVal !== "Pending") {
+        throw new Error("Only pending orders can be cancelled.");
+      }
+      
+      const { error } = await supabase.from('orders').update({ status: "Cancelled" }).eq('order_id', orderId);
+      if (error) {
+        console.error("[AdminService] Supabase order cancel error:", error);
+        return false;
+      }
+      
+      // Register Notification
+      registerNotification(data[0].customer_email as string, `Your order ${orderId} has been successfully cancelled.`);
+      return true;
     }
-    orders[index].status = "Cancelled";
-    setLocalStorageItem("certitude_admin_orders", orders);
-
-    // Register Notification
-    registerNotification(orders[index].customerEmail, `Your order ${orderId} has been successfully cancelled.`);
-    return true;
+  } catch (err) {
+    console.error("[AdminService] Supabase cancelCustomerOrder failed:", err);
   }
   return false;
 }
