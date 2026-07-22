@@ -1,6 +1,7 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { formatINR } from "@/utils";
 
 interface MetricCardProps {
   title: string;
@@ -46,7 +47,7 @@ export default function MetricCard({
       const elapsed = now - start;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setDisplayed(Math.round(target * eased));
+      setDisplayed(target * eased);
       if (progress < 1) raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
@@ -57,7 +58,7 @@ export default function MetricCard({
   const trendDown = trend !== undefined && trend < 0;
 
   const displayValue = isNumeric
-    ? `${prefix}${isCurrency ? formatCompact(displayed) : formatCompact(displayed)}${suffix}`
+    ? (isCurrency ? formatINR(displayed) : `${prefix}${formatCompact(displayed)}${suffix}`)
     : String(value);
 
   return (

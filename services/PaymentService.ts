@@ -14,6 +14,7 @@
 
 import type { CartItemType } from "@/context/CartContext";
 import type { AddressType } from "@/components/ui/ShippingForm";
+import { calculateOrderTotals } from "./PricingService";
 
 /**
  * Generates an Order ID in the format ORD-YYYYMMDD-XXXXX.
@@ -93,6 +94,7 @@ export interface OrderPayload {
     subtotal: number;
     shipping: number;
     tax: number;
+    discount: number;
     discountPercent: number;
     grandTotal: number;
   };
@@ -134,9 +136,8 @@ export function buildOrderPayload(params: {
     0
   );
 
-  const tax = subtotal * 0.08;
   const discountAmount = subtotal * (discountPercent / 100);
-  const grandTotal = subtotal + tax + deliveryFee - discountAmount;
+  const calculated = calculateOrderTotals(subtotal, deliveryFee, discountAmount);
 
   return {
     orderId,
@@ -154,11 +155,12 @@ export function buildOrderPayload(params: {
       price: item.price,
     })),
     totals: {
-      subtotal,
-      shipping: deliveryFee,
-      tax,
+      subtotal: calculated.subtotal,
+      shipping: calculated.shipping,
+      tax: calculated.tax,
+      discount: calculated.discount,
       discountPercent,
-      grandTotal,
+      grandTotal: calculated.grandTotal,
     },
   };
 }

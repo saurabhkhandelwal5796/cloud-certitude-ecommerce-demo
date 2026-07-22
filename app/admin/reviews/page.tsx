@@ -14,6 +14,7 @@ export default function AdminReviewsPage() {
   const [filterRating, setFilterRating] = useState<string>("all");
   const [filterProduct, setFilterProduct] = useState<string>("all");
   const [filterReported, setFilterReported] = useState<string>("all");
+  const [error, setError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -23,6 +24,7 @@ export default function AdminReviewsPage() {
       setProducts(allProducts);
     } catch (err) {
       console.error("[AdminReviews] Error loading reviews data:", err);
+      setError("Unable to load data from server.");
     } finally {
       setIsLoading(false);
     }
@@ -31,6 +33,16 @@ export default function AdminReviewsPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  if (error) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-rose-500 font-bold uppercase tracking-wider text-sm border border-rose-200 bg-rose-50/50 px-6 py-4 rounded-3xl">
+          ⚠️ {error}
+        </div>
+      </div>
+    );
+  }
 
   // Product ID to Product Name mapping
   const productNames: Record<string, string> = {};

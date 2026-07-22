@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import type { CategoryBreakdown } from "@/services/AdminService";
+import { formatINR } from "@/utils";
 
 interface CategoryDonutProps {
   data: CategoryBreakdown[];
@@ -33,9 +34,7 @@ export default function CategoryDonut({ data, title = "Sales by Category" }: Cat
 
   const total = data.reduce((s, d) => s + d.revenue, 0);
   const fmtRevenue = (v: number) => {
-    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-    return `$${v}`;
+    return formatINR(v);
   };
 
   return (
@@ -73,7 +72,7 @@ export default function CategoryDonut({ data, title = "Sales by Category" }: Cat
             ))}
             {/* Center label */}
             <text x={CX} y={CY - 6} textAnchor="middle" fontSize="9" fill="#A8A29E" fontFamily="sans-serif" fontWeight="600">TOTAL</text>
-            <text x={CX} y={CY + 10} textAnchor="middle" fontSize="13" fill="#1C1917" fontFamily="sans-serif" fontWeight="800">
+            <text x={CX} y={CY + 10} textAnchor="middle" fontSize="11" fill="#1C1917" fontFamily="sans-serif" fontWeight="800">
               {fmtRevenue(total)}
             </text>
           </svg>

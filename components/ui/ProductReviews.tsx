@@ -42,6 +42,7 @@ export default function ProductReviews({
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<ProductReview | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Load reviews and user session state
   const loadData = useCallback(async () => {
@@ -67,6 +68,7 @@ export default function ProductReviews({
       }
     } catch (err) {
       console.error("[ProductReviews] Load error:", err);
+      setError("Unable to load data from server.");
     } finally {
       setIsLoading(false);
     }
@@ -166,6 +168,14 @@ export default function ProductReviews({
   const currentDistribution = totalReviews > 0 ? distribution : fallbackDistribution;
 
   const sortedReviewsList = getSortedReviews();
+
+  if (error) {
+    return (
+      <div className="border-t border-stone-200/50 py-16 text-center text-rose-500 font-bold text-sm">
+        ⚠️ {error}
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

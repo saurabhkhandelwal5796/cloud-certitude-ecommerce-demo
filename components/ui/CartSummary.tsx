@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { calculateOrderTotals } from "@/services/PricingService";
 
 /**
  * CartSummary Component
@@ -36,11 +37,8 @@ export default function CartSummary() {
     checkAuth();
   }, []);
 
-  // Est Tax is 8% of subtotal
-  const tax = cartSubtotal * 0.08;
-  
-  // Shipping is free if subtotal is over ₹1,000, else ₹100 flat rate
-  const shipping = cartSubtotal > 1000 ? 0 : 100;
+  // Default to Standard Delivery (₹0) in Cart
+  const shipping = 0;
 
   // Promo code discounts
   const handleApplyPromo = (e: React.FormEvent) => {
@@ -56,7 +54,9 @@ export default function CartSummary() {
   };
 
   const discountAmount = cartSubtotal * (discountPercent / 100);
-  const grandTotal = cartSubtotal + tax + shipping - discountAmount;
+  const totals = calculateOrderTotals(cartSubtotal, shipping, discountAmount);
+  const tax = totals.tax;
+  const grandTotal = totals.grandTotal;
 
   const handleCheckout = () => {
     if (isAuthenticated === false) {

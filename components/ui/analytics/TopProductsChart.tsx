@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState } from "react";
 import type { ProductAnalytic } from "@/services/AdminService";
+import { formatINR } from "@/utils";
 
 interface TopProductsChartProps {
   data: ProductAnalytic[];
@@ -9,9 +10,7 @@ interface TopProductsChartProps {
 }
 
 function fmt(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v}`;
+  return formatINR(v);
 }
 
 export default function TopProductsChart({ data, title = "Top Products by Revenue" }: TopProductsChartProps) {
@@ -58,7 +57,7 @@ export default function TopProductsChart({ data, title = "Top Products by Revenu
                   <div>
                     <span className="block text-[10px] font-bold text-stone-700">{product.unitsSold} units</span>
                   </div>
-                  <div className="min-w-[56px]">
+                  <div className="min-w-[90px]">
                     <span className="block text-[10px] font-black text-stone-900">{fmt(product.revenue)}</span>
                   </div>
                 </div>

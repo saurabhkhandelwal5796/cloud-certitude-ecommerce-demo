@@ -5,6 +5,7 @@ import Image from "next/image";
 import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
 import { CartItemType } from "@/context/CartContext";
 import { useCart } from "@/context/CartContext";
+import { calculateOrderTotals } from "@/services/PricingService";
 
 interface OrderSummaryProps {
   deliveryFee: number;
@@ -44,9 +45,17 @@ export default function OrderSummary({
 }: OrderSummaryProps) {
   const { cartItems, cartCount, cartSubtotal } = useCart();
 
-  const tax = cartSubtotal * 0.08;
   const discountAmount = cartSubtotal * (discountPercent / 100);
-  const grandTotal = cartSubtotal + tax + deliveryFee - discountAmount;
+  const {
+    subtotal,
+    shipping,
+    tax,
+    grandTotal
+  } = calculateOrderTotals(
+    cartSubtotal,
+    deliveryFee,
+    discountAmount
+  );
 
   return (
     <div className="space-y-6">

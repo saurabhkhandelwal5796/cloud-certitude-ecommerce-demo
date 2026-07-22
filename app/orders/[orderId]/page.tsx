@@ -92,11 +92,12 @@ export default function OrderDetailsPage({ params }: PageProps) {
     );
   }
 
-  // Derived totals
-  const subtotal = order.total;
-  const deliveryFee = order.paymentMethod === "Cash on Delivery" ? 0 : 50; // standard delivery mockup
-  const tax = subtotal * 0.08;
-  const grandTotal = subtotal + tax + deliveryFee;
+  // Derived totals (no recalculation allowed)
+  const subtotal = order.subtotal;
+  const deliveryFee = order.shipping;
+  const tax = order.tax;
+  const discount = order.discount;
+  const grandTotal = order.grand_total;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8 bg-[#FAF9F6] text-stone-800 min-h-[calc(100vh-10rem)]">
@@ -177,15 +178,28 @@ export default function OrderDetailsPage({ params }: PageProps) {
             <div className="space-y-2 pt-1 font-light text-stone-600">
               <div className="flex justify-between">
                 <span>Subtotal</span>
-                <span>{formatPrice(subtotal)}</span>
+                <span>{subtotal !== undefined && subtotal !== null ? formatPrice(subtotal) : "Data unavailable"}</span>
               </div>
+              {discount !== undefined && discount !== null ? (
+                discount > 0 ? (
+                  <div className="flex justify-between text-rose-600">
+                    <span>Discount</span>
+                    <span>- {formatPrice(discount)}</span>
+                  </div>
+                ) : null
+              ) : (
+                <div className="flex justify-between text-rose-600">
+                  <span>Discount</span>
+                  <span>Data unavailable</span>
+                </div>
+              )}
               <div className="flex justify-between">
                 <span>Estimated Tax (8%)</span>
-                <span>{formatPrice(tax)}</span>
+                <span>{tax !== undefined && tax !== null ? formatPrice(tax) : "Data unavailable"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Shipping & Handling</span>
-                <span>{deliveryFee === 0 ? "Free" : formatPrice(deliveryFee)}</span>
+                <span>{deliveryFee !== undefined && deliveryFee !== null ? (deliveryFee === 0 ? "Free" : formatPrice(deliveryFee)) : "Data unavailable"}</span>
               </div>
               <div className="flex justify-between">
                 <span>Payment Mode</span>
@@ -193,7 +207,7 @@ export default function OrderDetailsPage({ params }: PageProps) {
               </div>
               <div className="flex justify-between font-bold text-stone-950 border-t border-stone-150 pt-2 text-sm">
                 <span>Grand Total</span>
-                <span>{formatPrice(grandTotal)}</span>
+                <span>{grandTotal !== undefined && grandTotal !== null ? formatPrice(grandTotal) : "Data unavailable"}</span>
               </div>
             </div>
           </div>

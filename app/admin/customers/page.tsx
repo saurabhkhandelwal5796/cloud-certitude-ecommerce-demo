@@ -12,6 +12,7 @@ import { getCustomers, AdminCustomer } from "@/services/AdminService";
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<AdminCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadCustomers = async () => {
@@ -20,12 +21,23 @@ export default function AdminCustomersPage() {
         setCustomers(list);
       } catch (err) {
         console.error("[Customers] Error loading customer registry:", err);
+        setError("Unable to load data from server.");
       } finally {
         setIsLoading(false);
       }
     };
     loadCustomers();
   }, []);
+
+  if (error) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-rose-500 font-bold uppercase tracking-wider text-sm border border-rose-200 bg-rose-50/50 px-6 py-4 rounded-3xl">
+          ⚠️ {error}
+        </div>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

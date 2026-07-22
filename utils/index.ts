@@ -18,7 +18,7 @@
 
 /**
  * Formats a number as a currency string.
- * @example formatPrice(1999) // → "₹1,999.00" or "$19.99" depending on locale
+ * @example formatPrice(1999) // → "₹1,999.00" depending on locale
  */
 export function formatPrice(
   amount: number,
@@ -31,6 +31,12 @@ export function formatPrice(
     minimumFractionDigits: 2,
   }).format(amount);
 }
+
+export const formatINR = (value: number) =>
+  `INR ${value.toLocaleString("en-IN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 
 /**
  * Formats a date string into a human-readable format.

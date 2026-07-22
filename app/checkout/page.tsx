@@ -18,6 +18,7 @@ import {
 } from "@/services/PaymentService";
 import { registerNewCheckoutOrder } from "@/services/AdminService";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { calculateOrderTotals } from "@/services/PricingService";
 
 const DEFAULT_ADDRESS: AddressType = {
   firstName: "",
@@ -121,9 +122,18 @@ export default function CheckoutPage() {
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
   const deliveryFee = DELIVERY_OPTIONS.find((o) => o.id === selectedDelivery)?.price || 0;
-  const tax = cartSubtotal * 0.08;
   const discountAmount = cartSubtotal * (discountPercent / 100);
-  const grandTotal = cartSubtotal + tax + deliveryFee - discountAmount;
+
+  const {
+    subtotal,
+    shipping,
+    tax,
+    grandTotal
+  } = calculateOrderTotals(
+    cartSubtotal,
+    deliveryFee,
+    discountAmount
+  );
 
   const validateForm = (): boolean => {
     const errs: Partial<Record<keyof AddressType, string>> = {};
@@ -192,7 +202,7 @@ export default function CheckoutPage() {
       orderId,
       canonicalEmail,
       canonicalName,
-      grandTotal,
+      grandTotal: payload.totals.grandTotal,
       itemsCount: cartItems.length,
       paymentMethod: selectedPayment,
     });
@@ -202,7 +212,7 @@ export default function CheckoutPage() {
       orderId,
       customerName: canonicalName,
       customerEmail: canonicalEmail,
-      total: grandTotal,
+      total: payload.totals.grandTotal,
       itemsCount: cartItems.length,
       paymentMethod: selectedPayment,
       address,
@@ -217,6 +227,11 @@ export default function CheckoutPage() {
         brand: item.brand,
         discountPercent: item.discountPercent,
       })),
+      subtotal: payload.totals.subtotal,
+      tax: payload.totals.tax,
+      shipping: payload.totals.shipping,
+      discount: payload.totals.discount,
+      grand_total: payload.totals.grandTotal,
     });
 
     console.log("[Checkout] Order registered. Clearing cart and redirecting...");

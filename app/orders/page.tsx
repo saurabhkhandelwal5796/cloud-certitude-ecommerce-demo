@@ -8,6 +8,7 @@ import { formatPrice } from "@/utils";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useCart } from "@/context/CartContext";
 import OrderTimeline from "@/components/ui/OrderTimeline";
+import { jsPDF } from "jspdf";
 import {
   getOrdersByCustomerEmail,
   cancelCustomerOrder,
@@ -119,60 +120,154 @@ export default function CustomerOrdersPage() {
   };
 
   const downloadInvoice = (order: AdminOrder) => {
-    const subtotal = order.total;
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const primaryColor = [44, 62, 80]; // dark slate
+    const secondaryColor = [189, 195, 199]; // light gray
     
-    const invoiceText = `
-=============================================
-         CLOUD CERTITUDE FASHION
-             INVOICE RECEIPT
-=============================================
-Order ID:      ${order.orderId}
-Order Date:    ${order.orderDate}
-Payment:       ${order.paymentMethod}
-Status:        ${order.status}
-Customer Name: ${order.customerName}
-Email:         ${order.customerEmail}
+    // Header Section
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text("Cloud Certitude Fashion", 14, 20);
+    
+    doc.setFontSize(13);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Tax Invoice", 14, 27);
+    
+    doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+    doc.setLineWidth(0.5);
+    doc.line(14, 31, 196, 31);
 
-Shipping Address:
----------------------------------------------
-${order.address?.firstName} ${order.address?.lastName}
-${order.address?.addressLine1}
-${order.address?.addressLine2 ? order.address?.addressLine2 + "\n" : ""}${order.address?.city}, ${order.address?.state} ${order.address?.postalCode}
-${order.address?.country}
-Phone: ${order.address?.phone}
+    // Metadata Left Column
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(80, 80, 80);
+    doc.text(`Order ID: ${order.orderId.toUpperCase()}`, 14, 40);
+    doc.text(`Order Date: ${order.orderDate}`, 14, 46);
+    doc.text(`Customer Name: ${order.customerName}`, 14, 52);
+    doc.text(`Customer Email: ${order.customerEmail}`, 14, 58);
+    doc.text(`Payment Method: ${order.paymentMethod}`, 14, 64);
 
-Items Purchased:
----------------------------------------------
-${order.items
-  ?.map(
-    (item) =>
-      `- ${item.name} (${item.size} / ${item.color}) x ${item.quantity} @ ₹${item.price.toFixed(
-        2
-      )}`
-  )
-  .join("\n")}
+    // Shipping Address Right Column
+    doc.setFont("helvetica", "bold");
+    doc.text("Shipping Address:", 120, 40);
+    doc.setFont("helvetica", "normal");
+    if (order.address) {
+      doc.text(`${order.address.firstName} ${order.address.lastName}`, 120, 46);
+      doc.text(`${order.address.addressLine1}`, 120, 52);
+      if (order.address.addressLine2) {
+        doc.text(`${order.address.addressLine2}`, 120, 58);
+        doc.text(`${order.address.city}, ${order.address.state} ${order.address.postalCode}`, 120, 64);
+        doc.text(`${order.address.country}`, 120, 70);
+      } else {
+        doc.text(`${order.address.city}, ${order.address.state} ${order.address.postalCode}`, 120, 58);
+        doc.text(`${order.address.country}`, 120, 64);
+      }
+    } else {
+      doc.text("Data unavailable", 120, 46);
+    }
 
-Order Calculation Breakdown:
----------------------------------------------
-Subtotal:      ₹${subtotal.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-Shipping:      Free
-Grand Total:   ₹${order.total.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+    doc.setLineWidth(0.3);
+    doc.line(14, 76, 196, 76);
 
-=============================================
-       Discover timeless fashion curated.
-          Thank you for shopping with us!
-=============================================
-`;
+    // Product Table Header
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(9);
+    doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+    doc.text("Product Details", 14, 82);
+    doc.text("Qty", 100, 82);
+    doc.text("Size", 115, 82);
+    doc.text("Unit Price", 130, 82);
+    doc.text("Discount %", 150, 82);
+    doc.text("Line Total", 175, 82);
 
-    const blob = new Blob([invoiceText], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `invoice-${order.orderId}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    doc.line(14, 85, 196, 85);
+
+    // Product Table Rows
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(80, 80, 80);
+    let y = 92;
+    order.items?.forEach((item) => {
+      const splitName = doc.splitTextToSize(item.name, 80);
+      doc.text(splitName, 14, y);
+      
+      const qtyStr = String(item.quantity);
+      const sizeStr = item.size || "-";
+      const priceStr = `INR ${item.price.toFixed(2)}`;
+      const discStr = item.discountPercent ? `${item.discountPercent}%` : "0%";
+      
+      const unitPriceAfterDisc = item.discountPercent 
+        ? item.price * (1 - item.discountPercent / 100) 
+        : item.price;
+      const lineTotalVal = unitPriceAfterDisc * item.quantity;
+      const totalStr = `INR ${lineTotalVal.toFixed(2)}`;
+
+      doc.text(qtyStr, 100, y);
+      doc.text(sizeStr, 115, y);
+      doc.text(priceStr, 130, y);
+      doc.text(discStr, 150, y);
+      doc.text(totalStr, 175, y);
+
+      y += (splitName.length * 5) + 3;
+
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+    });
+
+    // Divider
+    doc.line(14, y - 2, 196, y - 2);
+
+    // Totals Section
+    y += 6;
+    const subtotalStr = order.subtotal !== undefined && order.subtotal !== null ? `INR ${order.subtotal.toFixed(2)}` : "Data unavailable";
+    const discountStr = order.discount !== undefined && order.discount !== null ? `-INR ${order.discount.toFixed(2)}` : "Data unavailable";
+    const taxStr = order.tax !== undefined && order.tax !== null ? `INR ${order.tax.toFixed(2)}` : "Data unavailable";
+    const shippingStr = order.shipping !== undefined && order.shipping !== null ? `INR ${order.shipping.toFixed(2)}` : "Data unavailable";
+    const grandTotalStr = order.grand_total !== undefined && order.grand_total !== null ? `INR ${order.grand_total.toFixed(2)}` : "Data unavailable";
+
+    doc.setFont("helvetica", "bold");
+    doc.text("Pricing Summary", 14, y);
+    doc.setFont("helvetica", "normal");
+    
+    doc.text(`Subtotal:`, 130, y);
+    doc.text(subtotalStr, 175, y);
+    
+    y += 6;
+    doc.text(`Discount:`, 130, y);
+    doc.text(discountStr, 175, y);
+
+    y += 6;
+    doc.text(`Shipping:`, 130, y);
+    doc.text(shippingStr, 175, y);
+
+    y += 6;
+    doc.text(`GST (8%):`, 130, y);
+    doc.text(taxStr, 175, y);
+
+    y += 8;
+    doc.setFont("helvetica", "bold");
+    doc.text(`Grand Total:`, 130, y);
+    doc.text(grandTotalStr, 175, y);
+
+    // Divider
+    y += 10;
+    doc.line(14, y, 196, y);
+
+    // Footer note
+    y += 8;
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(9);
+    doc.setTextColor(120, 120, 120);
+    doc.text("Thank you for shopping with Cloud Certitude Fashion.", 14, y);
+
+    doc.save(`Invoice-${order.orderId}.pdf`);
   };
 
   const getStatusColor = (status: AdminOrder["status"]) => {

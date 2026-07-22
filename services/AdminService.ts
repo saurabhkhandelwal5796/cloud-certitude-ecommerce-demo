@@ -53,6 +53,11 @@ export interface AdminOrder {
     brand?: string;
     discountPercent?: number;
   }>;
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  discount?: number;
+  grand_total?: number;
 }
 
 export interface AdminCustomer {
@@ -215,32 +220,7 @@ const INITIAL_ORDERS: AdminOrder[] = [
   }
 ];
 
-const INITIAL_CUSTOMERS: AdminCustomer[] = [
-  {
-    email: "sarah@sky.net",
-    name: "Sarah Connor",
-    ordersCount: 5,
-    totalSpend: 25000.00
-  },
-  {
-    email: "john@gmail.com",
-    name: "John Doe",
-    ordersCount: 3,
-    totalSpend: 15000.00
-  },
-  {
-    email: "amit@yahoo.in",
-    name: "Amit Sharma",
-    ordersCount: 2,
-    totalSpend: 45000.00
-  },
-  {
-    email: "emma@watson.co.uk",
-    name: "Emma Watson",
-    ordersCount: 1,
-    totalSpend: 12000.00
-  }
-];
+
 
 // ─── LocalStorage Helper Functions ──────────────────────────────────────────
 
@@ -269,9 +249,6 @@ function setLocalStorageItem<T>(key: string, value: T): void {
 if (isBrowser) {
   if (!localStorage.getItem("certitude_admin_products")) {
     setLocalStorageItem("certitude_admin_products", INITIAL_PRODUCTS);
-  }
-  if (!localStorage.getItem("certitude_admin_customers")) {
-    setLocalStorageItem("certitude_admin_customers", INITIAL_CUSTOMERS);
   }
 }
 
@@ -357,74 +334,80 @@ function cleanProductUrls(products: AdminProduct[]): { cleaned: AdminProduct[], 
  * Returns all products.
  */
 export async function getProducts(): Promise<AdminProduct[]> {
-  if (isBrowser) {
-    try {
-      const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
-      const { data, error } = await supabase.from('products').select('*');
-      if (!error && data && data.length > 0) {
-        const mapped: AdminProduct[] = data.map((p: Record<string, unknown>) => ({
-          id: String(p.id),
-          name: String(p.name),
-          description: String(p.description || ""),
-          category: String(p.category),
-          brand: String(p.brand || "Certitude"),
-          price: Number(p.price),
-          discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
-          stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-          imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
-          images: Array.isArray(p.images) ? (p.images as string[]) : [],
-          size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
-          color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
-          rating: p.rating !== undefined ? Number(p.rating) : 4.5,
-          reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
-          sku: String(p.sku || ""),
-          tags: Array.isArray(p.tags) ? (p.tags as string[]) : []
-        }));
+  try {
+    const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
+    const { data, error } = await supabase.from('products').select('*');
+    if (!error && data && data.length > 0) {
+      const mapped: AdminProduct[] = data.map((p: Record<string, unknown>) => ({
+        id: String(p.id),
+        name: String(p.name),
+        description: String(p.description || ""),
+        category: String(p.category),
+        brand: String(p.brand || "Atelier"),
+        price: Number(p.price),
+        discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
+        stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
+        imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
+        images: Array.isArray(p.images) ? (p.images as string[]) : [],
+        size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
+        color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
+        rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+        reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
+        sku: String(p.sku || ""),
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : []
+      }));
 
-        const { cleaned, updatedCount } = cleanProductUrls(mapped);
-        if (updatedCount > 0) {
+      const { cleaned, updatedCount } = cleanProductUrls(mapped);
+      if (updatedCount > 0) {
+        if (isBrowser) {
           setLocalStorageItem("certitude_admin_products", cleaned);
-          // Sync with Supabase asynchronously
-          for (const product of cleaned) {
-            const original = mapped.find(p => p.id === product.id);
-            if (original && (original.imageSrc !== product.imageSrc || JSON.stringify(original.images) !== JSON.stringify(product.images))) {
-              supabase.from('products').upsert({
-                id: product.id,
-                name: product.name,
-                description: product.description,
-                price: product.price,
-                images: product.images,
-                category: product.category,
-                stock: product.stockQuantity,
-                brand: product.brand,
-                discount_percent: product.discountPercent || 0,
-                rating: product.rating || 4.5,
-                review_count: product.reviewCount || 0,
-                size: product.size,
-                color: product.color,
-                sku: product.sku || "",
-                is_active: true,
-                updated_at: new Date().toISOString()
-              }).catch(err => console.error("[AdminService] Sync error:", err));
-            }
-          }
-          return cleaned;
         }
-
-        setLocalStorageItem("certitude_admin_products", mapped);
-        return mapped;
+        // Sync with Supabase asynchronously
+        for (const product of cleaned) {
+          const original = mapped.find(p => p.id === product.id);
+          if (original && (original.imageSrc !== product.imageSrc || JSON.stringify(original.images) !== JSON.stringify(product.images))) {
+            supabase.from('products').upsert({
+              id: product.id,
+              name: product.name,
+              description: product.description,
+              price: product.price,
+              images: product.images,
+              category: product.category,
+              stock: product.stockQuantity,
+              brand: product.brand,
+              discount_percent: product.discountPercent || 0,
+              rating: product.rating || 4.5,
+              review_count: product.reviewCount || 0,
+              size: product.size,
+              color: product.color,
+              sku: product.sku || "",
+              is_active: true,
+              updated_at: new Date().toISOString()
+            }).catch(err => console.error("[AdminService] Sync error:", err));
+          }
+        }
+        return cleaned;
       }
-    } catch (err) {
-      console.error("[AdminService] Supabase getProducts error, falling back:", err);
+
+      if (isBrowser) {
+        setLocalStorageItem("certitude_admin_products", mapped);
+      }
+      return mapped;
     }
+  } catch (err) {
+    console.error("[AdminService] Supabase getProducts error, falling back:", err);
   }
-  const localProducts = getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
-  const { cleaned, updatedCount } = cleanProductUrls(localProducts);
-  if (updatedCount > 0) {
-    setLocalStorageItem("certitude_admin_products", cleaned);
-    return cleaned;
+
+  if (isBrowser) {
+    const localProducts = getLocalStorageItem<AdminProduct[]>("certitude_admin_products", INITIAL_PRODUCTS);
+    const { cleaned, updatedCount } = cleanProductUrls(localProducts);
+    if (updatedCount > 0) {
+      setLocalStorageItem("certitude_admin_products", cleaned);
+      return cleaned;
+    }
+    return localProducts;
   }
-  return localProducts;
+  return INITIAL_PRODUCTS;
 }
 
 /**
@@ -504,6 +487,12 @@ export async function getOrders(): Promise<AdminOrder[]> {
           const addressVal = row.shipping_address as unknown as AddressType;
           const itemsVal = row.items as unknown as AdminOrder["items"];
           
+          const subtotalVal = row.subtotal !== undefined && row.subtotal !== null ? Number(row.subtotal) : undefined;
+          const taxVal = row.tax !== undefined && row.tax !== null ? Number(row.tax) : undefined;
+          const shippingVal = row.shipping !== undefined && row.shipping !== null ? Number(row.shipping) : undefined;
+          const discountVal = row.discount !== undefined && row.discount !== null ? Number(row.discount) : undefined;
+          const grandTotalVal = row.grand_total !== undefined && row.grand_total !== null ? Number(row.grand_total) : undefined;
+
           return {
             orderId: orderIdVal,
             customerName: customerNameVal,
@@ -522,6 +511,11 @@ export async function getOrders(): Promise<AdminOrder[]> {
             itemsCount: itemsVal?.length || 0,
             address: addressVal,
             items: itemsVal,
+            subtotal: subtotalVal,
+            tax: taxVal,
+            shipping: shippingVal,
+            discount: discountVal,
+            grand_total: grandTotalVal,
           };
         });
         return mappedOrders;
@@ -575,11 +569,55 @@ export async function updateOrderStatus(
   return false;
 }
 
-/**
- * Returns all customers.
- */
 export async function getCustomers(): Promise<AdminCustomer[]> {
-  return getLocalStorageItem<AdminCustomer[]>("certitude_admin_customers", INITIAL_CUSTOMERS);
+  const supabase = getSupabaseClient() as any;
+
+  // 1. Fetch profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('*');
+
+  if (profilesError) {
+    console.error("[AdminService] Error fetching profiles:", profilesError);
+    throw new Error("Unable to load data from server.");
+  }
+
+  // 2. Fetch orders
+  const { data: orders, error: ordersError } = await supabase
+    .from('orders')
+    .select('customer_email, total_amount, status');
+
+  if (ordersError) {
+    console.error("[AdminService] Error fetching orders for customer stats:", ordersError);
+    throw new Error("Unable to load data from server.");
+  }
+
+  // 3. Aggregate order statistics by user email
+  const ordersByEmail: Record<string, { count: number; total: number }> = {};
+  for (const o of (orders || [])) {
+    if (!o.customer_email) continue;
+    const emailKey = o.customer_email.toLowerCase();
+    if (!ordersByEmail[emailKey]) {
+      ordersByEmail[emailKey] = { count: 0, total: 0 };
+    }
+    // Only count non-cancelled orders for metrics
+    if (o.status !== 'cancelled' && o.status !== 'Cancelled') {
+      ordersByEmail[emailKey].count += 1;
+      ordersByEmail[emailKey].total += Number(o.total_amount || 0);
+    }
+  }
+
+  // 4. Map profiles to AdminCustomer format with derived metrics
+  return (profiles || []).map((p: any) => {
+    const emailKey = (p.email || "").toLowerCase();
+    const stats = ordersByEmail[emailKey] || { count: 0, total: 0 };
+    return {
+      email: p.email,
+      name: p.name || p.email.split('@')[0],
+      ordersCount: stats.count,
+      totalSpend: stats.total,
+    };
+  });
 }
 
 export interface DashboardStats {
@@ -638,10 +676,13 @@ export function registerNewCheckoutOrder(params: {
   paymentMethod: string;
   address?: AddressType;
   items?: AdminOrder["items"];
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  discount?: number;
+  grand_total?: number;
 }) {
   if (!isBrowser) return;
-
-  const customers = getLocalStorageItem<AdminCustomer[]>("certitude_admin_customers", INITIAL_CUSTOMERS);
 
   const formattedPayment = params.paymentMethod === "credit" ? "Credit Card" :
                            params.paymentMethod === "debit" ? "Debit Card" :
@@ -661,6 +702,11 @@ export function registerNewCheckoutOrder(params: {
           status: "pending",
           payment_method: formattedPayment,
           shipping_address: params.address as unknown as Record<string, unknown>,
+          subtotal: params.subtotal,
+          tax: params.tax,
+          shipping: params.shipping,
+          discount: params.discount,
+          grand_total: params.grand_total,
         }).then(({ error }) => {
           if (error) {
             console.error("[AdminService] Supabase order insert error:", error);
@@ -673,21 +719,6 @@ export function registerNewCheckoutOrder(params: {
   } catch (err) {
     console.error("[AdminService] Supabase operation failed:", err);
   }
-
-  // 2. Add or update Customer
-  const custIndex = customers.findIndex((c) => c.email.toLowerCase() === params.customerEmail.toLowerCase());
-  if (custIndex >= 0) {
-    customers[custIndex].ordersCount += 1;
-    customers[custIndex].totalSpend += params.total;
-  } else {
-    customers.push({
-      email: params.customerEmail,
-      name: params.customerName,
-      ordersCount: 1,
-      totalSpend: params.total,
-    });
-  }
-  setLocalStorageItem("certitude_admin_customers", customers);
 
   // 3. Register Notification
   registerNotification(params.customerEmail, `Your order ${params.orderId} was successfully placed!`);

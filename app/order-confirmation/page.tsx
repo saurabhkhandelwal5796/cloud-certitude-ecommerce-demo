@@ -184,6 +184,12 @@ export default function OrderConfirmationPage() {
                   <span>Shipping Fee</span>
                   <span>{order.totals.shipping === 0 ? "Free" : `₹${order.totals.shipping}`}</span>
                 </div>
+                {order.totals.tax !== undefined && order.totals.tax > 0 && (
+                  <div className="flex justify-between">
+                    <span>Estimated Tax (8%)</span>
+                    <span>{formatPrice(order.totals.tax)}</span>
+                  </div>
+                )}
                 <div className="flex justify-between font-bold text-stone-950 border-t border-stone-100 pt-1.5">
                   <span>Grand Total</span>
                   <span>{formatPrice(order.totals.grandTotal)}</span>

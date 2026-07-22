@@ -25,6 +25,8 @@ export default function AdminDashboardPage() {
   const [recentCustomers, setRecentCustomers] = useState<AdminCustomer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
     const loadDashboardData = async () => {
       try {
@@ -37,12 +39,23 @@ export default function AdminDashboardPage() {
         setRecentCustomers(customersList.slice(0, 5)); // top 5 customers
       } catch (err) {
         console.error("[Dashboard] Error loading data:", err);
+        setError("Unable to load data from server.");
       } finally {
         setIsLoading(false);
       }
     };
     loadDashboardData();
   }, []);
+
+  if (error) {
+    return (
+      <div className="flex h-[60vh] items-center justify-center">
+        <div className="text-rose-500 font-bold uppercase tracking-wider text-sm border border-rose-200 bg-rose-50/50 px-6 py-4 rounded-3xl">
+          ⚠️ {error}
+        </div>
+      </div>
+    );
+  }
 
   const getStatusColor = (status: AdminOrder["status"]) => {
     switch (status) {

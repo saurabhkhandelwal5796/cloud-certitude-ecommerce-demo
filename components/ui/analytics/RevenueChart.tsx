@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useRef, useState } from "react";
 import type { MonthlyDataPoint } from "@/services/AdminService";
+import { formatINR } from "@/utils";
 
 interface RevenueChartProps {
   data: MonthlyDataPoint[];
@@ -9,9 +10,7 @@ interface RevenueChartProps {
 }
 
 function fmt(v: number): string {
-  if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-  if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-  return `$${v}`;
+  return formatINR(v);
 }
 
 export default function RevenueChart({ data, title = "Monthly Revenue" }: RevenueChartProps) {
@@ -29,7 +28,7 @@ export default function RevenueChart({ data, title = "Monthly Revenue" }: Revenu
   const max = Math.max(...data.map((d) => d.value), 1);
   const W = 600;
   const H = 220;
-  const PAD_L = 48;
+  const PAD_L = 80;
   const PAD_R = 16;
   const PAD_T = 16;
   const PAD_B = 32;
@@ -122,7 +121,7 @@ export default function RevenueChart({ data, title = "Monthly Revenue" }: Revenu
               {/* Hover tooltip */}
               {hovered === i && (
                 <g>
-                  <rect x={p.x - 28} y={p.y - 26} width={56} height={18} rx="4" fill="#1C1917" />
+                  <rect x={p.x - 45} y={p.y - 26} width={90} height={18} rx="4" fill="#1C1917" />
                   <text x={p.x} y={p.y - 13} textAnchor="middle" fontSize="8" fill="white" fontWeight="bold" fontFamily="sans-serif">
                     {fmt(p.value)}
                   </text>

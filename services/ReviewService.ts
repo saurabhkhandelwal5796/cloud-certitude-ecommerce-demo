@@ -7,6 +7,7 @@
  */
 
 import { getOrders, getProducts, saveProduct, AdminProduct } from "./AdminService";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 export interface ProductReview {
   id: string;
@@ -46,130 +47,76 @@ function setStorageItem<T>(key: string, value: T): void {
   }
 }
 
-// Initial Mock Reviews Distribution
-const INITIAL_REVIEWS: ProductReview[] = [
-  // Product m1 reviews
-  {
-    id: "rev-m1-1",
-    productId: "m1",
-    customerName: "Eleanor Vance",
-    customerEmail: "eleanor@sky.net",
-    rating: 5,
-    title: "Stunning Cashmere Quality!",
-    reviewText: "Absolutely stunning quality. The cashmere feels exceptionally soft and heavy. The drape is elegant and tailored to perfection.",
-    date: "Jul 12, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 24,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  {
-    id: "rev-m1-2",
-    productId: "m1",
-    customerName: "Julian Brooks",
-    customerEmail: "julian@gmail.com",
-    rating: 5,
-    title: "Perfect Tailoring",
-    reviewText: "Highly recommend this piece. Fits perfectly across the shoulders, and the fabric breathes well in warm environments.",
-    date: "Jun 30, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 15,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  {
-    id: "rev-m1-3",
-    productId: "m1",
-    customerName: "Saskia Sterling",
-    customerEmail: "saskia@yahoo.in",
-    rating: 4,
-    title: "Exquisite details",
-    reviewText: "Exquisite details. The buttons feel solid and high-end. Deducted one star only because shipping took an extra day.",
-    date: "Jun 14, 2026",
-    isVerifiedPurchase: false,
-    helpfulCount: 8,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  // Product w1 reviews
-  {
-    id: "rev-w1-1",
-    productId: "w1",
-    customerName: "Sarah Connor",
-    customerEmail: "sarah@sky.net",
-    rating: 5,
-    title: "Worth every single rupee!",
-    reviewText: "Exquisite floor-length evening gown crafted from heavy 100% mulberry silk satin with a delicate drape back. Fit is phenomenal.",
-    date: "Jul 10, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 42,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  {
-    id: "rev-w1-2",
-    productId: "w1",
-    customerName: "Emma Watson",
-    customerEmail: "emma@watson.co.uk",
-    rating: 5,
-    title: "Pure elegance and class",
-    reviewText: "Simply breathtaking gown. The texture and sheen under ambient lighting are mesmerizing. Perfect for high-profile galas.",
-    date: "Jun 24, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 19,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  // Product w2 reviews
-  {
-    id: "rev-w2-1",
-    productId: "w2",
-    customerName: "Clarissa Finch",
-    customerEmail: "clarissa@gmail.com",
-    rating: 5,
-    title: "Responsible luxury knitwear",
-    reviewText: "The material texture is beautiful. You can tell this is crafted with care from sustainable organic extra-fine wool fabrics.",
-    date: "May 10, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 12,
-    reported: false,
-    helpfulUserEmails: [],
-  },
-  {
-    id: "rev-w2-2",
-    productId: "w2",
-    customerName: "Dimitri Mercer",
-    customerEmail: "dimitri@outlook.com",
-    rating: 4,
-    title: "Warm and cozy oversized look",
-    reviewText: "An essential addition to my capsule wardrobe. Minimalist, premium, and holds its shape well after cleaning. Slightly larger than expected.",
-    date: "May 28, 2026",
-    isVerifiedPurchase: true,
-    helpfulCount: 3,
-    reported: false,
-    helpfulUserEmails: [],
-  }
-];
-
-if (isBrowser) {
-  if (!localStorage.getItem("certitude_product_reviews")) {
-    setStorageItem("certitude_product_reviews", INITIAL_REVIEWS);
-  }
-}
 
 /**
  * Retrieves all reviews.
  */
 export async function getReviews(): Promise<ProductReview[]> {
-  return getStorageItem<ProductReview[]>("certitude_product_reviews", INITIAL_REVIEWS);
+  const supabase = getSupabaseClient() as any;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("[ReviewService] Error fetching reviews:", error);
+    throw new Error("Unable to load data from server.");
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    productId: r.product_id,
+    customerName: r.customer_name,
+    customerEmail: r.customer_email,
+    rating: r.rating,
+    title: r.title || "",
+    reviewText: r.review_text,
+    date: new Date(r.created_at).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    isVerifiedPurchase: r.is_verified_purchase,
+    helpfulCount: r.helpful_count || 0,
+    reported: r.reported || false,
+    helpfulUserEmails: r.helpful_user_emails || [],
+  }));
 }
 
 /**
  * Retrieves reviews for a specific product.
  */
 export async function getReviewsByProductId(productId: string): Promise<ProductReview[]> {
-  const reviews = await getReviews();
-  return reviews.filter((r) => r.productId === productId);
+  const supabase = getSupabaseClient() as any;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('*')
+    .eq('product_id', productId)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error(`[ReviewService] Error fetching reviews for product ${productId}:`, error);
+    throw new Error("Unable to load data from server.");
+  }
+
+  return (data || []).map((r: any) => ({
+    id: r.id,
+    productId: r.product_id,
+    customerName: r.customer_name,
+    customerEmail: r.customer_email,
+    rating: r.rating,
+    title: r.title || "",
+    reviewText: r.review_text,
+    date: new Date(r.created_at).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    }),
+    isVerifiedPurchase: r.is_verified_purchase,
+    helpfulCount: r.helpful_count || 0,
+    reported: r.reported || false,
+    helpfulUserEmails: r.helpful_user_emails || [],
+  }));
 }
 
 /**
@@ -194,8 +141,19 @@ export async function checkHasPurchased(email: string, productId: string): Promi
  * Checks if a customer has already reviewed a product.
  */
 export async function checkHasReviewed(email: string, productId: string): Promise<boolean> {
-  const reviews = await getReviewsByProductId(productId);
-  return reviews.some((r) => r.customerEmail.toLowerCase() === email.toLowerCase());
+  const supabase = getSupabaseClient() as any;
+  const { data, error } = await supabase
+    .from('reviews')
+    .select('id')
+    .eq('product_id', productId)
+    .eq('customer_email', email.toLowerCase());
+
+  if (error) {
+    console.error("[ReviewService] Error checking review status:", error);
+    return false;
+  }
+
+  return (data || []).length > 0;
 }
 
 /**
@@ -203,22 +161,23 @@ export async function checkHasReviewed(email: string, productId: string): Promis
  */
 async function syncProductRatings(productId: string): Promise<void> {
   const reviews = await getReviewsByProductId(productId);
-  const products = await getProducts();
-  const prodIndex = products.findIndex((p) => p.id === productId);
+  const totalCount = reviews.length;
+  const avgRating = totalCount > 0
+    ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalCount
+    : 0;
 
-  if (prodIndex >= 0) {
-    const totalCount = reviews.length;
-    const avgRating = totalCount > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalCount
-      : 0;
-
-    const updatedProduct: AdminProduct = {
-      ...products[prodIndex],
+  const supabase = getSupabaseClient() as any;
+  const { error } = await supabase
+    .from('products')
+    .update({
       rating: parseFloat(avgRating.toFixed(1)),
+      review_count: totalCount,
       reviewCount: totalCount,
-    };
+    })
+    .eq('id', productId);
 
-    await saveProduct(updatedProduct);
+  if (error) {
+    console.error(`[ReviewService] Failed to sync product ratings for ${productId}:`, error);
   }
 }
 
@@ -233,8 +192,6 @@ export async function submitReview(params: {
   title: string;
   reviewText: string;
 }): Promise<ProductReview> {
-  const reviews = await getReviews();
-
   const isVerified = await checkHasPurchased(params.customerEmail, params.productId);
   const hasReviewed = await checkHasReviewed(params.customerEmail, params.productId);
 
@@ -242,27 +199,47 @@ export async function submitReview(params: {
     throw new Error("You have already reviewed this product.");
   }
 
+  const supabase = getSupabaseClient() as any;
+  const { data, error } = await supabase
+    .from('reviews')
+    .insert({
+      product_id: params.productId,
+      customer_name: params.customerName,
+      customer_email: params.customerEmail.toLowerCase(),
+      rating: params.rating,
+      title: params.title,
+      review_text: params.reviewText,
+      is_verified_purchase: isVerified,
+      helpful_count: 0,
+      reported: false,
+      helpful_user_emails: [],
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("[ReviewService] Error inserting review:", error);
+    throw new Error("Unable to save review to server.");
+  }
+
   const newReview: ProductReview = {
-    id: `rev-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-    productId: params.productId,
-    customerName: params.customerName,
-    customerEmail: params.customerEmail,
-    rating: params.rating,
-    title: params.title,
-    reviewText: params.reviewText,
-    date: new Date().toLocaleDateString("en-US", {
+    id: data.id,
+    productId: data.product_id,
+    customerName: data.customer_name,
+    customerEmail: data.customer_email,
+    rating: data.rating,
+    title: data.title || "",
+    reviewText: data.review_text,
+    date: new Date(data.created_at).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     }),
-    isVerifiedPurchase: isVerified,
-    helpfulCount: 0,
-    reported: false,
-    helpfulUserEmails: [],
+    isVerifiedPurchase: data.is_verified_purchase,
+    helpfulCount: data.helpful_count || 0,
+    reported: data.reported || false,
+    helpfulUserEmails: data.helpful_user_emails || [],
   };
-
-  reviews.unshift(newReview);
-  setStorageItem("certitude_product_reviews", reviews);
 
   // Recalculate and update catalog stats
   await syncProductRatings(params.productId);
@@ -277,73 +254,123 @@ export async function editReview(
   reviewId: string,
   params: { rating: number; title: string; reviewText: string }
 ): Promise<boolean> {
-  const reviews = await getReviews();
-  const index = reviews.findIndex((r) => r.id === reviewId);
+  const supabase = getSupabaseClient() as any;
+  
+  // Get product_id first to sync ratings
+  const { data: reviewData } = await supabase
+    .from('reviews')
+    .select('product_id')
+    .eq('id', reviewId)
+    .single();
 
-  if (index >= 0) {
-    reviews[index].rating = params.rating;
-    reviews[index].title = params.title;
-    reviews[index].reviewText = params.reviewText;
-    
-    setStorageItem("certitude_product_reviews", reviews);
-    await syncProductRatings(reviews[index].productId);
-    return true;
+  const { error } = await supabase
+    .from('reviews')
+    .update({
+      rating: params.rating,
+      title: params.title,
+      review_text: params.reviewText,
+    })
+    .eq('id', reviewId);
+
+  if (error) {
+    console.error(`[ReviewService] Error editing review ${reviewId}:`, error);
+    return false;
   }
-  return false;
+
+  if (reviewData) {
+    await syncProductRatings(reviewData.product_id);
+  }
+  return true;
 }
 
 /**
  * Deletes a review.
  */
 export async function deleteReview(reviewId: string): Promise<boolean> {
-  const reviews = await getReviews();
-  const index = reviews.findIndex((r) => r.id === reviewId);
+  const supabase = getSupabaseClient() as any;
 
-  if (index >= 0) {
-    const productId = reviews[index].productId;
-    const filtered = reviews.filter((r) => r.id !== reviewId);
-    setStorageItem("certitude_product_reviews", filtered);
-    await syncProductRatings(productId);
-    return true;
+  // Get product_id first to sync ratings
+  const { data: reviewData } = await supabase
+    .from('reviews')
+    .select('product_id')
+    .eq('id', reviewId)
+    .single();
+
+  const { error } = await supabase
+    .from('reviews')
+    .delete()
+    .eq('id', reviewId);
+
+  if (error) {
+    console.error(`[ReviewService] Error deleting review ${reviewId}:`, error);
+    return false;
   }
-  return false;
+
+  if (reviewData) {
+    await syncProductRatings(reviewData.product_id);
+  }
+  return true;
 }
 
 /**
  * Upvotes a review as helpful.
  */
 export async function voteHelpful(reviewId: string, userEmail: string): Promise<boolean> {
-  const reviews = await getReviews();
-  const index = reviews.findIndex((r) => r.id === reviewId);
+  const supabase = getSupabaseClient() as any;
 
-  if (index >= 0) {
-    const r = reviews[index];
-    if (r.helpfulUserEmails.includes(userEmail.toLowerCase())) {
-      // User already upvoted, remove it
-      r.helpfulUserEmails = r.helpfulUserEmails.filter((e) => e !== userEmail.toLowerCase());
-      r.helpfulCount = Math.max(0, r.helpfulCount - 1);
-    } else {
-      // User upvoted, add it
-      r.helpfulUserEmails.push(userEmail.toLowerCase());
-      r.helpfulCount += 1;
-    }
-    setStorageItem("certitude_product_reviews", reviews);
-    return true;
+  const { data: reviewData, error: fetchError } = await supabase
+    .from('reviews')
+    .select('helpful_user_emails, helpful_count')
+    .eq('id', reviewId)
+    .single();
+
+  if (fetchError || !reviewData) {
+    console.error(`[ReviewService] Error fetching review for helpful vote ${reviewId}:`, fetchError);
+    return false;
   }
-  return false;
+
+  const emails = reviewData.helpful_user_emails || [];
+  let newEmails = [...emails];
+  let newCount = reviewData.helpful_count || 0;
+
+  if (emails.includes(userEmail.toLowerCase())) {
+    newEmails = newEmails.filter((e: string) => e !== userEmail.toLowerCase());
+    newCount = Math.max(0, newCount - 1);
+  } else {
+    newEmails.push(userEmail.toLowerCase());
+    newCount += 1;
+  }
+
+  const { error } = await supabase
+    .from('reviews')
+    .update({
+      helpful_user_emails: newEmails,
+      helpful_count: newCount,
+    })
+    .eq('id', reviewId);
+
+  if (error) {
+    console.error(`[ReviewService] Error updating helpful vote ${reviewId}:`, error);
+    return false;
+  }
+
+  return true;
 }
 
 /**
  * Flags a review as reported.
  */
 export async function reportReview(reviewId: string): Promise<boolean> {
-  const reviews = await getReviews();
-  const index = reviews.findIndex((r) => r.id === reviewId);
+  const supabase = getSupabaseClient() as any;
+  const { error } = await supabase
+    .from('reviews')
+    .update({ reported: true })
+    .eq('id', reviewId);
 
-  if (index >= 0) {
-    reviews[index].reported = true;
-    setStorageItem("certitude_product_reviews", reviews);
-    return true;
+  if (error) {
+    console.error(`[ReviewService] Error reporting review ${reviewId}:`, error);
+    return false;
   }
-  return false;
+
+  return true;
 }

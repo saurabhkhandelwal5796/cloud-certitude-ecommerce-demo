@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import { formatINR } from "@/utils";
 import MetricCard from "@/components/ui/analytics/MetricCard";
 import DateFilter from "@/components/ui/analytics/DateFilter";
 import RevenueChart from "@/components/ui/analytics/RevenueChart";
@@ -113,7 +114,7 @@ export default function AdminAnalyticsPage() {
         o.orderDate,
         o.status,
         o.paymentMethod,
-        o.total.toFixed(2),
+        formatINR(o.total),
       ]),
     ];
     const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
@@ -189,7 +190,6 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Revenue Today"
           value={summary.revenueToday}
-          prefix="$"
           icon="💰"
           accentColor="text-emerald-500"
           isCurrency
@@ -197,7 +197,6 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Revenue This Week"
           value={summary.revenueThisWeek}
-          prefix="$"
           icon="📅"
           accentColor="text-blue-500"
           isCurrency
@@ -205,7 +204,6 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Revenue This Month"
           value={summary.revenueThisMonth}
-          prefix="$"
           icon="📈"
           trend={revenueTrend}
           trendLabel="vs last month"
@@ -215,8 +213,6 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Revenue This Year"
           value={summary.revenueThisYear}
-          prefix="$"
-          icon="🏆"
           trend={pctChange(summary.revenueThisYear, summary.revenuePrevYear)}
           trendLabel="vs last year"
           accentColor="text-amber-500"
@@ -281,7 +277,6 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Avg Customer Spend"
           value={summary.avgCustomerSpend}
-          prefix="$"
           icon="💳"
           accentColor="text-amber-500"
           isCurrency
@@ -347,10 +342,10 @@ export default function AdminAnalyticsPage() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
           {[
             { label: "Conversion Rate", value: `${allOrders.length > 0 ? ((summary.deliveredOrders / summary.totalOrders) * 100).toFixed(1) : "0"}%`, icon: "🎯" },
-            { label: "Avg Order Value", value: summary.totalOrders > 0 ? `$${(summary.revenueThisYear / Math.max(summary.totalOrders, 1)).toFixed(0)}` : "$0", icon: "🛒" },
+            { label: "Avg Order Value", value: summary.totalOrders > 0 ? formatINR(summary.revenueThisYear / Math.max(summary.totalOrders, 1)) : "INR 0.00", icon: "🛒" },
             { label: "Cancellation Rate", value: `${summary.totalOrders > 0 ? ((summary.cancelledOrders / summary.totalOrders) * 100).toFixed(1) : "0"}%`, icon: "❌" },
             { label: "Fulfillment Rate", value: `${summary.totalOrders > 0 ? (((summary.totalOrders - summary.cancelledOrders) / summary.totalOrders) * 100).toFixed(1) : "100"}%`, icon: "📊" },
-            { label: "Total Revenue", value: `$${(summary.revenueThisYear / 1000).toFixed(1)}K`, icon: "💰" },
+            { label: "Total Revenue", value: formatINR(summary.revenueThisYear), icon: "💰" },
             { label: "Active Products", value: `${summary.totalProducts - summary.outOfStockCount}`, icon: "✅" },
           ].map((stat) => (
             <div key={stat.label} className="text-center p-3 rounded-2xl bg-white/70 border border-stone-100/80 hover:border-stone-200/80 transition-colors">
