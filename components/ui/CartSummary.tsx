@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatPrice } from "@/utils";
+import { formatPrice, getGstLabel } from "@/utils";
 import { useCart } from "@/context/CartContext";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { calculateOrderTotals } from "@/services/PricingService";
@@ -17,7 +17,7 @@ import { calculateOrderTotals } from "@/services/PricingService";
  */
 export default function CartSummary() {
   const router = useRouter();
-  const { cartSubtotal } = useCart();
+  const { cartSubtotal, cartItems } = useCart();
   const [promoCode, setPromoCode] = useState("");
   const [discountPercent, setDiscountPercent] = useState(0);
   const [promoApplied, setPromoApplied] = useState(false);
@@ -92,7 +92,7 @@ export default function CartSummary() {
         )}
 
         <div className="flex justify-between">
-          <span>Estimated Tax (8%)</span>
+          <span>{getGstLabel(cartItems)}</span>
           <span className="font-semibold text-stone-900">{formatPrice(tax)}</span>
         </div>
 

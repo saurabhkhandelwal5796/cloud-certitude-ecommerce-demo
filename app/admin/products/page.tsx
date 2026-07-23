@@ -55,6 +55,8 @@ export default function AdminProductsPage() {
   const [imageSrc, setImageSrc] = useState("");
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
+  const [gstRate, setGstRate] = useState("5");
+  const [hsnCode, setHsnCode] = useState("");
   const [formError, setFormError] = useState("");
 
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -83,6 +85,8 @@ export default function AdminProductsPage() {
     setImageSrc("");
     setSelectedSizes(["M", "L"]);
     setSelectedColors(["Beige"]);
+    setGstRate("5");
+    setHsnCode("");
     setFormError("");
     setShowModal(true);
   };
@@ -99,6 +103,8 @@ export default function AdminProductsPage() {
     setImageSrc(p.imageSrc);
     setSelectedSizes(p.size);
     setSelectedColors(p.color);
+    setGstRate(p.gstRate !== undefined ? p.gstRate.toString() : "5");
+    setHsnCode(p.hsnCode || "");
     setFormError("");
     setShowModal(true);
   };
@@ -180,6 +186,8 @@ export default function AdminProductsPage() {
       rating: editingProduct ? editingProduct.rating : 5.0,
       reviewCount: editingProduct ? editingProduct.reviewCount : 0,
       sku: editingProduct ? editingProduct.sku : `CC-${brand.slice(0, 3).toUpperCase()}-${Date.now().toString(36).toUpperCase()}`,
+      gstRate: Number(gstRate),
+      hsnCode: hsnCode.trim() || undefined,
     };
 
     try {
@@ -451,6 +459,40 @@ export default function AdminProductsPage() {
                     value={discountPercent}
                     onChange={(e) => setDiscountPercent(e.target.value)}
                     placeholder="15"
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* GST Rate */}
+                <div className="space-y-1.5">
+                  <label className="block font-bold uppercase tracking-wider text-stone-500">
+                    GST Rate *
+                  </label>
+                  <select
+                    value={gstRate}
+                    onChange={(e) => setGstRate(e.target.value)}
+                    className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2.5 text-stone-850 focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50"
+                  >
+                    {["0", "5", "12", "18", "28"].map((rate) => (
+                      <option key={rate} value={rate}>
+                        {rate}%
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* HSN Code */}
+                <div className="space-y-1.5">
+                  <label className="block font-bold uppercase tracking-wider text-stone-500">
+                    HSN Code (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={hsnCode}
+                    onChange={(e) => setHsnCode(e.target.value)}
+                    placeholder="e.g. 6204"
                     className="w-full rounded-xl border border-stone-200 bg-stone-50/50 px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-[#E0A99E]/50 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/50"
                   />
                 </div>

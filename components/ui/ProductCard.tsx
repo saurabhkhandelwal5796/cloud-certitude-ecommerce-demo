@@ -102,16 +102,18 @@ export default function ProductCard({
 
       {/* Product Image and Overlay triggers */}
       <div className="relative aspect-[3/4] overflow-hidden bg-stone-50 z-0">
-        <Image
-          src={currentImage}
-          alt={name}
-          fill
-          sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-          className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-          onError={() => {
-            setCurrentImage(getCategoryFallbackImage(category));
-          }}
-        />
+        <Link href={`/products/${id}`} className="absolute inset-0 z-0 block">
+          <Image
+            src={currentImage}
+            alt={name}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            onError={() => {
+              setCurrentImage(getCategoryFallbackImage(category));
+            }}
+          />
+        </Link>
 
         {/* Discount Badge */}
         {discountPercent && (

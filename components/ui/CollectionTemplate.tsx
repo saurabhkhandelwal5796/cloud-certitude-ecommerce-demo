@@ -6,6 +6,7 @@ import FilterSidebar from "./FilterSidebar";
 import ProductCard from "./ProductCard";
 import Pagination from "./Pagination";
 import ProductQuickViewModal from "./ProductQuickViewModal";
+import { useSearchParams } from "next/navigation";
 
 interface ProductType {
   id: string;
@@ -89,10 +90,20 @@ export default function CollectionTemplate({
     loadDynamicProducts();
   }, [categoryFilter]);
 
+  const searchParams = useSearchParams();
+  const brandParam = searchParams.get("brand");
+
   // Filters & State
   const [selectedSizes, setSelectedSizes] = useState<string[]>([]);
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedBrands, setSelectedBrands] = useState<string[]>(brandParam ? [brandParam] : []);
+
+  useEffect(() => {
+    if (brandParam) {
+      setSelectedBrands([brandParam]);
+    }
+  }, [brandParam]);
+
   const [priceRange, setPriceRange] = useState<number>(10000);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOption, setSortOption] = useState<string>("newest");

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
+import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId, getGstLabel } from "@/utils";
 import { CartItemType } from "@/context/CartContext";
 import { useCart } from "@/context/CartContext";
 import { calculateOrderTotals } from "@/services/PricingService";
@@ -112,7 +112,7 @@ export default function OrderSummary({
         )}
 
         <div className="flex justify-between">
-          <span>Estimated Tax (8%)</span>
+          <span>{getGstLabel(cartItems)}</span>
           <span className="font-semibold text-stone-900">{formatPrice(tax)}</span>
         </div>
 

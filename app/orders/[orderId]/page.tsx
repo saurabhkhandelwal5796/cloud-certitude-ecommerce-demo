@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getGstLabel } from "@/utils";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import OrderTimeline from "@/components/ui/OrderTimeline";
 import { getOrders, AdminOrder } from "@/services/AdminService";
@@ -194,7 +194,7 @@ export default function OrderDetailsPage({ params }: PageProps) {
                 </div>
               )}
               <div className="flex justify-between">
-                <span>Estimated Tax (8%)</span>
+                <span>{getGstLabel(order.items)}</span>
                 <span>{tax !== undefined && tax !== null ? formatPrice(tax) : "Data unavailable"}</span>
               </div>
               <div className="flex justify-between">

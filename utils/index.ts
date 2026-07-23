@@ -156,3 +156,26 @@ export function getCategoryFromProductId(id: string): string {
   return "Men";
 }
 
+export function getGstLabel(items?: any[]): string {
+  if (!items || items.length === 0) return "GST (Calculated per product)";
+
+  let products: any[] = [];
+  if (typeof window !== "undefined") {
+    try {
+      const stored = localStorage.getItem("certitude_admin_products");
+      if (stored) products = JSON.parse(stored);
+    } catch (e) {}
+  }
+
+  const rates = items.map((item) => {
+    const matched = products.find((p) => p.id === (item.id || item.productId));
+    return matched?.gstRate ?? matched?.gst_rate ?? item.gstRate ?? item.gst_rate ?? 5;
+  });
+
+  const uniqueRates = Array.from(new Set(rates));
+  if (uniqueRates.length === 1) {
+    return `GST (${uniqueRates[0]}% on taxable subtotal)`;
+  }
+  return "GST (Mixed Rates on taxable subtotal)";
+}
+

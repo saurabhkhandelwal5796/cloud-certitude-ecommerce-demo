@@ -25,27 +25,48 @@ export interface Database {
           created_at: string;
           updated_at: string | null;
           email: string;
+          name: string | null;
           full_name: string | null;
           avatar_url: string | null;
+          phone: string | null;
+          address: string | null;
+          city: string | null;
+          state: string | null;
+          country: string | null;
           role: "customer" | "admin";
+          newsletter_subscribed: boolean | null;
         };
         Insert: {
           id: string;
           created_at?: string;
           updated_at?: string | null;
           email: string;
+          name?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          city?: string | null;
+          state?: string | null;
+          country?: string | null;
           role?: "customer" | "admin";
+          newsletter_subscribed?: boolean | null;
         };
         Update: {
           id?: string;
           created_at?: string;
           updated_at?: string | null;
           email?: string;
+          name?: string | null;
           full_name?: string | null;
           avatar_url?: string | null;
+          phone?: string | null;
+          address?: string | null;
+          city?: string | null;
+          state?: string | null;
+          country?: string | null;
           role?: "customer" | "admin";
+          newsletter_subscribed?: boolean | null;
         };
         Relationships: [
           {
@@ -101,30 +122,60 @@ export interface Database {
           created_at: string;
           updated_at: string | null;
           user_id: string;
-          status: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+          status: string;
           total_amount: number;
           shipping_address: Json | null;
           payment_intent_id: string | null;
+          order_id: string | null;
+          customer_email: string | null;
+          customer_name: string | null;
+          payment_method: string | null;
+          items: Json | null;
+          subtotal: number | null;
+          tax: number | null;
+          shipping: number | null;
+          discount: number | null;
+          grand_total: number | null;
         };
         Insert: {
           id?: string;
           created_at?: string;
           updated_at?: string | null;
-          user_id: string;
-          status?: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
-          total_amount: number;
+          user_id?: string;
+          status?: string;
+          total_amount?: number;
           shipping_address?: Json | null;
           payment_intent_id?: string | null;
+          order_id?: string | null;
+          customer_email?: string | null;
+          customer_name?: string | null;
+          payment_method?: string | null;
+          items?: Json | null;
+          subtotal?: number | null;
+          tax?: number | null;
+          shipping?: number | null;
+          discount?: number | null;
+          grand_total?: number | null;
         };
         Update: {
           id?: string;
           created_at?: string;
           updated_at?: string | null;
           user_id?: string;
-          status?: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+          status?: string;
           total_amount?: number;
           shipping_address?: Json | null;
           payment_intent_id?: string | null;
+          order_id?: string | null;
+          customer_email?: string | null;
+          customer_name?: string | null;
+          payment_method?: string | null;
+          items?: Json | null;
+          subtotal?: number | null;
+          tax?: number | null;
+          shipping?: number | null;
+          discount?: number | null;
+          grand_total?: number | null;
         };
         Relationships: [
           {
@@ -134,6 +185,51 @@ export interface Database {
             referencedColumns: ["id"];
           }
         ];
+      };
+      reviews: {
+        Row: {
+          id: string;
+          product_id: string;
+          customer_email: string;
+          customer_name: string;
+          rating: number;
+          review_text: string;
+          is_verified_purchase: boolean | null;
+          created_at: string | null;
+          title: string | null;
+          helpful_count: number | null;
+          reported: boolean | null;
+          helpful_user_emails: string[] | null;
+        };
+        Insert: {
+          id?: string;
+          product_id: string;
+          customer_email: string;
+          customer_name: string;
+          rating: number;
+          review_text: string;
+          is_verified_purchase?: boolean | null;
+          created_at?: string | null;
+          title?: string | null;
+          helpful_count?: number | null;
+          reported?: boolean | null;
+          helpful_user_emails?: string[] | null;
+        };
+        Update: {
+          id?: string;
+          product_id?: string;
+          customer_email?: string;
+          customer_name?: string;
+          rating?: number;
+          review_text?: string;
+          is_verified_purchase?: boolean | null;
+          created_at?: string | null;
+          title?: string | null;
+          helpful_count?: number | null;
+          reported?: boolean | null;
+          helpful_user_emails?: string[] | null;
+        };
+        Relationships: [];
       };
     };
     Views: {

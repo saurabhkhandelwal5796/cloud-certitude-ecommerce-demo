@@ -93,7 +93,7 @@ export default function ProductQuickViewModal({
         {/* Left: Product Image */}
         <div className="relative w-full md:w-1/2 aspect-[4/5] bg-stone-50">
           <Image
-            src={currentImage}
+            src={currentImage || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab"}
             alt={product.name}
             fill
             sizes="(max-width: 768px) 100vw, 50vw"

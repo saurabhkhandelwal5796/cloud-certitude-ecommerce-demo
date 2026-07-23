@@ -30,6 +30,8 @@ export interface AdminProduct {
   reviewCount?: number;
   sku?: string;
   tags?: string[];
+  gstRate?: number;
+  hsnCode?: string;
 }
 
 export interface AdminOrder {
@@ -354,7 +356,9 @@ export async function getProducts(): Promise<AdminProduct[]> {
         rating: p.rating !== undefined ? Number(p.rating) : 4.5,
         reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
         sku: String(p.sku || ""),
-        tags: Array.isArray(p.tags) ? (p.tags as string[]) : []
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+        gstRate: p.gst_rate !== undefined ? Number(p.gst_rate) : 5,
+        hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : ""
       }));
 
       const { cleaned, updatedCount } = cleanProductUrls(mapped);
@@ -382,7 +386,9 @@ export async function getProducts(): Promise<AdminProduct[]> {
               color: product.color,
               sku: product.sku || "",
               is_active: true,
-              updated_at: new Date().toISOString()
+              updated_at: new Date().toISOString(),
+              gst_rate: product.gstRate !== undefined ? Number(product.gstRate) : 5,
+              hsn_code: product.hsnCode || null
             }).catch(err => console.error("[AdminService] Sync error:", err));
           }
         }
@@ -443,7 +449,9 @@ export async function saveProduct(product: AdminProduct): Promise<AdminProduct> 
       color: product.color,
       sku: product.sku || "",
       is_active: true,
-      updated_at: new Date().toISOString()
+      updated_at: new Date().toISOString(),
+      gst_rate: product.gstRate !== undefined ? Number(product.gstRate) : 5,
+      hsn_code: product.hsnCode || null
     });
   } catch (err) {
     console.error("[AdminService] Supabase saveProduct error:", err);
@@ -557,7 +565,7 @@ export async function updateOrderStatus(
       else if (status === "Cancelled") message = `Your order ${orderId} has been cancelled.`;
 
       if (message) {
-        registerNotification(customerEmail, message);
+        registerNotification(customerEmail, message, status, `/orders/${orderId}`);
       }
     }
 
@@ -721,7 +729,7 @@ export function registerNewCheckoutOrder(params: {
   }
 
   // 3. Register Notification
-  registerNotification(params.customerEmail, `Your order ${params.orderId} was successfully placed!`);
+  registerNotification(params.customerEmail, `Your order ${params.orderId} was successfully placed!`, "Placed", `/orders/${params.orderId}`);
 }
 
 /**
@@ -925,7 +933,7 @@ export async function cancelCustomerOrder(orderId: string): Promise<boolean> {
       }
       
       // Register Notification
-      registerNotification(data[0].customer_email as string, `Your order ${orderId} has been successfully cancelled.`);
+      registerNotification(data[0].customer_email as string, `Your order ${orderId} has been successfully cancelled.`, "Cancelled", `/orders/${orderId}`);
       return true;
     }
   } catch (err) {
@@ -941,6 +949,8 @@ export interface InAppNotification {
   message: string;
   timestamp: string;
   isRead: boolean;
+  type?: string;
+  targetUrl?: string;
 }
 
 /**
@@ -954,7 +964,12 @@ export function getUserNotifications(email: string): InAppNotification[] {
 /**
  * Pushes a new notification to a user's feed.
  */
-export function registerNotification(email: string, message: string) {
+export function registerNotification(
+  email: string,
+  message: string,
+  type?: string,
+  targetUrl?: string
+) {
   if (!isBrowser) return;
 
   const key = `certitude_notifications_${email.toLowerCase()}`;
@@ -971,6 +986,8 @@ export function registerNotification(email: string, message: string) {
       hour12: true,
     }),
     isRead: false,
+    type,
+    targetUrl,
   };
 
   notifications.unshift(newNotif);
@@ -991,6 +1008,35 @@ export function markNotificationsAsRead(email: string) {
   
   const updated = notifications.map((n) => ({ ...n, isRead: true }));
   setLocalStorageItem(key, updated);
+
+  window.dispatchEvent(new Event("certitude_notifications_updated"));
+}
+
+/**
+ * Marks a single notification as read.
+ */
+export function markNotificationAsRead(email: string, notifId: string) {
+  if (!isBrowser) return;
+
+  const key = `certitude_notifications_${email.toLowerCase()}`;
+  const notifications = getLocalStorageItem<InAppNotification[]>(key, []);
+  
+  const updated = notifications.map((n) =>
+    n.id === notifId ? { ...n, isRead: true } : n
+  );
+  setLocalStorageItem(key, updated);
+
+  window.dispatchEvent(new Event("certitude_notifications_updated"));
+}
+
+/**
+ * Clears all notifications for a specific user.
+ */
+export function clearNotifications(email: string) {
+  if (!isBrowser) return;
+
+  const key = `certitude_notifications_${email.toLowerCase()}`;
+  setLocalStorageItem(key, []);
 
   window.dispatchEvent(new Event("certitude_notifications_updated"));
 }
@@ -1103,17 +1149,6 @@ function isPrevYear(d: Date): boolean {
   return d.getFullYear() === new Date().getFullYear() - 1;
 }
 
-// Sample data used when real order history is sparse (< 6 real orders)
-const SAMPLE_MONTHLY_REVENUE: number[] = [
-  124000, 185000, 210000, 340000, 280000, 412000,
-  490000, 375000, 430000, 395000, 460000, 520000,
-];
-const SAMPLE_MONTHLY_ORDERS: number[] = [
-  42, 65, 74, 118, 96, 143, 170, 128, 149, 135, 158, 180,
-];
-const SAMPLE_CUSTOMER_GROWTH: number[] = [
-  18, 27, 34, 51, 44, 63, 79, 58, 70, 62, 76, 90,
-];
 
 /**
  * Returns the consolidated analytics summary computed from real data.
@@ -1248,9 +1283,9 @@ export async function getMonthlyRevenueData(): Promise<MonthlyDataPoint[]> {
     });
 
   const hasData = realData.some((v) => v > 0);
-  const data = hasData ? realData : SAMPLE_MONTHLY_REVENUE;
+  if (!hasData) return [];
 
-  return MONTH_LABELS.map((month, i) => ({ month, year, value: data[i] }));
+  return MONTH_LABELS.map((month, i) => ({ month, year, value: realData[i] }));
 }
 
 /**
@@ -1269,9 +1304,9 @@ export async function getOrdersPerMonthData(): Promise<MonthlyDataPoint[]> {
     });
 
   const hasData = realData.some((v) => v > 0);
-  const data = hasData ? realData : SAMPLE_MONTHLY_ORDERS;
+  if (!hasData) return [];
 
-  return MONTH_LABELS.map((month, i) => ({ month, year, value: data[i] }));
+  return MONTH_LABELS.map((month, i) => ({ month, year, value: realData[i] }));
 }
 
 /**
@@ -1302,15 +1337,7 @@ export async function getCategoryBreakdown(): Promise<CategoryBreakdown[]> {
 
   const total = Object.values(catRevenue).reduce((s, v) => s + v, 0);
 
-  // Fall back to sample if no data
-  const SAMPLE_CATEGORIES: CategoryBreakdown[] = [
-    { category: "Women", revenue: 412000, percentage: 54, color: "#E0A99E" },
-    { category: "Men", revenue: 248000, percentage: 32, color: "#C68B7D" },
-    { category: "Kids", revenue: 98000, percentage: 13, color: "#D4988D" },
-    { category: "Accessories", revenue: 8000, percentage: 1, color: "#B87265" },
-  ];
-
-  if (total === 0) return SAMPLE_CATEGORIES;
+  if (total === 0) return [];
 
   const COLORS = ["#E0A99E", "#C68B7D", "#D4988D", "#B87265", "#A06055"];
   return Object.entries(catRevenue).map(([category, revenue], i) => ({
@@ -1355,18 +1382,7 @@ export async function getTopProducts(): Promise<ProductAnalytic[]> {
   const sorted = Object.values(map).sort((a, b) => b.revenue - a.revenue);
 
   if (sorted.length > 0) return sorted.slice(0, 10);
-
-  // Fallback: derive from products list with synthetic sales
-  const SYNTHETIC_UNITS = [124, 98, 86, 74, 61, 55, 48, 42, 38, 31];
-  return products.slice(0, 10).map((p, i) => ({
-    id: p.id,
-    name: p.name,
-    brand: p.brand,
-    category: p.category,
-    unitsSold: SYNTHETIC_UNITS[i] ?? 20,
-    revenue: (SYNTHETIC_UNITS[i] ?? 20) * p.price,
-    imageSrc: p.imageSrc,
-  }));
+  return [];
 }
 
 /**
@@ -1387,9 +1403,9 @@ export async function getCustomerGrowthData(): Promise<MonthlyDataPoint[]> {
 
   const realData = emailsByMonth.map((s) => s.size);
   const hasData = realData.some((v) => v > 0);
-  const data = hasData ? realData : SAMPLE_CUSTOMER_GROWTH;
+  if (!hasData) return [];
 
-  return MONTH_LABELS.map((month, i) => ({ month, year, value: data[i] }));
+  return MONTH_LABELS.map((month, i) => ({ month, year, value: realData[i] }));
 }
 
 /**

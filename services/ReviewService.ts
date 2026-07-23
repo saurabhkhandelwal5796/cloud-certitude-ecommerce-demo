@@ -76,10 +76,10 @@ export async function getReviews(): Promise<ProductReview[]> {
       day: "numeric",
       year: "numeric",
     }),
-    isVerifiedPurchase: r.is_verified_purchase,
-    helpfulCount: r.helpful_count || 0,
+    isVerifiedPurchase: r.verified_purchase,
+    helpfulCount: r.helpful_votes || 0,
     reported: r.reported || false,
-    helpfulUserEmails: r.helpful_user_emails || [],
+    helpfulUserEmails: [],
   }));
 }
 
@@ -112,10 +112,10 @@ export async function getReviewsByProductId(productId: string): Promise<ProductR
       day: "numeric",
       year: "numeric",
     }),
-    isVerifiedPurchase: r.is_verified_purchase,
-    helpfulCount: r.helpful_count || 0,
+    isVerifiedPurchase: r.verified_purchase,
+    helpfulCount: r.helpful_votes || 0,
     reported: r.reported || false,
-    helpfulUserEmails: r.helpful_user_emails || [],
+    helpfulUserEmails: [],
   }));
 }
 
@@ -172,7 +172,6 @@ async function syncProductRatings(productId: string): Promise<void> {
     .update({
       rating: parseFloat(avgRating.toFixed(1)),
       review_count: totalCount,
-      reviewCount: totalCount,
     })
     .eq('id', productId);
 
@@ -200,6 +199,7 @@ export async function submitReview(params: {
   }
 
   const supabase = getSupabaseClient() as any;
+  const finalTitle = params.title?.trim() || "Customer Review";
   const { data, error } = await supabase
     .from('reviews')
     .insert({
@@ -207,12 +207,11 @@ export async function submitReview(params: {
       customer_name: params.customerName,
       customer_email: params.customerEmail.toLowerCase(),
       rating: params.rating,
-      title: params.title,
+      title: finalTitle,
       review_text: params.reviewText,
-      is_verified_purchase: isVerified,
-      helpful_count: 0,
+      verified_purchase: isVerified,
+      helpful_votes: 0,
       reported: false,
-      helpful_user_emails: [],
     })
     .select()
     .single();
@@ -235,10 +234,10 @@ export async function submitReview(params: {
       day: "numeric",
       year: "numeric",
     }),
-    isVerifiedPurchase: data.is_verified_purchase,
-    helpfulCount: data.helpful_count || 0,
+    isVerifiedPurchase: data.verified_purchase,
+    helpfulCount: data.helpful_votes || 0,
     reported: data.reported || false,
-    helpfulUserEmails: data.helpful_user_emails || [],
+    helpfulUserEmails: [],
   };
 
   // Recalculate and update catalog stats
@@ -320,7 +319,7 @@ export async function voteHelpful(reviewId: string, userEmail: string): Promise<
 
   const { data: reviewData, error: fetchError } = await supabase
     .from('reviews')
-    .select('helpful_user_emails, helpful_count')
+    .select('helpful_votes')
     .eq('id', reviewId)
     .single();
 
@@ -329,23 +328,12 @@ export async function voteHelpful(reviewId: string, userEmail: string): Promise<
     return false;
   }
 
-  const emails = reviewData.helpful_user_emails || [];
-  let newEmails = [...emails];
-  let newCount = reviewData.helpful_count || 0;
-
-  if (emails.includes(userEmail.toLowerCase())) {
-    newEmails = newEmails.filter((e: string) => e !== userEmail.toLowerCase());
-    newCount = Math.max(0, newCount - 1);
-  } else {
-    newEmails.push(userEmail.toLowerCase());
-    newCount += 1;
-  }
+  let newCount = (reviewData.helpful_votes || 0) + 1;
 
   const { error } = await supabase
     .from('reviews')
     .update({
-      helpful_user_emails: newEmails,
-      helpful_count: newCount,
+      helpful_votes: newCount,
     })
     .eq('id', reviewId);
 

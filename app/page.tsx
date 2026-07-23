@@ -28,32 +28,8 @@ const CATEGORIES = [
   },
   {
     title: "Accessories",
-    href: "/sale",
+    href: "/collections/accessories",
     imageSrc: "https://images.unsplash.com/photo-1509319117193-57bab727e09d?q=80&w=600&auto=format&fit=crop",
-  },
-];
-
-const TESTIMONIALS = [
-  {
-    name: "Sarah Jenkins",
-    review: "The quality of the trench coat exceeded all my expectations. The tailoring is pristine, the customer support was extremely helpful, and delivery took less than three days. Outstanding branding!",
-    rating: 5,
-    avatarSrc: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-    role: "Verified Purchaser"
-  },
-  {
-    name: "David Miller",
-    review: "Purchased the Italian leather bag and mesh chronograph. Truly premium products that make a statement. The transaction was effortless, and the packaging felt incredibly high-end.",
-    rating: 5,
-    avatarSrc: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
-    role: "Elite Tier Member"
-  },
-  {
-    name: "Emma Thompson",
-    review: "Finding high-quality organic cotton clothing for kids that looks contemporary can be hard. The kids knit romper is gorgeous, soft, and holds up perfectly after multiple washes.",
-    rating: 4,
-    avatarSrc: "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop",
-    role: "Verified Purchaser"
   },
 ];
 
@@ -107,6 +83,7 @@ export default function HomePage() {
   const [recentlyViewed, setRecentlyViewed] = useState<AdminProduct[]>([]);
   const [customersAlsoBought, setCustomersAlsoBought] = useState<AdminProduct[]>([]);
   const [newArrivals, setNewArrivals] = useState<AdminProduct[]>([]);
+  const [testimonials, setTestimonials] = useState<any[]>([]);
 
   // Hero Carousel State
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
@@ -130,6 +107,17 @@ export default function HomePage() {
         const { data: { user } } = await supabase.auth.getUser();
         const email = user?.email || undefined;
 
+        if (user) {
+          const { data: profileRow } = await supabase
+            .from("profiles")
+            .select("newsletter_subscribed")
+            .eq("id", user.id)
+            .single();
+          if (profileRow) {
+            setNewsletterSubscribed(!!profileRow.newsletter_subscribed);
+          }
+        }
+
         const recs = await getRecommendedForYou(email);
         const trend = await getTrendingNow();
         const best = await getBestSellers();
@@ -149,6 +137,17 @@ export default function HomePage() {
 
         const newArrList = allProducts.filter((p) => p.tags?.includes("New Arrival") || p.id.startsWith("new") || p.id.startsWith("na"));
         setNewArrivals(newArrList.slice(0, 8));
+
+        // Fetch testimonials from Supabase
+        const { data: dbReviews } = await supabase
+          .from("reviews")
+          .select("*")
+          .eq("reported", false)
+          .order("created_at", { ascending: false })
+          .limit(3);
+        if (dbReviews) {
+          setTestimonials(dbReviews);
+        }
       } catch (err) {
         console.error("Failed to load recommendations on home page:", err);
       }
@@ -176,15 +175,54 @@ export default function HomePage() {
     setCurrentHeroSlide((prev) => (prev - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
   };
 
-  const handleNewsletterSubmit = (e: React.FormEvent) => {
+  const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newsletterEmail) return;
     setIsSubmitting(true);
-    setTimeout(() => {
+    try {
+      const { getSupabaseClient } = await import("@/lib/supabase/client");
+      const supabase = getSupabaseClient();
+      const emailToSubscribe = newsletterEmail.trim().toLowerCase();
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ newsletter_subscribed: true })
+          .eq("id", user.id);
+      } else {
+        await supabase
+          .from("profiles")
+          .update({ newsletter_subscribed: true })
+          .eq("email", emailToSubscribe);
+      }
+    } catch (err) {
+      console.error("[Newsletter] Subscription failed:", err);
+    } finally {
       setIsSubmitting(false);
       setNewsletterSubscribed(true);
       setNewsletterEmail("");
-    }, 1000);
+    }
+  };
+
+  const handleNewsletterUnsubscribe = async () => {
+    setIsSubmitting(true);
+    try {
+      const { getSupabaseClient } = await import("@/lib/supabase/client");
+      const supabase = getSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await supabase
+          .from("profiles")
+          .update({ newsletter_subscribed: false })
+          .eq("id", user.id);
+      }
+      setNewsletterSubscribed(false);
+    } catch (err) {
+      console.error("[Newsletter] Unsubscribe failed:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -428,7 +466,7 @@ export default function HomePage() {
           {["Nike", "Adidas", "Puma", "Zara", "Levi's", "Tommy Hilfiger"].map((brand, idx) => (
             <Link
               key={idx}
-              href="/men"
+              href={`/men?brand=${encodeURIComponent(brand)}`}
               className="group relative flex flex-col items-center justify-center p-6 rounded-2xl bg-white border border-stone-200/45 shadow-sm hover:shadow-md hover:border-stone-300 transition-all duration-300 cursor-pointer"
             >
               <span className="text-sm font-extrabold uppercase tracking-widest text-stone-600 group-hover:text-stone-900">
@@ -451,16 +489,29 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {TESTIMONIALS.map((review) => (
-            <TestimonialCard
-              key={review.name}
-              name={review.name}
-              review={review.review}
-              rating={review.rating}
-              avatarSrc={review.avatarSrc}
-              role={review.role}
-            />
-          ))}
+          {testimonials.length > 0 ? (
+            testimonials.map((review, idx) => {
+              const avatars = [
+                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
+                "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop"
+              ];
+              return (
+                <TestimonialCard
+                  key={review.id}
+                  name={review.customer_name}
+                  review={review.review_text}
+                  rating={review.rating}
+                  avatarSrc={avatars[idx % avatars.length]}
+                  role={review.is_verified_purchase ? "Verified Purchaser" : "Conscious Customer"}
+                />
+              );
+            })
+          ) : (
+            <div className="col-span-3 text-center text-stone-500 py-8 font-light text-sm">
+              No customer testimonials are currently available. Check back soon!
+            </div>
+          )}
         </div>
       </section>
 
@@ -478,8 +529,15 @@ export default function HomePage() {
 
           <div className="mt-10 max-w-md mx-auto">
             {newsletterSubscribed ? (
-              <div className="rounded-full bg-[#E0A99E]/10 border border-[#E0A99E]/20 px-6 py-4 text-sm text-[#C68B7D] font-bold leading-relaxed shadow-sm">
-                Thank you for subscribing! Keep an eye on your inbox for our latest arrivals.
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-full bg-[#E0A99E]/10 border border-[#E0A99E]/20 px-6 py-3 text-sm text-[#C68B7D] font-bold shadow-sm">
+                <span>You are already subscribed!</span>
+                <button
+                  onClick={handleNewsletterUnsubscribe}
+                  disabled={isSubmitting}
+                  className="rounded-full bg-stone-900 px-6 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-stone-800 transition-colors shadow-md cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? "Processing..." : "Unsubscribe"}
+                </button>
               </div>
             ) : (
               <form onSubmit={handleNewsletterSubmit} className="flex flex-col sm:flex-row gap-3">

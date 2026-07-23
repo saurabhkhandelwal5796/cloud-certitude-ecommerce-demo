@@ -78,7 +78,7 @@ export default function WishlistItem({ item }: WishlistItemProps) {
           </div>
 
           {/* Discount badge if applicable */}
-          {item.discountPercent && (
+          {item.discountPercent !== undefined && item.discountPercent > 0 && (
             <span className="mt-1 inline-block rounded-full bg-[#E0A99E]/10 border border-[#E0A99E]/20 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-[#C68B7D]">
               {item.discountPercent}% OFF
             </span>

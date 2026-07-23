@@ -40,7 +40,7 @@ export default function MoveToCartButton({ item }: MoveToCartButtonProps) {
     <button
       type="button"
       onClick={handleMoveToCart}
-      className="flex-1 rounded-full bg-[#E0A99E] py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] transition-colors shadow-sm cursor-pointer h-9 flex items-center justify-center"
+      className="flex-1 rounded-full bg-[#E0A99E] px-5 py-2 text-xs font-bold uppercase tracking-wider text-white hover:bg-[#D4988D] transition-colors shadow-sm cursor-pointer h-9 flex items-center justify-center"
     >
       Move to Cart
     </button>

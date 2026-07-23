@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
+import { useRouter } from "next/navigation";
 
 interface ProductInfoProps {
   id: string;
@@ -55,6 +56,7 @@ export default function ProductInfo({
 }: ProductInfoProps) {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  const router = useRouter();
   const [selectedSize, setSelectedSize] = useState("M");
   const [selectedColor, setSelectedColor] = useState("Beige");
   const [activeTab, setActiveTab] = useState<string>("description");
@@ -110,8 +112,9 @@ export default function ProductInfo({
     setIsBuying(true);
     setTimeout(() => {
       setIsBuying(false);
-      alert(`Proceeding to checkout for "${name}" (Size: ${selectedSize}, Color: ${selectedColor})!`);
-    }, 800);
+      addToCart({ id, name, price, imageSrc, discountPercent, brand }, 1, selectedSize, selectedColor);
+      router.push("/checkout");
+    }, 600);
   };
 
   const toggleWishlist = () => {

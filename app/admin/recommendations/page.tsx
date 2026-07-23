@@ -21,16 +21,20 @@ export default function AdminRecommendationsPage() {
   const [categoriesList, setCategoriesList] = useState<TrendingCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [conversionRate, setConversionRate] = useState("0.0%");
+  const [avgRating, setAvgRating] = useState("0.00");
+  const [topStyle, setTopStyle] = useState("N/A");
+
   // Load recommendations stats
   const loadData = useCallback(async () => {
     try {
       const allProducts = await getProducts();
       const best = await getBestSellers();
-      const trend = await getTrendingNow();
       const orders = await getOrders();
 
       setBestSellers(best.slice(0, 5));
-      setTrendingNow(trend.slice(0, 5));
+      setTrendingNow(best.slice(0, 5)); // Display Top 5 products ordered most frequently
 
       // Calculate Category views and sales percentages
       const categorySales: Record<string, number> = {};
@@ -45,23 +49,43 @@ export default function AdminRecommendationsPage() {
         }
       });
 
-      // Tally views (mock views distribution plus active ones)
-      const mockViews: Record<string, number> = {
-        Women: 540,
-        Men: 320,
-        Kids: 140,
-        Accessories: 90,
-      };
+      // 1. Total Products Count
+      const totalProductsCount = allProducts.length;
+      setTotalProducts(totalProductsCount);
 
-      const totalViews = Object.values(mockViews).reduce((s, v) => s + v, 0);
+      // 2. Conversion Rate: (Orders Count / Total Products) * 100
+      const rate = totalProductsCount > 0 ? ((orders.length / totalProductsCount) * 100).toFixed(1) : "0.0";
+      setConversionRate(`${rate}%`);
 
-      const computedCategories = Object.entries(mockViews).map(([cat, views]) => {
-        const salesCount = categorySales[cat] || 0;
+      // 3. AVG CTR: Average product rating across all products
+      const sumRating = allProducts.reduce((sum, p) => sum + (p.rating || 0), 0);
+      const avg = totalProductsCount > 0 ? (sumRating / totalProductsCount).toFixed(2) : "0.00";
+      setAvgRating(avg);
+
+      // 4. Top Recommended Style: Most frequently ordered category
+      let topCategory = "N/A";
+      let maxSales = 0;
+      Object.entries(categorySales).forEach(([cat, sales]) => {
+        if (sales > maxSales) {
+          maxSales = sales;
+          topCategory = cat;
+        }
+      });
+      setTopStyle(topCategory);
+
+      // 6. Views By Category: Count of products per category
+      const productCountsByCategory: Record<string, number> = {};
+      allProducts.forEach((p) => {
+        const cat = p.category || "General";
+        productCountsByCategory[cat] = (productCountsByCategory[cat] || 0) + 1;
+      });
+
+      const computedCategories = Object.entries(productCountsByCategory).map(([cat, count]) => {
         return {
           category: cat,
-          views,
-          salesCount,
-          percentage: totalViews > 0 ? Math.round((views / totalViews) * 100) : 0,
+          views: count, // Count of products
+          salesCount: categorySales[cat] || 0,
+          percentage: totalProductsCount > 0 ? Math.round((count / totalProductsCount) * 100) : 0,
         };
       });
 
@@ -108,9 +132,9 @@ export default function AdminRecommendationsPage() {
         <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between text-left">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-[#E0A99E]">
-              Total Views Logged
+              Total Products
             </span>
-            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">1,090</h4>
+            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">{totalProducts}</h4>
           </div>
           <span className="text-xl">👁️</span>
         </div>
@@ -118,9 +142,9 @@ export default function AdminRecommendationsPage() {
         <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between text-left">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-600">
-              A/B Conversion Rate
+              Conversion Rate
             </span>
-            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">14.8%</h4>
+            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">{conversionRate}</h4>
           </div>
           <span className="text-xl">🎯</span>
         </div>
@@ -128,9 +152,9 @@ export default function AdminRecommendationsPage() {
         <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between text-left">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-blue-600">
-              Avg CTR (Trench Coat)
+              Average Product Rating
             </span>
-            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">24.2%</h4>
+            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">{avgRating}</h4>
           </div>
           <span className="text-xl">📈</span>
         </div>
@@ -138,9 +162,9 @@ export default function AdminRecommendationsPage() {
         <div className="rounded-3xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/30 flex items-center justify-between text-left">
           <div>
             <span className="text-[9px] font-extrabold uppercase tracking-widest text-violet-500">
-              Top Recommended Style
+              Top Ordered Category
             </span>
-            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">Winter Knit</h4>
+            <h4 className="text-xl font-black text-stone-900 mt-1 leading-none">{topStyle}</h4>
           </div>
           <span className="text-xl">✨</span>
         </div>
@@ -187,7 +211,7 @@ export default function AdminRecommendationsPage() {
         <div className="rounded-3xl border border-stone-200/50 bg-white p-6 shadow-sm flex flex-col">
           <div className="border-b border-stone-100 pb-4 mb-4">
             <h3 className="text-sm font-extrabold uppercase tracking-wider text-stone-900">
-              Views by Category
+              Products by Category
             </h3>
           </div>
 
@@ -196,7 +220,7 @@ export default function AdminRecommendationsPage() {
               <div key={cat.category} className="py-4 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-bold text-stone-700 uppercase tracking-wider">{cat.category}</span>
-                  <span className="font-black text-stone-900">{cat.views} views ({cat.percentage}%)</span>
+                  <span className="font-black text-stone-900">{cat.views} products ({cat.percentage}%)</span>
                 </div>
                 <div className="w-full bg-[#FAF6F0] h-2 rounded-full overflow-hidden">
                   <div

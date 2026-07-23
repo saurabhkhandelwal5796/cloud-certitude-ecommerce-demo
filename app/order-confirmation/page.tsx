@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { formatPrice } from "@/utils";
+import { formatPrice, getGstLabel } from "@/utils";
 import { AddressType } from "@/components/ui/ShippingForm";
 
 interface OrderDetailType {
@@ -186,7 +186,7 @@ export default function OrderConfirmationPage() {
                 </div>
                 {order.totals.tax !== undefined && order.totals.tax > 0 && (
                   <div className="flex justify-between">
-                    <span>Estimated Tax (8%)</span>
+                    <span>{getGstLabel(order.items)}</span>
                     <span>{formatPrice(order.totals.tax)}</span>
                   </div>
                 )}

@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { formatPrice } from "@/utils";
+import { formatPrice, getGstLabel } from "@/utils";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import { useCart } from "@/context/CartContext";
 import OrderTimeline from "@/components/ui/OrderTimeline";
@@ -248,7 +248,7 @@ export default function CustomerOrdersPage() {
     doc.text(shippingStr, 175, y);
 
     y += 6;
-    doc.text(`GST (8%):`, 130, y);
+    doc.text(`${getGstLabel(order.items)}:`, 130, y);
     doc.text(taxStr, 175, y);
 
     y += 8;
