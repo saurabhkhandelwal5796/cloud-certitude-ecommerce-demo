@@ -18,6 +18,7 @@ export default function SignUpForm() {
   const searchParams = useSearchParams();
   const nextRoute = searchParams.get("next") || "/";
 
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -33,7 +34,7 @@ export default function SignUpForm() {
     setSuccessMsg(null);
 
     // Form Validations
-    if (!email || !password || !confirmPassword) {
+    if (!fullName.trim() || !email || !password || !confirmPassword) {
       setErrorMsg("Please fill in all fields.");
       return;
     }
@@ -62,7 +63,21 @@ export default function SignUpForm() {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: { full_name: fullName.trim() },
+        },
       });
+
+      // After successful signup, upsert profile name fields
+      const userId = data.user?.id;
+      if (!error && userId) {
+        await supabase.from("profiles").upsert({
+          id: userId,
+          email,
+          name: fullName.trim(),
+          full_name: fullName.trim(),
+        }, { onConflict: "id" });
+      }
 
       if (error) {
         const errMsgLower = error.message.toLowerCase();
@@ -148,6 +163,25 @@ export default function SignUpForm() {
           {successMsg}
         </div>
       )}
+
+      {/* Full Name input */}
+      <div>
+        <label htmlFor="fullName" className="block text-sm font-semibold text-stone-700">
+          Full Name
+        </label>
+        <div className="mt-1">
+          <input
+            id="fullName"
+            type="text"
+            required
+            disabled={isLoading}
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="block w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-stone-900 placeholder-stone-400 shadow-sm focus:border-[#E0A99E] focus:outline-none focus:ring-1 focus:ring-[#E0A99E] disabled:opacity-50 sm:text-sm"
+            placeholder="Jane Doe"
+          />
+        </div>
+      </div>
 
       {/* Email input */}
       <div>
