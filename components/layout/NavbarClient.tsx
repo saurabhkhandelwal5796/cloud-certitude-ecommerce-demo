@@ -71,6 +71,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
   const [profileAvatarUrl, setProfileAvatarUrl] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const bellRef = useRef<HTMLDivElement>(null);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -230,6 +231,19 @@ export default function NavbarClient({ user }: NavbarClientProps) {
     document.addEventListener("mousedown", handleOutsideClick);
     return () => {
       document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, []);
+
+  // Close notification panel on outside click
+  useEffect(() => {
+    const handleBellOutsideClick = (e: MouseEvent) => {
+      if (bellRef.current && !bellRef.current.contains(e.target as Node)) {
+        setShowNotifications(false);
+      }
+    };
+    document.addEventListener("mousedown", handleBellOutsideClick);
+    return () => {
+      document.removeEventListener("mousedown", handleBellOutsideClick);
     };
   }, []);
 
@@ -395,7 +409,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
               {/* In-app Notification Bell (Visible if signed in) */}
               {currentUser && (
-                <div className="relative">
+                <div ref={bellRef} className="relative">
                   <button
                     onClick={handleBellClick}
                     className="text-stone-600 hover:text-[#C68B7D] transition-colors relative p-1 cursor-pointer focus:outline-none"
