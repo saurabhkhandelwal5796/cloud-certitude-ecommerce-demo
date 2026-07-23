@@ -213,6 +213,7 @@ export default function AdminAnalyticsPage() {
         <MetricCard
           title="Revenue This Year"
           value={summary.revenueThisYear}
+          icon="🗓️"
           trend={pctChange(summary.revenueThisYear, summary.revenuePrevYear)}
           trendLabel="vs last year"
           accentColor="text-amber-500"
