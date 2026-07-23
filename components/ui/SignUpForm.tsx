@@ -65,16 +65,18 @@ export default function SignUpForm() {
       });
 
       if (error) {
-        console.error(`[Auth SignUp] Supabase error: ${error.message}`);
         const errMsgLower = error.message.toLowerCase();
-        if (
+        const isConflict =
           errMsgLower.includes("already registered") ||
           errMsgLower.includes("already exists") ||
           errMsgLower.includes("already in use") ||
-          errMsgLower.includes("conflict")
-        ) {
+          errMsgLower.includes("conflict");
+
+        if (isConflict) {
+          console.warn(`[Auth SignUp] Supabase validation warning: ${error.message}`);
           setErrorMsg("An account with this email already exists. Please sign in instead or use a different email.");
         } else {
+          console.error(`[Auth SignUp] Supabase error: ${error.message}`);
           setErrorMsg(error.message);
         }
         setIsLoading(false);
