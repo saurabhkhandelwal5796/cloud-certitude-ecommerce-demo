@@ -66,7 +66,17 @@ export default function SignUpForm() {
 
       if (error) {
         console.error(`[Auth SignUp] Supabase error: ${error.message}`);
-        setErrorMsg(error.message);
+        const errMsgLower = error.message.toLowerCase();
+        if (
+          errMsgLower.includes("already registered") ||
+          errMsgLower.includes("already exists") ||
+          errMsgLower.includes("already in use") ||
+          errMsgLower.includes("conflict")
+        ) {
+          setErrorMsg("An account with this email already exists. Please sign in instead or use a different email.");
+        } else {
+          setErrorMsg(error.message);
+        }
         setIsLoading(false);
         return;
       }
