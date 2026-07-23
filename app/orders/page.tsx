@@ -10,7 +10,7 @@ import { useCart } from "@/context/CartContext";
 import OrderTimeline from "@/components/ui/OrderTimeline";
 import { jsPDF } from "jspdf";
 import {
-  getOrdersByCustomerEmail,
+  getOrdersByProfileId,
   cancelCustomerOrder,
   seedMissingHistoricalOrders,
   AdminOrder,
@@ -37,10 +37,10 @@ export default function CustomerOrdersPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  const loadCustomerOrders = async (email: string) => {
-    console.log("[Orders] Loading orders for email:", email);
+  const loadCustomerOrders = async (userId: string, email: string) => {
+    console.log("[Orders] Loading orders for profile:", userId);
     try {
-      const list = await getOrdersByCustomerEmail(email);
+      const list = await getOrdersByProfileId(userId, email);
       console.log("[Orders] Retrieved orders:", list.length, list.map(o => o.orderId));
       setOrders(list);
     } catch (err) {
@@ -66,7 +66,7 @@ export default function CustomerOrdersPage() {
         setUser(user);
         // Seed mock data for demonstration if they don't have orders yet
         await seedMissingHistoricalOrders(user.email!);
-        await loadCustomerOrders(user.email!);
+        await loadCustomerOrders(user.id, user.email!);
       } catch (err) {
         console.error("[Orders] Auth session verification failed:", err);
       } finally {
@@ -86,7 +86,7 @@ export default function CustomerOrdersPage() {
       await cancelCustomerOrder(orderId);
       setMessage(`Order ${orderId} cancelled successfully.`);
       if (user) {
-        await loadCustomerOrders(user.email!);
+        await loadCustomerOrders(user.id, user.email!);
       }
     } catch (err) {
       const error = err as Error;

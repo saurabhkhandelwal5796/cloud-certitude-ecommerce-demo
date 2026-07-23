@@ -36,6 +36,7 @@ export interface AdminProduct {
 
 export interface AdminOrder {
   orderId: string;
+  profileId?: string | null;
   customerName: string;
   customerEmail: string;
   orderDate: string;
@@ -504,6 +505,7 @@ export async function getOrders(): Promise<AdminOrder[]> {
 
           return {
             orderId: orderIdVal,
+            profileId: (row.profile_id as string) || null,
             customerName: customerNameVal,
             customerEmail: customerEmailVal,
             orderDate: row.created_at ? new Date(row.created_at as string).toLocaleString("en-US", {
@@ -742,6 +744,19 @@ export async function getOrdersByCustomerEmail(email: string): Promise<AdminOrde
   const orders = await getOrders();
   const matched = orders.filter((o) => o.customerEmail.toLowerCase() === email.toLowerCase());
   console.log(`[AdminService] getOrdersByCustomerEmail("${email}"): ${matched.length} of ${orders.length} orders matched`);
+  return matched;
+}
+
+/**
+ * Returns orders owned by the authenticated user's profile_id.
+ * Falls back to email-matching for historical orders that have no profile_id.
+ */
+export async function getOrdersByProfileId(profileId: string, email: string): Promise<AdminOrder[]> {
+  const orders = await getOrders();
+  const matched = orders.filter(
+    (o) => o.profileId === profileId || (!o.profileId && o.customerEmail.toLowerCase() === email.toLowerCase())
+  );
+  console.log(`[AdminService] getOrdersByProfileId("${profileId}"): ${matched.length} of ${orders.length} orders matched`);
   return matched;
 }
 
