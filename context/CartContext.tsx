@@ -43,15 +43,55 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [cartItems, setCartItems] = useState<CartItemType[]>([]);
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const toastIdRef = useRef(0);
+
+  // Sync auth state changes
+  useEffect(() => {
+    const { getSupabaseClient } = require("@/lib/supabase/client");
+    const supabase = getSupabaseClient();
+
+    // Set initial user if session exists
+    supabase.auth.getUser().then(({ data: { user } }: any) => {
+      if (user) {
+        setUserId(user.id);
+      } else {
+        setUserId(null);
+        setCartItems([]);
+        setIsInitialized(true);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+      } else {
+        setUserId(null);
+        setCartItems([]);
+        setIsInitialized(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // 1. Safe hydration mount loader from localStorage
   useEffect(() => {
+    if (!userId) {
+      setCartItems([]);
+      return;
+    }
     const loadCart = async () => {
       try {
-        const stored = localStorage.getItem("certitude_cart");
+        const stored = localStorage.getItem(`certitude_cart_${userId}`);
         if (stored) {
           setCartItems(JSON.parse(stored));
+        } else {
+          setCartItems([]);
         }
       } catch (err) {
         console.error("[CartContext] Failed loading cart from localStorage:", err);
@@ -60,17 +100,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       }
     };
     loadCart();
-  }, []);
+  }, [userId]);
 
   // 2. Persist state edits to storage
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !userId) return;
     try {
-      localStorage.setItem("certitude_cart", JSON.stringify(cartItems));
+      localStorage.setItem(`certitude_cart_${userId}`, JSON.stringify(cartItems));
     } catch (err) {
       console.error("[CartContext] Failed syncing cart to localStorage:", err);
     }
-  }, [cartItems, isInitialized]);
+  }, [cartItems, isInitialized, userId]);
 
   // Toast Manager helpers
   const addToast = (message: string) => {
@@ -93,6 +133,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     size: string,
     color: string
   ) => {
+    if (!userId) {
+      window.location.href = "/signin";
+      return;
+    }
     setCartItems((prev) => {
       // Find matching item by ID, selected size, AND selected color
       const existingIdx = prev.findIndex(

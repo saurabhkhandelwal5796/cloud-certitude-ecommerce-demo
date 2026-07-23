@@ -43,15 +43,55 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [wishlistItems, setWishlistItems] = useState<WishlistItemType[]>([]);
   const [toasts, setToasts] = useState<WishlistToastType[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const toastIdRef = useRef(0);
+
+  // Sync auth state changes
+  useEffect(() => {
+    const { getSupabaseClient } = require("@/lib/supabase/client");
+    const supabase = getSupabaseClient();
+
+    // Set initial user if session exists
+    supabase.auth.getUser().then(({ data: { user } }: any) => {
+      if (user) {
+        setUserId(user.id);
+      } else {
+        setUserId(null);
+        setWishlistItems([]);
+        setIsInitialized(true);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event: any, session: any) => {
+      if (session?.user) {
+        setUserId(session.user.id);
+      } else {
+        setUserId(null);
+        setWishlistItems([]);
+        setIsInitialized(true);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // 1. Safe hydration mount loader from localStorage
   useEffect(() => {
+    if (!userId) {
+      setWishlistItems([]);
+      return;
+    }
     const loadWishlist = async () => {
       try {
-        const stored = localStorage.getItem("certitude_wishlist");
+        const stored = localStorage.getItem(`certitude_wishlist_${userId}`);
         if (stored) {
           setWishlistItems(JSON.parse(stored));
+        } else {
+          setWishlistItems([]);
         }
       } catch (err) {
         console.error("[WishlistContext] Failed loading wishlist from localStorage:", err);
@@ -60,17 +100,17 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       }
     };
     loadWishlist();
-  }, []);
+  }, [userId]);
 
   // 2. Persist state edits to storage
   useEffect(() => {
-    if (!isInitialized) return;
+    if (!isInitialized || !userId) return;
     try {
-      localStorage.setItem("certitude_wishlist", JSON.stringify(wishlistItems));
+      localStorage.setItem(`certitude_wishlist_${userId}`, JSON.stringify(wishlistItems));
     } catch (err) {
       console.error("[WishlistContext] Failed syncing wishlist to localStorage:", err);
     }
-  }, [wishlistItems, isInitialized]);
+  }, [wishlistItems, isInitialized, userId]);
 
   // Toast Manager helpers
   const addToast = (message: string) => {
@@ -88,6 +128,10 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
 
   // Wishlist actions
   const addToWishlist = (product: WishlistItemType) => {
+    if (!userId) {
+      window.location.href = "/signin";
+      return;
+    }
     setWishlistItems((prev) => {
       const exists = prev.some((item) => item.id === product.id);
       if (exists) return prev; // Prevent duplicate entries
@@ -97,11 +141,13 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
   };
 
   const removeFromWishlist = (id: string) => {
+    if (!userId) return;
     setWishlistItems((prev) => prev.filter((item) => item.id !== id));
     addToast("Removed from Wishlist.");
   };
 
   const isInWishlist = (id: string) => {
+    if (!userId) return false;
     return wishlistItems.some((item) => item.id === id);
   };
 
