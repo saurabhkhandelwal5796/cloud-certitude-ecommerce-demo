@@ -489,14 +489,7 @@ export async function getOrders(): Promise<AdminOrder[]> {
           const customerEmailVal = (row.customer_email as string) || "";
           const addressVal = row.shipping_address as unknown as AddressType;
           
-          const addressName = addressVal
-            ? `${addressVal.firstName || ""} ${addressVal.lastName || ""}`.trim()
-            : "";
-            
-          const customerNameVal = (row.customer_name as string) || 
-                                  addressName || 
-                                  customerEmailVal.split('@')[0] || 
-                                  "Customer";
+          const customerNameVal = (row.customer_name as string) || "Unknown Customer";
           const paymentMethodVal = (row.payment_method as string) || "Credit Card";
           const totalVal = Number(row.total_amount);
           const statusStr = (row.status as string) || "Pending";
@@ -712,6 +705,7 @@ export function registerNewCheckoutOrder(params: {
       if (user) {
         supabase.from('orders').insert({
           order_id: params.orderId,
+          profile_id: user.id,
           customer_name: params.customerName,
           customer_email: params.customerEmail,
           items: params.items as unknown as Record<string, unknown>[],

@@ -136,6 +136,7 @@ export interface Database {
           shipping: number | null;
           discount: number | null;
           grand_total: number | null;
+          profile_id: string | null;
         };
         Insert: {
           id?: string;
@@ -156,6 +157,7 @@ export interface Database {
           shipping?: number | null;
           discount?: number | null;
           grand_total?: number | null;
+          profile_id?: string | null;
         };
         Update: {
           id?: string;
@@ -176,6 +178,7 @@ export interface Database {
           shipping?: number | null;
           discount?: number | null;
           grand_total?: number | null;
+          profile_id?: string | null;
         };
         Relationships: [
           {
