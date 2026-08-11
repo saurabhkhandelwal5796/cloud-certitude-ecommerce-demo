@@ -7,71 +7,69 @@ export interface OrderTotals {
 }
 
 /**
- * Single source of truth for order calculations.
- * - Tax is calculated based on item-level GST rates
- * - Taxable amount = (subtotal - discount + shipping)
- * - grandTotal = subtotal + shipping + tax - discount
+ * Single source of truth for order calculations (Pure utility, zero localStorage dependence).
+ * - Primary: Calculate GST using active items passed by caller
+ * - Fallback: GST = 0% if items are missing (warns)
+ * - Defensive check: Warn if sum of item subtotals != subtotal parameter
  */
 export function calculateOrderTotals(
   subtotal: number,
   shipping: number,
-  discount: number
+  discount: number,
+  cartItems?: any[]
 ): OrderTotals {
   let tax = 0;
+  const items = cartItems && Array.isArray(cartItems) ? cartItems : [];
 
-  // Attempt to load cart and product database from localStorage for item-level GST
-  let cart: any[] = [];
-  let products: any[] = [];
+  if (items.length > 0 && subtotal > 0) {
+    let itemsCalculatedSubtotal = 0;
 
-  if (typeof window !== "undefined") {
-    try {
-      const storedCart = localStorage.getItem("certitude_cart");
-      if (storedCart) {
-        cart = JSON.parse(storedCart);
-      }
-      const storedProducts = localStorage.getItem("certitude_admin_products");
-      if (storedProducts) {
-        products = JSON.parse(storedProducts);
-      }
-    } catch (e) {
-      console.error("[PricingService] Error reading cart/products from storage:", e);
+    items.forEach((item) => {
+      const price = Number(item.price || 0);
+      const qty = Number(item.quantity || 1);
+      const discPct = Number(item.discountPercent || item.discount_percent || 0);
+      const originalSubtotal = price * qty;
+      const itemSubtotalAfterItemDiscount = originalSubtotal * (1 - discPct / 100);
+      itemsCalculatedSubtotal += itemSubtotalAfterItemDiscount;
+    });
+
+    // Defensive check: Compare calculated sum of items against subtotal parameter
+    if (Math.abs(itemsCalculatedSubtotal - subtotal) > 0.5) {
+      console.warn("PricingService: Item subtotal mismatch detected.", {
+        itemsCalculatedSubtotal,
+        subtotal,
+      });
     }
-  }
 
-  if (cart.length > 0 && subtotal > 0) {
     let totalTax = 0;
-    cart.forEach((item) => {
-      const originalSubtotal = (item.price || 0) * (item.quantity || 1);
-      const itemLevelDiscount = originalSubtotal * ((item.discountPercent || item.discount_percent || 0) / 100);
-      const itemSubtotalAfterItemDiscount = originalSubtotal - itemLevelDiscount;
+    items.forEach((item) => {
+      const price = Number(item.price || 0);
+      const qty = Number(item.quantity || 1);
+      const discPct = Number(item.discountPercent || item.discount_percent || 0);
+      const originalSubtotal = price * qty;
+      const itemSubtotalAfterItemDiscount = originalSubtotal * (1 - discPct / 100);
 
-      const fraction = itemSubtotalAfterItemDiscount / subtotal;
-      
-      // Distribute global discount proportionally
+      // Distribute global discount proportionally across items based on subtotal
+      const fraction = subtotal > 0 ? itemSubtotalAfterItemDiscount / subtotal : 0;
       const itemPromoDiscount = discount * fraction;
-      const itemTaxableAmount = itemSubtotalAfterItemDiscount - itemPromoDiscount;
+      const itemTaxableAmount = Math.max(0, itemSubtotalAfterItemDiscount - itemPromoDiscount);
 
-      // Resolve GST Rate: 
-      // 1. Look up in active products catalog (which is updated via Admin CRUD)
-      // 2. Look up on the cart item itself
-      // 3. Fallback to default of 5%
-      const matchedProduct = products.find((p) => p.id === item.id);
-      const rate =
-        matchedProduct?.gstRate ??
-        matchedProduct?.gst_rate ??
-        item.gstRate ??
-        item.gst_rate ??
-        5;
-
-      const itemTax = itemTaxableAmount * (rate / 100);
+      // Resolve GST Rate: item rate
+      const rate = item.gstRate ?? item.gst_rate;
+      if (rate === undefined || rate === null) {
+        console.warn(`PricingService: Missing GST rate for item ${item.id || item.name}, using 0% to avoid arbitrary tax charges.`);
+      }
+      const itemTax = itemTaxableAmount * (Number(rate || 0) / 100);
       totalTax += itemTax;
     });
+
     tax = Number(totalTax.toFixed(2));
   } else {
-    // Fallback if cart is empty or we are on the server side: 
-    // Calculate using the default GST rate of 5% on the entire taxable value
-    const taxableValue = subtotal - discount;
-    tax = Number((taxableValue * 0.05).toFixed(2));
+    // Fallback: GST calculation requires line items.
+    if (subtotal > 0) {
+      console.warn("PricingService: Cannot calculate tax without line items. Using 0%.");
+    }
+    tax = 0;
   }
 
   const grandTotal = Number((subtotal - discount + shipping + tax).toFixed(2));

@@ -404,7 +404,7 @@ async function run() {
       color: p.color || [],
       sku: p.sku || "",
       tags: p.tags || [],
-      is_active: true,
+      status: "active",
       created_at: new Date().toISOString()
     }));
 

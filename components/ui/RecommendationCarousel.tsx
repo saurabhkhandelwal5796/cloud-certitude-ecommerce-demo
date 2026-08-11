@@ -76,8 +76,8 @@ export default function RecommendationCarousel({
               price={p.price}
               imageSrc={p.imageSrc}
               discountPercent={p.discountPercent}
-              rating={p.rating || 0}
-              reviewCount={p.reviewCount || 0}
+              rating={p.rating}
+              reviewCount={p.reviewCount}
               category={p.category}
               brand={p.brand}
               description={p.description}

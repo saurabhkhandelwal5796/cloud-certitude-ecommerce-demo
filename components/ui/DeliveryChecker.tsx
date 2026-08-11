@@ -2,19 +2,21 @@
 
 import React, { useState } from "react";
 
+import { getDeliveryEstimate, DeliveryEstimate } from "@/services/ShippingService";
+
 /**
  * DeliveryChecker Component
  *
- * Simulates shipping estimates based on client-side pincode testing.
+ * Fetches dynamic shipping estimates based on pincode testing via ShippingService.
  * Styled in warm cream glassmorphic outline cards.
  */
-export default function DeliveryChecker() {
+export default function DeliveryChecker({ productId }: { productId?: string }) {
   const [pincode, setPincode] = useState("");
   const [isChecked, setIsChecked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [deliveryDate, setDeliveryDate] = useState("");
+  const [estimate, setEstimate] = useState<DeliveryEstimate | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pincode || pincode.trim().length < 5) {
       alert("Please enter a valid 5 or 6 digit pincode.");
@@ -24,20 +26,15 @@ export default function DeliveryChecker() {
     setIsLoading(true);
     setIsChecked(false);
 
-    // Simulate server side lookup
-    setTimeout(() => {
-      setIsLoading(false);
+    try {
+      const res = await getDeliveryEstimate(pincode, productId);
+      setEstimate(res);
       setIsChecked(true);
-      // Generate estimated delivery date (current date + 3 days)
-      const targetDate = new Date();
-      targetDate.setDate(targetDate.getDate() + 3);
-      const formattedDate = targetDate.toLocaleDateString("en-US", {
-        weekday: "long",
-        month: "short",
-        day: "numeric",
-      });
-      setDeliveryDate(formattedDate);
-    }, 850);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -83,16 +80,39 @@ export default function DeliveryChecker() {
       )}
 
       {/* Success estimate output */}
-      {isChecked && !isLoading && (
+      {isChecked && !isLoading && estimate && (
         <div className="mt-4 rounded-xl bg-white border border-stone-100 p-3 flex items-start gap-2.5 shadow-sm">
-          <svg className="h-5 w-5 text-emerald-500 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+          <svg className={`h-5 w-5 mt-0.5 flex-shrink-0 ${estimate.available ? 'text-emerald-500' : 'text-amber-500'}`} fill="currentColor" viewBox="0 0 20 20">
+            {estimate.available ? (
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+            ) : (
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            )}
           </svg>
-          <div className="text-xs">
-            <p className="font-bold text-stone-800">Delivery is Available for Pincode {pincode}</p>
-            <p className="mt-0.5 text-stone-600 font-light">
-              Expected Delivery: <strong className="font-bold text-stone-850">{deliveryDate}</strong> via Express Post.
+          <div className="text-xs w-full">
+            <p className="font-bold text-stone-800">
+              {estimate.available ? `Delivery Available for ${pincode}` : `Delivery Issue for ${pincode}`}
             </p>
+            {estimate.fallbackMessage && (
+              <p className="mt-0.5 text-stone-500 italic">{estimate.fallbackMessage}</p>
+            )}
+            <p className="mt-1 text-stone-600 font-light">
+              Expected Delivery: <strong className="font-bold text-stone-850">{estimate.deliveryDateRange}</strong>
+            </p>
+            <div className="mt-2 flex flex-col gap-1 text-[11px] text-stone-500">
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Ships from:</span> {estimate.warehouseName} ({estimate.warehouseCity})
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Zone:</span> {estimate.zoneName}
+              </span>
+              <span className="flex items-center gap-1">
+                <span className="font-medium">Cash on Delivery:</span>
+                <span className={estimate.codAvailable ? "text-emerald-600 font-medium" : "text-rose-500 font-medium"}>
+                  {estimate.codAvailable ? "Available" : "Unavailable"}
+                </span>
+              </span>
+            </div>
           </div>
         </div>
       )}

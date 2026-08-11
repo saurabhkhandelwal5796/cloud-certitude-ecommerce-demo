@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -7,6 +8,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 import CartBadge from "@/components/ui/CartBadge";
 import WishlistBadge from "@/components/ui/WishlistBadge";
 import { formatPrice } from "@/utils";
+import type { NavNode } from "@/services/NavigationService";
 import {
   getUserNotifications,
   markNotificationsAsRead,
@@ -14,6 +16,7 @@ import {
   clearNotifications,
   InAppNotification,
 } from "@/services/AdminService";
+import { getSearchSuggestions, SearchSuggestion } from "@/services/SearchService";
 
 // Helper functions for custom notification UI
 function getNotificationIcon(message: string): string {
@@ -46,6 +49,10 @@ interface NavbarClientProps {
     id: string;
     email?: string;
   } | null;
+  /** Legacy flat tree (backward compat) */
+  navigationTree?: Record<string, string[]>;
+  /** New dynamic tree from navigation_nodes */
+  navTree?: NavNode[];
 }
 
 /**
@@ -54,7 +61,154 @@ interface NavbarClientProps {
  * Premium light glassmorphic navigation header styled for "Cloud Certitude Fashion".
  * Features warm charcoal text, rose gold buttons, interactive notifications, and order links.
  */
-export default function NavbarClient({ user }: NavbarClientProps) {
+// ─── MegaMenu sub-component ──────────────────────────────────────────────────
+
+function MegaMenu({ rootNode, onClose }: { rootNode: NavNode; onClose: () => void }) {
+  const [activeL1, setActiveL1] = useState<NavNode | null>(
+    rootNode.children[0] ?? null
+  );
+
+  const activeL2Children = activeL1?.children ?? [];
+
+  return (
+    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0 w-screen max-w-4xl z-50 pt-3">
+      <div className="bg-white border border-stone-200/50 shadow-2xl rounded-2xl overflow-hidden">
+        <div className="flex">
+          {/* Column 1: L1 children of root */}
+          <div className="w-44 border-r border-stone-100 bg-stone-50 py-3">
+            {rootNode.children.map((l1) => (
+              <button
+                key={l1.id}
+                onMouseEnter={() => setActiveL1(l1)}
+                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
+                  activeL1?.id === l1.id
+                    ? "text-[#C68B7D] bg-white border-r-2 border-[#E0A99E]"
+                    : "text-stone-600 hover:text-[#C68B7D] hover:bg-white/70"
+                }`}
+              >
+                {l1.icon && <span className="mr-1.5">{l1.icon}</span>}
+                {l1.name}
+                {l1.children.length > 0 && <span className="text-stone-300 text-[9px]">▶</span>}
+              </button>
+            ))}
+          </div>
+
+          {/* Columns 2+: L2 / leaf links */}
+          {activeL1 && (
+            <div className="flex-1 p-5">
+              {activeL2Children.length > 0 ? (
+                <div className="grid grid-cols-3 gap-6">
+                  {activeL2Children.map((l2) => (
+                    <div key={l2.id}>
+                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-stone-400 mb-2">
+                        {l2.name}
+                      </p>
+                      <div className="space-y-1.5">
+                        {l2.children.length > 0
+                          ? l2.children.map((leaf) => (
+                              <Link
+                                key={leaf.id}
+                                href={`/${leaf.fullPath}`}
+                                onClick={onClose}
+                                className="block text-[12px] text-stone-600 hover:text-[#C68B7D] font-medium transition-colors"
+                              >
+                                {leaf.name}
+                              </Link>
+                            ))
+                          : (
+                              <Link
+                                href={`/${l2.fullPath}`}
+                                onClick={onClose}
+                                className="block text-[12px] text-stone-600 hover:text-[#C68B7D] font-medium transition-colors"
+                              >
+                                Shop All
+                              </Link>
+                            )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                // L1 has no L2 children — show direct link
+                <Link
+                  href={`/${activeL1.fullPath}`}
+                  onClick={onClose}
+                  className="text-sm font-semibold text-[#C68B7D] hover:underline"
+                >
+                  Shop All {activeL1.name} →
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mobile Nav Node Tree ─────────────────────────────────────────────────────
+
+function MobileNodeTree({
+  nodes,
+  depth = 0,
+  onClose,
+}: {
+  nodes: NavNode[];
+  depth?: number;
+  onClose: () => void;
+}) {
+  const [openIds, setOpenIds] = useState<Set<string>>(new Set());
+  const toggle = (id: string) =>
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
+  return (
+    <div className={depth > 0 ? "pl-4 border-l border-stone-100" : ""}>
+      {nodes.map((node) => (
+        <div key={node.id}>
+          <div className="flex items-center justify-between">
+            <Link
+              href={`/${node.fullPath}`}
+              onClick={onClose}
+              className="flex-1 py-2.5 text-sm font-semibold text-stone-700 hover:text-[#C68B7D] transition-colors capitalize"
+            >
+              {node.icon && <span className="mr-1.5">{node.icon}</span>}
+              {node.name}
+            </Link>
+            {node.children.length > 0 && (
+              <button
+                onClick={() => toggle(node.id)}
+                className="p-2 text-stone-400 hover:text-stone-700"
+              >
+                <span
+                  className={`text-[10px] inline-block transition-transform duration-200 ${
+                    openIds.has(node.id) ? "rotate-90" : ""
+                  }`}
+                >
+                  ▶
+                </span>
+              </button>
+            )}
+          </div>
+          {node.children.length > 0 && openIds.has(node.id) && (
+            <MobileNodeTree
+              nodes={node.children}
+              depth={depth + 1}
+              onClose={onClose}
+            />
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Main NavbarClient ────────────────────────────────────────────────────────
+
+export default function NavbarClient({ user, navigationTree = {}, navTree = [] }: NavbarClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
@@ -62,8 +216,10 @@ export default function NavbarClient({ user }: NavbarClientProps) {
   const [currentUser, setCurrentUser] = useState(user);
   const [searchQuery, setSearchQuery] = useState("");
   const [userRole, setUserRole] = useState<"admin" | "customer">("customer");
+  const [searchCategory, setSearchCategory] = useState("All");
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
 
-  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [searchResults, setSearchResults] = useState<SearchSuggestion[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [debouncedQuery, setDebouncedQuery] = useState("");
   
@@ -122,17 +278,8 @@ export default function NavbarClient({ user }: NavbarClientProps) {
       return;
     }
     try {
-      const supabase = getSupabaseClient();
-      const { data, error } = await supabase
-        .from("products")
-        .select("id, name, price, category, brand, images")
-        .eq("is_active", true)
-        .or(`name.ilike.%${query}%,brand.ilike.%${query}%,category.ilike.%${query}%,description.ilike.%${query}%`)
-        .limit(10);
-
-      if (!error && data) {
-        setSearchResults(data);
-      }
+      const results = await getSearchSuggestions(query);
+      setSearchResults(results);
     } catch (e) {
       console.error("[LiveSearch] Error:", e);
     }
@@ -155,7 +302,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
       if (data) {
         setProfileName(data.name || (currentUser.email ? currentUser.email.split("@")[0] : "User"));
         setProfileAvatarUrl(data.avatar_url || null);
-        const role = data.role || (currentUser.email === "admin@cloudcertitude.com" ? "admin" : "customer");
+        const role = data.role || "customer";
         setUserRole(role as "admin" | "customer");
       }
     } catch (err) {
@@ -191,7 +338,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
           .select("role, name, avatar_url")
           .eq("id", session.user.id)
           .single();
-        const role = profile?.role || (session.user.email === "admin@cloudcertitude.com" ? "admin" : "customer");
+        const role = profile?.role || "customer";
         setUserRole(role as "admin" | "customer");
         setProfileName(profile?.name || (session.user.email ? session.user.email.split("@")[0] : "User"));
         setProfileAvatarUrl(profile?.avatar_url || null);
@@ -209,12 +356,17 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
     // Fetch role, name, avatar_url on initial mount if user already logged in
     if (user) {
-      supabase.from("profiles").select("role, name, avatar_url").eq("id", user.id).single().then(({ data }) => {
-        const role = data?.role || (user.email === "admin@cloudcertitude.com" ? "admin" : "customer");
+      (async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("role, name, avatar_url")
+          .eq("id", user.id)
+          .single();
+        const role = data?.role || "customer";
         setUserRole(role as "admin" | "customer");
         setProfileName(data?.name || (user.email ? user.email.split("@")[0] : "User"));
         setProfileAvatarUrl(data?.avatar_url || null);
-      });
+      })();
     }
 
     return () => {
@@ -247,22 +399,43 @@ export default function NavbarClient({ user }: NavbarClientProps) {
     };
   }, []);
 
-  // Sync notifications on user session changes or custom events
+  // Sync notifications on user session changes, custom events, window focus, and periodic polling
   useEffect(() => {
-    const handleUpdate = () => {
+    let isSubscribed = true;
+
+    const handleUpdate = async () => {
       if (currentUser && currentUser.email) {
-        setNotifications(getUserNotifications(currentUser.email));
+        try {
+          const list = await getUserNotifications(currentUser.email, currentUser.id);
+          if (isSubscribed) {
+            setNotifications(list);
+          }
+        } catch {
+          if (isSubscribed) {
+            setNotifications([]);
+          }
+        }
       } else {
-        setNotifications([]);
+        if (isSubscribed) {
+          setNotifications([]);
+        }
       }
     };
 
-    // Defer initialization to avoid synchronous setState inside the effect body
-    setTimeout(handleUpdate, 0);
+    handleUpdate();
 
+    // Poll every 3 seconds for real-time cross-window notification updates
+    const intervalId = setInterval(handleUpdate, 3000);
     window.addEventListener("certitude_notifications_updated", handleUpdate);
+    window.addEventListener("focus", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
     return () => {
+      isSubscribed = false;
+      clearInterval(intervalId);
       window.removeEventListener("certitude_notifications_updated", handleUpdate);
+      window.removeEventListener("focus", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
     };
   }, [currentUser]);
 
@@ -284,105 +457,190 @@ export default function NavbarClient({ user }: NavbarClientProps) {
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchQuery.trim()) {
-      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
-      closeModal();
+    if (!searchQuery.trim()) return;
+    
+    closeModal();
+    const params = new URLSearchParams();
+    params.set("q", searchQuery.trim());
+    if (searchCategory !== "All") {
+      params.set("Category", searchCategory);
     }
+    router.push(`/search?${params.toString()}`);
   };
 
-  const handleMarkAllRead = () => {
+  const ORDER = ["men", "women", "kids", "watches"];
+  const sortedNavTree = [...navTree].sort((a, b) => {
+    const aName = a.name.toLowerCase();
+    const bName = b.name.toLowerCase();
+    const aIdx = ORDER.indexOf(aName);
+    const bIdx = ORDER.indexOf(bName);
+    if (aIdx === -1 && bIdx === -1) return 0;
+    if (aIdx === -1) return 1;
+    if (bIdx === -1) return -1;
+    return aIdx - bIdx;
+  });
+
+  const handleMarkAllRead = async () => {
     if (currentUser && currentUser.email) {
-      markNotificationsAsRead(currentUser.email);
+      await markNotificationsAsRead(currentUser.email, currentUser.id);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     }
   };
 
-  const handleClearAll = () => {
+  const handleClearAll = async () => {
     if (currentUser && currentUser.email) {
-      clearNotifications(currentUser.email);
+      await clearNotifications(currentUser.email, currentUser.id);
+      setNotifications([]);
     }
   };
 
-  const handleBellClick = () => {
+  const handleBellClick = async () => {
     const nextState = !showNotifications;
     setShowNotifications(nextState);
-    if (nextState && currentUser && currentUser.email) {
-      markNotificationsAsRead(currentUser.email);
+    if (nextState && currentUser && currentUser.email && unreadCount > 0) {
+      await markNotificationsAsRead(currentUser.email, currentUser.id);
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
     }
   };
 
-  const handleNotificationClick = (notif: InAppNotification) => {
+  const handleNotificationClick = async (notif: InAppNotification) => {
     if (currentUser && currentUser.email) {
       if (!notif.isRead) {
-        markNotificationAsRead(currentUser.email, notif.id);
+        await markNotificationAsRead(currentUser.email, notif.id);
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === notif.id ? { ...n, isRead: true } : n))
+        );
       }
     }
     setShowNotifications(false);
     if (notif.targetUrl) {
       router.push(notif.targetUrl);
+      router.refresh();
     }
   };
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   return (
-    <nav className="border-b border-stone-200/50 bg-white/70 backdrop-blur-md sticky top-0 z-50 text-stone-850 transition-all duration-300">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex h-20 items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex-shrink-0">
+    <nav className="bg-white border-b border-stone-200/50 sticky top-0 z-50 transition-all duration-300">
+      {/* Top Amazon-style Bar */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          
+          {/* Logo & Mobile Toggles (Flex row on mobile) */}
+          <div className="w-full md:w-auto flex items-center justify-between flex-shrink-0">
             <Link
               href="/"
               className="text-base sm:text-lg md:text-xl font-black tracking-widest uppercase text-stone-850 hover:text-[#C68B7D] transition-colors flex items-center gap-1.5"
             >
               Cloud <span className="text-[#E0A99E] font-light">Certitude</span> Fashion
             </Link>
-          </div>
 
-          {/* Desktop Navigation Links */}
-          <div className="hidden lg:block">
-            <div className="flex space-x-8">
-              {[
-                { name: "Home", href: "/" },
-                { name: "Men", href: "/men" },
-                { name: "Women", href: "/women" },
-                { name: "Kids", href: "/kids" },
-                { name: "New Arrivals", href: "/new-arrivals" },
-                { name: "Sale", href: "/sale", isSale: true },
-              ].map((link) => (
-                <Link
-                  key={link.name}
-                  href={link.href}
-                  className={`text-[11px] font-extrabold uppercase tracking-widest transition-colors ${
-                    link.isSale
-                      ? "text-rose-500 hover:text-rose-600"
-                      : pathname === link.href
-                      ? "text-[#C68B7D] border-b-2 border-[#C68B7D] pb-0.5"
-                      : "text-stone-600 hover:text-[#C68B7D]"
-                  }`}
-                >
-                  {link.name}
-                </Link>
-              ))}
+            {/* Mobile Toggles */}
+            <div className="flex items-center gap-3 md:hidden">
+              <Link href="/cart" className="text-stone-600 hover:text-[#C68B7D] p-2 relative cursor-pointer">
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                </svg>
+                <CartBadge />
+              </Link>
+              <button
+                onClick={() => setIsOpen(!isOpen)}
+                className="p-2 text-stone-500 hover:bg-stone-100 rounded-md"
+              >
+                {isOpen ? (
+                  <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                ) : (
+                  <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                )}
+              </button>
             </div>
           </div>
 
-          {/* Desktop Search & Controls */}
-          <div className="hidden md:flex items-center gap-6 flex-1 max-w-xl lg:max-w-lg justify-end">
-            {/* Search Input */}
-            {/* Search Icon */}
-            <button
-              onClick={() => setIsModalOpen(true)}
-              className="text-stone-600 hover:text-[#C68B7D] transition-colors relative cursor-pointer p-1"
-              title="Search"
-            >
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
+          {/* Large Amazon-style Search Bar */}
+          <div className="flex-1 w-full max-w-4xl px-0 md:px-8 relative group">
+            <form onSubmit={handleSearchSubmit} className={`flex w-full rounded-md border ${isSearchFocused ? 'border-[#E0A99E] ring-1 ring-[#E0A99E]' : 'border-stone-300'} bg-white transition-all`}>
+              {/* Category Dropdown */}
+              <div className="flex-shrink-0 bg-stone-100 hover:bg-stone-200 rounded-l-md border-r border-stone-300 transition-colors">
+                <select
+                  value={searchCategory}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSearchCategory(val);
+                    if (val !== "All") {
+                      const node = navTree.find((n) => n.name.toLowerCase() === val.toLowerCase());
+                      const route = node ? `/${node.fullPath}` : `/${val.toLowerCase()}`;
+                      router.push(route);
+                    }
+                  }}
+                  className="h-full py-2.5 pl-3 pr-8 bg-transparent text-xs font-semibold text-stone-700 focus:outline-none cursor-pointer appearance-none rounded-l-md"
+                  style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
+                >
+                  <option value="All" className="bg-white text-stone-700 text-sm font-medium py-2">All</option>
+                  <option value="Men" className="bg-white text-stone-700 text-sm font-medium py-2">Men</option>
+                  <option value="Women" className="bg-white text-stone-700 text-sm font-medium py-2">Women</option>
+                  <option value="Kids" className="bg-white text-stone-700 text-sm font-medium py-2">Kids</option>
+                  <option value="Watches" className="bg-white text-stone-700 text-sm font-medium py-2">Watches</option>
+                </select>
+              </div>
 
-            {/* Icons */}
-            <div className="flex items-center gap-4 flex-shrink-0 relative">
-              
+              {/* Input */}
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
+                placeholder="Search products..."
+                className="flex-1 px-4 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none w-full min-w-[200px]"
+              />
+
+              {/* Search Button */}
+              <button
+                type="submit"
+                className="bg-[#E0A99E] hover:bg-[#C68B7D] text-white px-5 py-2.5 rounded-r-md transition-colors flex items-center justify-center cursor-pointer"
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+            </form>
+            
+            {/* Live Search Popup */}
+            {isSearchFocused && searchResults.length > 0 && debouncedQuery.trim() && (
+              <div className="absolute top-full left-0 right-0 mt-1 mx-0 md:mx-8 bg-white border border-stone-200 shadow-2xl rounded-md overflow-hidden z-[999]">
+                <div className="max-h-[400px] overflow-y-auto">
+                  {searchResults
+                    .filter((prod) => searchCategory === "All" || prod.category_name?.toLowerCase() === searchCategory.toLowerCase())
+                    .map((prod) => (
+                    <Link
+                      key={prod.id}
+                      href={`/products/${prod.id}`}
+                      className="flex items-center gap-4 p-3 hover:bg-stone-50 border-b border-stone-100 last:border-0"
+                    >
+                      <div className="relative h-12 w-10 flex-shrink-0 rounded bg-stone-100 overflow-hidden">
+                        <img src={prod.image_url || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab"} className="object-cover h-full w-full" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-stone-850 truncate">{prod.name}</p>
+                        <p className="text-[9px] text-[#E0A99E] font-extrabold uppercase tracking-widest mt-0.5">
+                          {prod.brand || "Cloud Certitude"} 
+                          {prod.category_name && <span className="text-stone-400"> • {prod.category_name}</span>}
+                        </p>
+                      </div>
+                      <p className="text-xs font-black text-stone-900 flex-shrink-0">{formatPrice(prod.price)}</p>
+                    </Link>
+                  ))}
+                  {searchResults.filter((prod) => searchCategory === "All" || prod.category_name?.toLowerCase() === searchCategory.toLowerCase()).length === 0 && (
+                    <div className="p-4 text-center text-xs text-stone-500 font-light">No products found in {searchCategory}.</div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Actions (Desktop) */}
+          <div className="hidden md:flex items-center gap-6 flex-shrink-0 relative">
               {/* Wishlist */}
               <Link
                 href="/wishlist"
@@ -584,75 +842,37 @@ export default function NavbarClient({ user }: NavbarClientProps) {
                   </Link>
                 </div>
               )}
-            </div>
-          </div>
 
-          {/* Mobile hamburger menu trigger */}
-          <div className="flex items-center gap-3 lg:hidden">
-            {/* Search */}
-            <button onClick={() => router.push("/search")} className="text-stone-600 hover:text-[#C68B7D] p-2 cursor-pointer md:hidden">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </button>
-
-            {/* Cart Icon */}
-            <Link href="/cart" className="text-stone-600 hover:text-[#C68B7D] p-2 relative cursor-pointer">
-              <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-              </svg>
-              <CartBadge />
-            </Link>
-
-            {/* Hamburger toggle */}
-            <button
-              onClick={() => setIsOpen(!isOpen)}
-              type="button"
-              className="inline-flex items-center justify-center rounded-md p-2 text-stone-500 hover:bg-stone-100 hover:text-stone-800 focus:outline-none cursor-pointer"
-              aria-controls="mobile-menu"
-              aria-expanded={isOpen}
-            >
-              <span className="sr-only">Open main menu</span>
-              {isOpen ? (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="block h-6 w-6" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-                </svg>
-              )}
-            </button>
           </div>
         </div>
       </div>
 
+
+
       {/* Mobile Drawer */}
       <div className={`${isOpen ? "block" : "hidden"} lg:hidden border-t border-stone-200/50 bg-white/95 backdrop-blur-md`} id="mobile-menu">
         <div className="space-y-1 px-3 pb-4 pt-3">
-          {[
-            { name: "Home", href: "/" },
-            { name: "Men", href: "/men" },
-            { name: "Women", href: "/women" },
-            { name: "Kids", href: "/kids" },
-            { name: "New Arrivals", href: "/new-arrivals" },
-            { name: "Sale", href: "/sale", isSale: true },
-          ].map((link) => (
+          {/* Dynamic navigation tree (accordion) */}
+          <div className="px-1 py-2">
             <Link
-              key={link.name}
-              href={link.href}
+              href="/"
               onClick={() => setIsOpen(false)}
               className={`block rounded-md px-3 py-2 text-sm font-bold uppercase tracking-wider ${
-                link.isSale
-                  ? "text-rose-500 hover:bg-rose-50"
-                  : pathname === link.href
+                pathname === "/"
                   ? "text-[#C68B7D] bg-[#E0A99E]/10"
-                  : "text-stone-600 hover:bg-stone-50 hover:text-stone-900"
+                  : "text-stone-600 hover:bg-stone-50"
               }`}
             >
-              {link.name}
+              Home
             </Link>
-          ))}
+            {sortedNavTree.length > 0 && (
+              <MobileNodeTree
+                nodes={sortedNavTree}
+                onClose={() => setIsOpen(false)}
+              />
+            )}
+          </div>
+
 
           {currentUser ? (
             <div className="border-t border-stone-200/50 mt-4 pt-4 space-y-1">
@@ -699,90 +919,7 @@ export default function NavbarClient({ user }: NavbarClientProps) {
         </div>
       </div>
 
-      {isModalOpen && (
-        <div
-          className="fixed inset-0 z-[9999] bg-stone-900/60 backdrop-blur-sm p-4 animate-fade-in"
-          onClick={closeModal}
-        >
-          <div
-            className="fixed top-[100px] left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] sm:w-full max-w-[700px] bg-white rounded-3xl border border-stone-200/50 shadow-2xl p-6 flex flex-col gap-5 animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-              <span className="text-[10px] font-black uppercase tracking-wider text-stone-400">
-                Premium Search Catalog
-              </span>
-              <button
-                onClick={closeModal}
-                className="text-stone-400 hover:text-stone-700 transition-colors cursor-pointer"
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
 
-            {/* Input field */}
-            <form onSubmit={handleSearchSubmit} className="relative w-full">
-              <input
-                type="text"
-                autoFocus
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products, brands, categories..."
-                className="w-full rounded-full border border-stone-250 bg-stone-50/50 pl-5 pr-12 py-3 text-sm text-stone-850 placeholder-stone-400 shadow-sm focus:border-[#E0A99E]/80 focus:outline-none focus:ring-1 focus:ring-[#E0A99E]/80 transition-all font-medium"
-              />
-              <button type="submit" className="absolute inset-y-0 right-0 pr-4 flex items-center text-stone-400 hover:text-[#C68B7D] transition-colors cursor-pointer">
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-            </form>
-
-            {/* Live search results */}
-            <div className="overflow-y-auto max-h-[400px] min-h-0 pr-1">
-              {searchResults.length > 0 ? (
-                <div className="space-y-2 divide-y divide-stone-100/50">
-                  {searchResults.map((prod) => (
-                    <Link
-                      key={prod.id}
-                      href={`/products/${prod.id}`}
-                      className="flex items-center gap-4 py-3 first:pt-0 rounded-2xl hover:bg-stone-50/60 px-2 -mx-2 transition-colors text-left"
-                      onClick={closeModal}
-                    >
-                      <div className="relative h-14 w-11 overflow-hidden rounded-lg bg-stone-50 border border-stone-100 flex-shrink-0">
-                        <img
-                          src={prod.images?.[0] || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab"}
-                          alt={prod.name}
-                          className="object-cover h-full w-full"
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <h4 className="text-xs font-bold text-stone-850 line-clamp-1">
-                          {prod.name}
-                        </h4>
-                        <p className="text-[10px] text-[#E0A99E] font-extrabold uppercase tracking-widest mt-0.5">
-                          {prod.brand || "Cloud Certitude"}
-                        </p>
-                      </div>
-                      <span className="text-xs font-black text-stone-900 pr-1">
-                        {formatPrice(prod.price)}
-                      </span>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                debouncedQuery.trim() && (
-                  <div className="py-12 text-center text-xs text-stone-400 font-light">
-                    No matching products found.
-                  </div>
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

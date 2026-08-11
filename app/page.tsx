@@ -101,7 +101,7 @@ export default function HomePage() {
           getCustomersAlsoBought,
           getCustomerProfile,
         } = await import("@/services/RecommendationService");
-        const { getProducts } = await import("@/services/AdminService");
+        const { fetchProductsByIds, getNewArrivals } = await import("@/services/RecommendationService");
 
         const supabase = getSupabaseClient();
         const { data: { user } } = await supabase.auth.getUser();
@@ -127,16 +127,20 @@ export default function HomePage() {
         setBestSellers(best.slice(0, 8));
 
         const profile = getCustomerProfile();
-        const allProducts = await getProducts();
-        const viewed = allProducts.filter((p) => profile.recentlyViewed.includes(p.id));
-        setRecentlyViewed(viewed);
+        if (profile.recentlyViewed.length > 0) {
+          const viewedProds = await fetchProductsByIds(profile.recentlyViewed.slice(0, 10));
+          const sortedViewed = profile.recentlyViewed
+            .map(id => viewedProds.find(p => p.id === id))
+            .filter(Boolean) as import("@/services/AdminService").AdminProduct[];
+          setRecentlyViewed(sortedViewed);
+        }
 
         const lastViewedId = profile.recentlyViewed[0] || "m1";
         const alsoBought = await getCustomersAlsoBought(lastViewedId);
         setCustomersAlsoBought(alsoBought.slice(0, 8));
 
-        const newArrList = allProducts.filter((p) => p.tags?.includes("New Arrival") || p.id.startsWith("new") || p.id.startsWith("na"));
-        setNewArrivals(newArrList.slice(0, 8));
+        const newArrList = await getNewArrivals();
+        setNewArrivals(newArrList);
 
         // Fetch testimonials from Supabase
         const { data: dbReviews } = await supabase

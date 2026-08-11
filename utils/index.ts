@@ -133,20 +133,6 @@ export function verifySupabaseConfig(): SupabaseConfigStatus {
   };
 }
 
-export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
-  Men: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab",
-  Women: "https://images.unsplash.com/photo-1483985988355-763728e1935b",
-  Kids: "https://images.unsplash.com/photo-1519238263530-99bdd11df2ea",
-  Accessories: "https://images.unsplash.com/photo-1523170335258-f5ed11844a49",
-  Footwear: "https://images.unsplash.com/photo-1542291026-7eec264c27ff"
-};
-
-export function getCategoryFallbackImage(category?: string): string {
-  if (!category) return CATEGORY_FALLBACK_IMAGES.Men;
-  const normalized = category.trim();
-  return CATEGORY_FALLBACK_IMAGES[normalized] || CATEGORY_FALLBACK_IMAGES.Men;
-}
-
 export function getCategoryFromProductId(id: string): string {
   if (id.startsWith("m")) return "Men";
   if (id.startsWith("w")) return "Women";

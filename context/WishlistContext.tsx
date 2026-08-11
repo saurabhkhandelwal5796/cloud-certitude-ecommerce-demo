@@ -8,7 +8,7 @@ export interface WishlistItemType {
   price: number;
   imageSrc: string;
   discountPercent?: number;
-  rating: number;
+  rating?: number;      // optional — no fake ratings
   reviewCount?: number;
   category: string;
   brand?: string;
@@ -132,18 +132,23 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
       window.location.href = "/signin";
       return;
     }
+    const exists = wishlistItems.some((item) => item.id === product.id);
+    if (!exists) {
+      addToast("Added to Wishlist.");
+    }
     setWishlistItems((prev) => {
-      const exists = prev.some((item) => item.id === product.id);
-      if (exists) return prev; // Prevent duplicate entries
+      if (prev.some((item) => item.id === product.id)) return prev;
       return [...prev, product];
     });
-    addToast("Added to Wishlist.");
   };
 
   const removeFromWishlist = (id: string) => {
     if (!userId) return;
-    setWishlistItems((prev) => prev.filter((item) => item.id !== id));
-    addToast("Removed from Wishlist.");
+    const exists = wishlistItems.some((item) => item.id === id);
+    if (exists) {
+      addToast("Removed from Wishlist.");
+      setWishlistItems((prev) => prev.filter((item) => item.id !== id));
+    }
   };
 
   const isInWishlist = (id: string) => {

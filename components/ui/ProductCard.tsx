@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { formatPrice, getCategoryFallbackImage } from "@/utils";
+import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
 import { useWishlist } from "@/context/WishlistContext";
 
@@ -13,7 +13,7 @@ interface ProductCardProps {
   price: number;
   imageSrc: string;
   discountPercent?: number;
-  rating: number;
+  rating?: number;      // optional — hide stars when no real reviews
   reviewCount?: number;
   category: string;
   brand?: string;
@@ -24,7 +24,7 @@ interface ProductCardProps {
     price: number;
     imageSrc: string;
     discountPercent?: number;
-    rating: number;
+    rating?: number;
     reviewCount?: number;
     category: string;
     brand?: string;
@@ -54,12 +54,25 @@ export default function ProductCard({
 }: ProductCardProps) {
   const { addToCart } = useCart();
   const { addToWishlist, removeFromWishlist, isInWishlist } = useWishlist();
+  // Defensive check for valid images
+  const getValidImage = (src?: string | null) => {
+    if (!src || typeof src !== "string" || src.trim() === "") {
+      return "";
+    }
+    if (Array.isArray(src)) {
+      return src[0] || "";
+    }
+    return src;
+  };
+
   const [isAdding, setIsAdding] = useState(false);
-  const [currentImage, setCurrentImage] = useState(imageSrc);
+  const [currentImage, setCurrentImage] = useState(() => getValidImage(imageSrc));
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    setCurrentImage(imageSrc);
-  }, [imageSrc]);
+    setCurrentImage(getValidImage(imageSrc));
+    setHasError(false);
+  }, [imageSrc, category]);
 
   const isWishlisted = isInWishlist(id);
 
@@ -73,7 +86,9 @@ export default function ProductCard({
     setIsAdding(true);
     setTimeout(() => {
       setIsAdding(false);
-      addToCart({ id, name, price, imageSrc, discountPercent, brand }, 1, "M", "Beige");
+      // Use currentImage (derived from variant shim) so Cart shows the correct
+      // Supabase-stored image rather than the stale product-row imageSrc.
+      addToCart({ id, name, price, imageSrc: currentImage, discountPercent, brand }, 1, "M", "Beige");
     }, 600);
   };
 
@@ -83,7 +98,8 @@ export default function ProductCard({
     if (isWishlisted) {
       removeFromWishlist(id);
     } else {
-      addToWishlist({ id, name, price, imageSrc, discountPercent, rating, reviewCount, category, brand, description });
+      // Use currentImage so Wishlist shows the correct Supabase-stored image.
+      addToWishlist({ id, name, price, imageSrc: currentImage, discountPercent, rating, reviewCount, category, brand, description });
     }
   };
 
@@ -103,16 +119,22 @@ export default function ProductCard({
       {/* Product Image and Overlay triggers */}
       <div className="relative aspect-[3/4] overflow-hidden bg-stone-50 z-0">
         <Link href={`/products/${id}`} className="absolute inset-0 z-0 block">
-          <Image
-            src={currentImage}
-            alt={name}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-            onError={() => {
-              setCurrentImage(getCategoryFallbackImage(category));
-            }}
-          />
+          {currentImage && !hasError ? (
+            <Image
+              src={currentImage}
+              alt={name}
+              fill
+              sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              onError={() => {
+                setHasError(true);
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex flex-col items-center justify-center bg-stone-100 text-stone-400">
+              <span className="text-[10px] font-bold uppercase tracking-widest text-center mt-2">No Image</span>
+            </div>
+          )}
         </Link>
 
         {/* Discount Badge */}
@@ -174,31 +196,31 @@ export default function ProductCard({
           {name}
         </h4>
 
-        {/* Star Rating Reviews */}
-        <div className="mt-2 flex items-center gap-1">
-          <div className="flex text-amber-400">
-            {Array.from({ length: 5 }).map((_, i) => (
-              <svg
-                key={i}
-                className={`h-3 w-3 ${
-                  i < Math.floor(rating) ? "fill-current" : "text-stone-200"
-                }`}
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-              </svg>
-            ))}
-          </div>
-          <span className="text-[10px] font-semibold text-stone-400">
-            ({rating.toFixed(1)})
-            {reviewCount !== undefined && (
+        {/* Star Rating Reviews — only show when real reviews exist */}
+        {reviewCount !== undefined && reviewCount > 0 && rating !== undefined && (
+          <div className="mt-2 flex items-center gap-1">
+            <div className="flex text-amber-400">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <svg
+                  key={i}
+                  className={`h-3 w-3 ${
+                    i < Math.floor(rating) ? "fill-current" : "text-stone-200"
+                  }`}
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
+                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                </svg>
+              ))}
+            </div>
+            <span className="text-[10px] font-semibold text-stone-400">
+              ({rating.toFixed(1)})
               <span className="text-[#E0A99E] ml-1 font-bold">
                 &middot; {reviewCount} {reviewCount === 1 ? "review" : "reviews"}
               </span>
-            )}
-          </span>
-        </div>
+            </span>
+          </div>
+        )}
 
         {/* Pricing tag */}
         <div className="mt-3 flex items-baseline gap-2">

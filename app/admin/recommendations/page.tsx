@@ -7,6 +7,7 @@ import { formatPrice } from "@/utils";
 import RatingStars from "@/components/ui/RatingStars";
 import { getProducts, getOrders, AdminProduct } from "@/services/AdminService";
 import { getBestSellers, getTrendingNow } from "@/services/RecommendationService";
+import { isFullSnapshot } from "@/services/SnapshotService";
 
 interface TrendingCategory {
   category: string;
@@ -41,9 +42,11 @@ export default function AdminRecommendationsPage() {
       orders.forEach((o) => {
         if (o.status !== "Cancelled") {
           o.items?.forEach((item) => {
-            const p = allProducts.find((prod) => prod.id === item.id);
+            const prodId = isFullSnapshot(item) ? item.productId : item.id;
+            const p = allProducts.find((prod) => prod.id === prodId);
             if (p) {
-              categorySales[p.category] = (categorySales[p.category] || 0) + item.quantity;
+              const qty = isFullSnapshot(item) ? item.pricing.quantity : item.quantity;
+              categorySales[p.category] = (categorySales[p.category] || 0) + qty;
             }
           });
         }

@@ -19,11 +19,17 @@ export default function AdminUsersPage() {
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const loadUsers = async () => {
     setIsLoading(true);
     try {
       const supabase = getSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+
       const { data, error } = await supabase
         .from("profiles")
         .select("*")
@@ -43,6 +49,11 @@ export default function AdminUsersPage() {
   }, []);
 
   const updateRole = async (userId: string, newRole: "admin" | "customer") => {
+    if (userId === currentUserId && newRole === "customer") {
+      setActionMsg("Error: You cannot remove your own Admin role.");
+      setTimeout(() => setActionMsg(null), 3000);
+      return;
+    }
     const supabase = getSupabaseClient();
     const { error } = await supabase
       .from("profiles")
@@ -160,35 +171,43 @@ export default function AdminUsersPage() {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center gap-2 flex-wrap">
-                        {u.role === "admin" ? (
-                          <button
-                            onClick={() => updateRole(u.id, "customer")}
-                            className="rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[10px] font-bold text-stone-600 hover:bg-stone-50 uppercase tracking-wider transition-colors cursor-pointer"
-                          >
-                            Remove Admin
-                          </button>
+                        {u.id === currentUserId ? (
+                          <span className="rounded-full border border-stone-200 bg-stone-100 px-3 py-1 text-[10px] font-bold text-stone-500 uppercase tracking-wider select-none">
+                            Current User
+                          </span>
                         ) : (
-                          <button
-                            onClick={() => updateRole(u.id, "admin")}
-                            className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700 hover:bg-violet-100 uppercase tracking-wider transition-colors cursor-pointer"
-                          >
-                            Make Admin
-                          </button>
-                        )}
-                        {u.status === "disabled" ? (
-                          <button
-                            onClick={() => updateStatus(u.id, "active")}
-                            className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 uppercase tracking-wider transition-colors cursor-pointer"
-                          >
-                            Enable
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => updateStatus(u.id, "disabled")}
-                            className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-100 uppercase tracking-wider transition-colors cursor-pointer"
-                          >
-                            Disable
-                          </button>
+                          <>
+                            {u.role === "admin" ? (
+                              <button
+                                onClick={() => updateRole(u.id, "customer")}
+                                className="rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[10px] font-bold text-stone-600 hover:bg-stone-50 uppercase tracking-wider transition-colors cursor-pointer"
+                              >
+                                Remove Admin
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => updateRole(u.id, "admin")}
+                                className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-bold text-violet-700 hover:bg-violet-100 uppercase tracking-wider transition-colors cursor-pointer"
+                              >
+                                Make Admin
+                              </button>
+                            )}
+                            {u.status === "disabled" ? (
+                              <button
+                                onClick={() => updateStatus(u.id, "active")}
+                                className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700 hover:bg-emerald-100 uppercase tracking-wider transition-colors cursor-pointer"
+                              >
+                                Enable
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => updateStatus(u.id, "disabled")}
+                                className="rounded-full border border-rose-200 bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-600 hover:bg-rose-100 uppercase tracking-wider transition-colors cursor-pointer"
+                              >
+                                Disable
+                              </button>
+                            )}
+                          </>
                         )}
                       </div>
                     </td>

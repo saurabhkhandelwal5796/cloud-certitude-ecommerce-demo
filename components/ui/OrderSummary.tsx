@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId, getGstLabel } from "@/utils";
+import { formatPrice, getGstLabel } from "@/utils";
 import { CartItemType } from "@/context/CartContext";
 import { useCart } from "@/context/CartContext";
 import { calculateOrderTotals } from "@/services/PricingService";
@@ -20,9 +20,20 @@ interface OrderSummaryProps {
  */
 function SummaryItemImage({ item }: { item: CartItemType }) {
   const [src, setSrc] = useState(item.imageSrc);
+  const [hasError, setHasError] = useState(false);
+
   useEffect(() => {
     setSrc(item.imageSrc);
+    setHasError(false);
   }, [item.imageSrc]);
+
+  if (!src || hasError) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-stone-100 text-stone-400">
+        <span className="text-[6px] font-bold uppercase tracking-widest text-center mt-2">No Image</span>
+      </div>
+    );
+  }
 
   return (
     <Image
@@ -32,7 +43,7 @@ function SummaryItemImage({ item }: { item: CartItemType }) {
       sizes="40px"
       className="object-cover"
       onError={() => {
-        setSrc(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
+        setHasError(true);
       }}
     />
   );
@@ -54,7 +65,8 @@ export default function OrderSummary({
   } = calculateOrderTotals(
     cartSubtotal,
     deliveryFee,
-    discountAmount
+    discountAmount,
+    cartItems
   );
 
   return (

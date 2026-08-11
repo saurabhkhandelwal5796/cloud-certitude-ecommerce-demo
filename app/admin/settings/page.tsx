@@ -41,7 +41,7 @@ export default function AdminSettingsPage() {
               Contact Email
             </span>
             <span className="text-sm font-semibold text-stone-850">
-              admin@cloudcertitude.com
+              Manage admin accounts via Supabase Dashboard → Authentication → Users
             </span>
           </div>
 

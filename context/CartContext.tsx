@@ -1,9 +1,11 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useRef } from "react";
+import { validateCartItems } from "@/services/PurchasabilityService";
 
 export interface CartItemType {
-  id: string;
+  id: string;           // product_id — kept for display and lookup
+  variantId?: string;   // product_variants.id — used as dedup key when present
   name: string;
   price: number;
   imageSrc: string;
@@ -12,6 +14,9 @@ export interface CartItemType {
   selectedColor: string;
   discountPercent?: number;
   brand?: string;
+  maxStock?: number;
+  /** GST rate for this specific variant (e.g. 5, 12, 18, 28). Frozen at add-to-cart time. */
+  gstRate?: number;
 }
 
 export interface ToastType {
@@ -23,9 +28,10 @@ interface CartContextType {
   cartItems: CartItemType[];
   cartCount: number;
   cartSubtotal: number;
+  staleVariantIds: Set<string>; // variant IDs that failed staleness check
   addToCart: (product: Omit<CartItemType, "quantity" | "selectedSize" | "selectedColor">, quantity: number, size: string, color: string) => void;
-  removeFromCart: (id: string, size: string, color: string) => void;
-  updateQuantity: (id: string, size: string, color: string, quantity: number) => void;
+  removeFromCart: (id: string, size: string, color: string, variantId?: string) => void;
+  updateQuantity: (id: string, size: string, color: string, quantity: number, variantId?: string) => void;
   clearCart: () => void;
   toasts: ToastType[];
   removeToast: (id: string) => void;
@@ -44,6 +50,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [isInitialized, setIsInitialized] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [staleVariantIds, setStaleVariantIds] = useState<Set<string>>(new Set());
   const toastIdRef = useRef(0);
 
   // Sync auth state changes
@@ -89,7 +96,34 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       try {
         const stored = localStorage.getItem(`certitude_cart_${userId}`);
         if (stored) {
-          setCartItems(JSON.parse(stored));
+          const parsed: CartItemType[] = JSON.parse(stored);
+          setCartItems(parsed);
+
+          // ─── Staleness Detection ──────────────────────────────────────────
+          // After loading from localStorage, validate all items with variantIds
+          // against live DB. Flag any that are now inactive or OOS.
+          const variantIds = parsed
+            .map((item) => item.variantId)
+            .filter((id): id is string => !!id);
+
+          if (variantIds.length > 0) {
+            try {
+              const resultMap = await validateCartItems(variantIds);
+              const stale = new Set<string>();
+              resultMap.forEach((result, vid) => {
+                if (!result.purchasable) {
+                  stale.add(vid);
+                }
+              });
+              setStaleVariantIds(stale);
+              if (stale.size > 0) {
+                addToast(`${stale.size} item(s) in your cart may no longer be available.`);
+              }
+            } catch {
+              // Non-fatal — don't break the cart load
+            }
+          }
+          // ─────────────────────────────────────────────────────────────────
         } else {
           setCartItems([]);
         }
@@ -137,55 +171,108 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       window.location.href = "/signin";
       return;
     }
+    const existingItem = product.variantId
+      ? cartItems.find((item) => item.variantId === product.variantId)
+      : cartItems.find(
+          (item) =>
+            item.id === product.id &&
+            item.selectedSize === size &&
+            item.selectedColor === color
+        );
+
+    const currentQty = existingItem ? existingItem.quantity : 0;
+    const max = existingItem ? existingItem.maxStock : product.maxStock;
+    const targetQty = currentQty + quantity;
+
+    if (max !== undefined && targetQty > max) {
+      addToast(`Only ${max} left in stock for "${product.name}".`);
+    } else {
+      addToast(`"${product.name}" added to cart.`);
+    }
+
     setCartItems((prev) => {
-      // Find matching item by ID, selected size, AND selected color
-      const existingIdx = prev.findIndex(
-        (item) =>
-          item.id === product.id &&
-          item.selectedSize === size &&
-          item.selectedColor === color
-      );
+      const existingIdx = product.variantId
+        ? prev.findIndex((item) => item.variantId === product.variantId)
+        : prev.findIndex(
+            (item) =>
+              item.id === product.id &&
+              item.selectedSize === size &&
+              item.selectedColor === color
+          );
 
       if (existingIdx > -1) {
         const updated = [...prev];
-        updated[existingIdx].quantity += quantity;
+        const newQty = updated[existingIdx].quantity + quantity;
+        const maxStock = updated[existingIdx].maxStock;
+        
+        if (maxStock !== undefined && newQty > maxStock) {
+          updated[existingIdx] = { ...updated[existingIdx], quantity: maxStock };
+        } else {
+          updated[existingIdx] = { ...updated[existingIdx], quantity: newQty };
+        }
         return updated;
+      }
+
+      let finalQty = quantity;
+      if (product.maxStock !== undefined && finalQty > product.maxStock) {
+        finalQty = product.maxStock;
       }
 
       return [
         ...prev,
         {
           ...product,
-          quantity,
+          quantity: finalQty,
           selectedSize: size,
           selectedColor: color,
         },
       ];
     });
-
-    addToast(`"${product.name}" added to cart.`);
   };
 
-  const removeFromCart = (id: string, size: string, color: string) => {
+  const removeFromCart = (id: string, size: string, color: string, variantId?: string) => {
     setCartItems((prev) =>
-      prev.filter(
-        (item) =>
-          !(item.id === id && item.selectedSize === size && item.selectedColor === color)
+      prev.filter((item) =>
+        variantId
+          ? item.variantId !== variantId
+          : !(item.id === id && item.selectedSize === size && item.selectedColor === color)
       )
     );
   };
 
-  const updateQuantity = (id: string, size: string, color: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(id, size, color);
-      return;
+  const updateQuantity = (
+    id: string,
+    size: string,
+    color: string,
+    quantity: number,
+    variantId?: string
+  ) => {
+    if (quantity < 1) return;
+
+    const existingItem = variantId
+      ? cartItems.find((item) => item.variantId === variantId)
+      : cartItems.find(
+          (item) => item.id === id && item.selectedSize === size && item.selectedColor === color
+        );
+
+    if (existingItem && existingItem.maxStock !== undefined && quantity > existingItem.maxStock) {
+      addToast(`Only ${existingItem.maxStock} left in stock.`);
     }
+
     setCartItems((prev) =>
-      prev.map((item) =>
-        item.id === id && item.selectedSize === size && item.selectedColor === color
-          ? { ...item, quantity }
-          : item
-      )
+      prev.map((item) => {
+        if (
+          variantId
+            ? item.variantId === variantId
+            : item.id === id && item.selectedSize === size && item.selectedColor === color
+        ) {
+          if (item.maxStock !== undefined && quantity > item.maxStock) {
+            return { ...item, quantity: item.maxStock };
+          }
+          return { ...item, quantity };
+        }
+        return item;
+      })
     );
   };
 
@@ -208,6 +295,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         cartItems,
         cartCount,
         cartSubtotal,
+        staleVariantIds,
         addToCart,
         removeFromCart,
         updateQuantity,

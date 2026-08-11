@@ -26,6 +26,9 @@ export default async function AdminLayout({
     redirect("/");
   }
 
+  let currentUser: any = null;
+  let currentProfile: any = null;
+
   try {
     const supabase = await createServerClient();
     const {
@@ -35,30 +38,39 @@ export default async function AdminLayout({
     if (!user) {
       redirect("/signin");
     }
+    
+    currentUser = user;
 
     // Check role in profiles table
     const { data: profile } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, name, avatar_url")
       .eq("id", user.id)
       .single();
 
-    // Fallback: also allow the hardcoded admin email
-    const isAdmin =
-      profile?.role === "admin" || user.email === "admin@cloudcertitude.com";
+    // Fallback: rely exclusively on profiles.role field
+    const isAdmin = profile?.role === "admin";
 
     if (!isAdmin) {
       redirect("/");
     }
+    
+    currentProfile = profile;
   } catch (err) {
     console.error("[AdminLayout] Error fetching authenticated user:", err);
     redirect("/");
   }
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row bg-[#FAF9F6] text-stone-800">
-      <AdminSidebar />
-      <main className="flex-grow w-full p-4 sm:p-6 lg:p-8 overflow-y-auto lg:h-screen">
+    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row bg-[#FAF9F6] text-stone-800">
+      <AdminSidebar 
+        user={{ 
+          email: currentUser?.email || "", 
+          name: currentProfile?.name || "Admin User", 
+          avatarUrl: currentProfile?.avatar_url 
+        }} 
+      />
+      <main className="flex-grow w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
         <div className="mx-auto max-w-7xl">
           {children}
         </div>

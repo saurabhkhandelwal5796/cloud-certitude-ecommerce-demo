@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { formatPrice, getCategoryFallbackImage } from "@/utils";
+import { formatPrice } from "@/utils";
 import { useCart } from "@/context/CartContext";
 
 interface ProductType {
@@ -11,7 +11,7 @@ interface ProductType {
   price: number;
   imageSrc: string;
   discountPercent?: number;
-  rating: number;
+  rating?: number;      // optional — no fake ratings
   category: string;
   brand?: string;
   description?: string;
@@ -36,14 +36,16 @@ export default function ProductQuickViewModal({
 }: ProductQuickViewModalProps) {
   const { addToCart } = useCart();
   const [selectedSize, setSelectedSize] = useState("M");
-  const [selectedColor, setSelectedColor] = useState("Beige");
+  const [selectedColor, setSelectedColor] = useState(product?.category.includes("Women") ? "Blush" : "Navy");
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
   const [currentImage, setCurrentImage] = useState(product?.imageSrc || "");
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (product) {
       setCurrentImage(product.imageSrc);
+      setHasError(false);
     }
   }, [product]);
 
@@ -91,17 +93,21 @@ export default function ProductQuickViewModal({
         </button>
 
         {/* Left: Product Image */}
-        <div className="relative w-full md:w-1/2 aspect-[4/5] bg-stone-50">
-          <Image
-            src={currentImage || "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab"}
-            alt={product.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 50vw"
-            className="object-cover"
-            onError={() => {
-              setCurrentImage(getCategoryFallbackImage(product.category));
-            }}
-          />
+        <div className="relative w-full md:w-1/2 aspect-[4/5] bg-stone-50 flex items-center justify-center">
+          {currentImage && !hasError ? (
+            <Image
+              src={currentImage}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover"
+              onError={() => {
+                setHasError(true);
+              }}
+            />
+          ) : (
+            <span className="text-sm font-bold uppercase tracking-widest text-stone-400">No Image</span>
+          )}
           {product.discountPercent && (
             <span className="absolute top-4 left-4 rounded-full bg-[#E0A99E] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">
               {product.discountPercent}% OFF
@@ -122,26 +128,28 @@ export default function ProductQuickViewModal({
               {product.name}
             </h2>
 
-            {/* Star Reviews */}
-            <div className="mt-2.5 flex items-center gap-1.5">
-              <div className="flex text-amber-400">
-                {Array.from({ length: 5 }).map((_, i) => (
-                  <svg
-                    key={i}
-                    className={`h-3.5 w-3.5 ${
-                      i < Math.floor(product.rating) ? "fill-current" : "text-stone-200"
-                    }`}
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
-                  >
-                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                  </svg>
-                ))}
+            {/* Star Reviews — only shown when real rating exists */}
+            {product.rating !== undefined && (
+              <div className="mt-2.5 flex items-center gap-1.5">
+                <div className="flex text-amber-400">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <svg
+                      key={i}
+                      className={`h-3.5 w-3.5 ${
+                        i < Math.floor(product.rating!) ? "fill-current" : "text-stone-200"
+                      }`}
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                    </svg>
+                  ))}
+                </div>
+                <span className="text-xs font-semibold text-stone-500">
+                  {product.rating.toFixed(1)} verified client rating
+                </span>
               </div>
-              <span className="text-xs font-semibold text-stone-500">
-                {product.rating.toFixed(1)} verified client rating
-              </span>
-            </div>
+            )}
 
             {/* Pricing */}
             <div className="mt-4 flex items-baseline gap-3">

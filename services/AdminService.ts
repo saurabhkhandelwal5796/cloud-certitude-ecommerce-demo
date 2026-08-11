@@ -30,8 +30,10 @@ export interface AdminProduct {
   reviewCount?: number;
   sku?: string;
   tags?: string[];
-  gstRate?: number;
   hsnCode?: string;
+  createdAt?: string;
+  navNodeId?: string | null;
+  status: "draft" | "active" | "archived";
 }
 
 export interface AdminOrder {
@@ -45,6 +47,7 @@ export interface AdminOrder {
   total: number;
   itemsCount: number;
   address?: AddressType;
+  transactionId?: string;
   items?: Array<{
     id?: string;
     name: string;
@@ -358,8 +361,10 @@ export async function getProducts(): Promise<AdminProduct[]> {
         reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
         sku: String(p.sku || ""),
         tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
-        gstRate: p.gst_rate !== undefined ? Number(p.gst_rate) : 5,
-        hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : ""
+        hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
+        createdAt: String(p.created_at || new Date().toISOString()),
+        navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
+        status: p.status as "draft" | "active" | "archived" || "draft"
       }));
 
       const { cleaned, updatedCount } = cleanProductUrls(mapped);
@@ -388,7 +393,6 @@ export async function getProducts(): Promise<AdminProduct[]> {
               sku: product.sku || "",
               is_active: true,
               updated_at: new Date().toISOString(),
-              gst_rate: product.gstRate !== undefined ? Number(product.gstRate) : 5,
               hsn_code: product.hsnCode || null
             }).catch(err => console.error("[AdminService] Sync error:", err));
           }
@@ -451,7 +455,6 @@ export async function saveProduct(product: AdminProduct): Promise<AdminProduct> 
       sku: product.sku || "",
       is_active: true,
       updated_at: new Date().toISOString(),
-      gst_rate: product.gstRate !== undefined ? Number(product.gstRate) : 5,
       hsn_code: product.hsnCode || null
     });
   } catch (err) {
@@ -1445,3 +1448,463 @@ export function filterOrdersByDateRange(
   return orders.filter((o) => filterFn[range](parseOrderDate(o.orderDate)));
 }
 
+// ─── Returns & Refunds Service ───────────────────────────────────────────────
+
+export interface ReturnRequestRecord {
+  id: string;
+  order_id: string;
+  user_id?: string | null;
+  customer_email: string;
+  reason: string;
+  comments?: string | null;
+  status: string;
+  admin_notes?: string | null;
+  tracking_number?: string | null;
+  courier_name?: string | null;
+  received_by?: string | null;
+  received_at?: string | null;
+  created_at: string;
+}
+
+export interface RefundRecord {
+  id: string;
+  order_id: string;
+  return_id?: string | null;
+  customer_email: string;
+  amount: number;
+  status: string;
+  initiated_by?: string | null;
+  remarks?: string | null;
+  payment_gateway?: string | null;
+  gateway_transaction_id?: string | null;
+  refund_transaction_id?: string | null;
+  processed_at?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ReturnAnalytics {
+  total: number;
+  pending: number;
+  approved: number;
+  rejected: number;
+  returned: number;
+}
+
+/**
+ * Fetches all return requests ordered by most recent first.
+ */
+export async function getAllReturnRequests(): Promise<ReturnRequestRecord[]> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from('returns')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) {
+      console.error('[AdminService] getAllReturnRequests error:', error);
+      return [];
+    }
+    return (data || []) as ReturnRequestRecord[];
+  } catch (err) {
+    console.error('[AdminService] getAllReturnRequests exception:', err);
+    return [];
+  }
+}
+
+/**
+ * Approves a return request, optionally recording admin notes.
+ */
+export async function approveReturnRequest(returnId: string, notes: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { error } = await supabase
+      .from('returns')
+      .update({ status: 'Approved', admin_notes: notes || null })
+      .eq('id', returnId);
+    if (error) {
+      console.error('[AdminService] approveReturnRequest error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] approveReturnRequest exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Rejects a return request. Admin notes are required.
+ */
+export async function rejectReturnRequest(returnId: string, notes: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { error } = await supabase
+      .from('returns')
+      .update({ status: 'Rejected', admin_notes: notes || null })
+      .eq('id', returnId);
+    if (error) {
+      console.error('[AdminService] rejectReturnRequest error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] rejectReturnRequest exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Marks the physical product as received by the warehouse.
+ * Transitions status to "Returned" and records received_at timestamp.
+ */
+export async function markReturnProductReceived(returnId: string, notes: string): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { error } = await supabase
+      .from('returns')
+      .update({
+        status: 'Returned',
+        admin_notes: notes || null,
+        received_at: new Date().toISOString(),
+      })
+      .eq('id', returnId);
+    if (error) {
+      console.error('[AdminService] markReturnProductReceived error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] markReturnProductReceived exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Updates the status of a refund record.
+ * When completing, records processed_at timestamp and optional transaction ID.
+ */
+export async function updateRefundStatus(
+  refundId: string,
+  status: string,
+  notes: string,
+  modalTxId?: string
+): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const updatePayload: Record<string, unknown> = {
+      status,
+      remarks: notes || null,
+      updated_at: new Date().toISOString(),
+    };
+    if (status === 'Completed') {
+      updatePayload.processed_at = new Date().toISOString();
+      if (modalTxId && modalTxId.trim()) {
+        updatePayload.refund_transaction_id = modalTxId.trim();
+      }
+    }
+    const { error } = await supabase
+      .from('refunds')
+      .update(updatePayload)
+      .eq('id', refundId);
+    if (error) {
+      console.error('[AdminService] updateRefundStatus error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] updateRefundStatus exception:', err);
+    return false;
+  }
+}
+
+/**
+ * Returns the return request for a specific order, or null if not found.
+ */
+export async function getReturnRequestByOrderId(orderId: string): Promise<ReturnRequestRecord | null> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from('returns')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) {
+      console.error('[AdminService] getReturnRequestByOrderId error:', error);
+      return null;
+    }
+    return data && data.length > 0 ? (data[0] as ReturnRequestRecord) : null;
+  } catch (err) {
+    console.error('[AdminService] getReturnRequestByOrderId exception:', err);
+    return null;
+  }
+}
+
+/**
+ * Returns the refund record for a specific order, or null if not found.
+ */
+export async function getRefundByOrderId(orderId: string): Promise<RefundRecord | null> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from('refunds')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (error) {
+      console.error('[AdminService] getRefundByOrderId error:', error);
+      return null;
+    }
+    return data && data.length > 0 ? (data[0] as RefundRecord) : null;
+  } catch (err) {
+    console.error('[AdminService] getRefundByOrderId exception:', err);
+    return null;
+  }
+}
+
+/**
+ * Returns aggregated return analytics counts from the returns table.
+ */
+export async function getReturnAnalytics(): Promise<ReturnAnalytics> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase.from('returns').select('status');
+    if (error) {
+      console.error('[AdminService] getReturnAnalytics error:', error);
+      return { total: 0, pending: 0, approved: 0, rejected: 0, returned: 0 };
+    }
+    const rows = (data || []) as { status: string }[];
+    return {
+      total: rows.length,
+      pending: rows.filter((r) => r.status.toLowerCase() === 'pending').length,
+      approved: rows.filter((r) => r.status.toLowerCase() === 'approved').length,
+      rejected: rows.filter((r) => r.status.toLowerCase() === 'rejected').length,
+      returned: rows.filter((r) => r.status.toLowerCase() === 'returned').length,
+    };
+  } catch (err) {
+    console.error('[AdminService] getReturnAnalytics exception:', err);
+    return { total: 0, pending: 0, approved: 0, rejected: 0, returned: 0 };
+  }
+}
+
+/**
+ * Creates a new return request for a customer order.
+ */
+export async function createReturnRequest(
+  orderId: string,
+  _items: unknown[],
+  reason: string,
+  comments?: string
+): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data: { user } } = await supabase.auth.getUser();
+    const customerEmail = user?.email || '';
+    const { error } = await supabase.from('returns').insert({
+      order_id: orderId,
+      user_id: user?.id || null,
+      customer_email: customerEmail,
+      reason,
+      comments: comments || null,
+      status: 'Pending',
+    });
+    if (error) {
+      console.error('[AdminService] createReturnRequest error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] createReturnRequest exception:', err);
+    return false;
+  }
+}
+
+// ─── Order History ───────────────────────────────────────────────────────────
+
+export interface OrderHistoryEntry {
+  id: string;
+  order_id: string;
+  previous_status?: string | null;
+  new_status: string;
+  changed_by_user_id?: string | null;
+  changed_by_name?: string | null;
+  remarks?: string | null;
+  created_at: string;
+}
+
+/**
+ * Returns the status transition history for an order, ordered chronologically.
+ */
+export async function getOrderHistory(orderId: string): Promise<OrderHistoryEntry[]> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from('order_history')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
+    if (error) {
+      console.error('[AdminService] getOrderHistory error:', error);
+      return [];
+    }
+    return (data || []) as OrderHistoryEntry[];
+  } catch (err) {
+    console.error('[AdminService] getOrderHistory exception:', err);
+    return [];
+  }
+}
+
+// ─── Admin Activity Logs ─────────────────────────────────────────────────────
+
+export interface AdminActivityLog {
+  id: string;
+  admin_user_id?: string | null;
+  admin_name: string;
+  activity_type: string;
+  entity_type: string;
+  entity_id: string;
+  description: string;
+  ip_address?: string | null;
+  created_at: string;
+}
+
+/**
+ * Returns admin activity audit logs, most recent first.
+ * @param limit Maximum number of records to return (default: 100)
+ */
+export async function getAdminActivityLogs(limit: number = 100): Promise<AdminActivityLog[]> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from('admin_activity_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(limit);
+    if (error) {
+      console.error('[AdminService] getAdminActivityLogs error:', error);
+      return [];
+    }
+    return (data || []) as AdminActivityLog[];
+  } catch (err) {
+    console.error('[AdminService] getAdminActivityLogs exception:', err);
+    return [];
+  }
+}
+
+// ─── Admin Products (Paginated) ──────────────────────────────────────────────
+
+export interface GetAdminProductsPaginatedOptions {
+  page: number;
+  limit: number;
+  search?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Returns a paginated slice of products from Supabase, with total count.
+ *
+ * Accepts an options object matching the call-site contract in admin/products/page.tsx:
+ *   getAdminProductsPaginated({ page, limit, search, sortOrder })
+ *
+ * Returns: { products: AdminProduct[], total: number }
+ */
+export async function getAdminProductsPaginated(
+  options: GetAdminProductsPaginatedOptions
+): Promise<{ products: AdminProduct[]; total: number }> {
+  const { page, limit, search, sortOrder = 'desc' } = options;
+  try {
+    const supabase = getSupabaseClient() as any;
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+
+    let query = supabase
+      .from('products')
+      .select('*', { count: 'exact' });
+
+    // Apply search filter on name, brand, and sku (case-insensitive)
+    if (search && search.trim().length > 0) {
+      const term = search.trim();
+      query = query.or(`name.ilike.%${term}%,brand.ilike.%${term}%,sku.ilike.%${term}%`);
+    }
+
+    query = query
+      .order('created_at', { ascending: sortOrder === 'asc' })
+      .range(from, to);
+
+    const { data, error, count } = await query;
+
+    if (error) {
+      console.error('[AdminService] getAdminProductsPaginated error:', error);
+      return { products: [], total: 0 };
+    }
+
+    const mapProduct = (p: Record<string, unknown>): AdminProduct => ({
+      id: String(p.id),
+      name: String(p.name),
+      description: String(p.description || ''),
+      category: String(p.category),
+      brand: String(p.brand || 'Atelier'),
+      price: Number(p.price),
+      discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : 0,
+      stockQuantity: p.stock !== undefined ? Number(p.stock) : 0,
+      imageSrc: String(p.image_src || (Array.isArray(p.images) ? (p.images as string[])[0] : '')),
+      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      size: Array.isArray(p.size) ? (p.size as string[]) : [],
+      color: Array.isArray(p.color) ? (p.color as string[]) : [],
+      rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+      reviewCount: p.review_count !== undefined ? Number(p.review_count) : 0,
+      sku: String(p.sku || ''),
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+      hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || '') : '',
+      createdAt: String(p.created_at || new Date().toISOString()),
+      navNodeId: p.nav_node_id ? String(p.nav_node_id) : null,
+      status: (p.status as 'draft' | 'active' | 'archived') || 'draft',
+    });
+
+    const products: AdminProduct[] = (data || []).map(mapProduct);
+    return { products, total: count ?? 0 };
+  } catch (err) {
+    console.error('[AdminService] getAdminProductsPaginated exception:', err);
+    return { products: [], total: 0 };
+  }
+}
+
+
+// ─── Bulk Product Updates ────────────────────────────────────────────────────
+
+/**
+ * Applies the same partial update to multiple products by ID.
+ */
+export async function bulkUpdateProducts(
+  productIds: string[],
+  updates: Partial<AdminProduct>
+): Promise<boolean> {
+  if (!productIds || productIds.length === 0) return true;
+  try {
+    const supabase = getSupabaseClient() as any;
+    // Build the DB-column update payload
+    const dbPayload: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (updates.status !== undefined) dbPayload.status = updates.status;
+    if (updates.price !== undefined) dbPayload.price = updates.price;
+    if (updates.discountPercent !== undefined) dbPayload.discount_percent = updates.discountPercent;
+    if (updates.stockQuantity !== undefined) dbPayload.stock = updates.stockQuantity;
+    if (updates.brand !== undefined) dbPayload.brand = updates.brand;
+    if (updates.category !== undefined) dbPayload.category = updates.category;
+    if (updates.hsnCode !== undefined) dbPayload.hsn_code = updates.hsnCode;
+
+    const { error } = await supabase
+      .from('products')
+      .update(dbPayload)
+      .in('id', productIds);
+    if (error) {
+      console.error('[AdminService] bulkUpdateProducts error:', error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('[AdminService] bulkUpdateProducts exception:', err);
+    return false;
+  }
+}

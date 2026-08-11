@@ -25,6 +25,7 @@ import Footer from "@/components/layout/Footer";
 import { CartProvider } from "@/context/CartContext";
 import { WishlistProvider } from "@/context/WishlistContext";
 import SEOProvider from "@/components/ui/SEOProvider";
+import InactivityListener from "@/components/ui/InactivityListener";
 import { PromotionalBanner } from "@/components/ui/MarketingSuite";
 import { headers } from "next/headers";
 
@@ -68,6 +69,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-[#FAF9F6] text-stone-800">
+        <InactivityListener />
         <SEOProvider>
           {!isAdminRoute && <PromotionalBanner />}
           <CartProvider>

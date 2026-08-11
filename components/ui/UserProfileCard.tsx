@@ -249,7 +249,7 @@ export default function UserProfileCard({ user }: UserProfileCardProps) {
             {profile?.name || "Customer Profile"}
           </h3>
           <p className="text-xs font-semibold text-stone-400 uppercase tracking-wider mt-0.5">
-            {user.email === "admin@cloudcertitude.com" ? "Certitude Admin" : "Certitude Patron"}
+            {profile?.role === "admin" ? "Certitude Admin" : "Certitude Patron"}
           </p>
         </div>
       </div>

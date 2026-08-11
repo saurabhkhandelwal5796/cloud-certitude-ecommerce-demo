@@ -1,9 +1,5 @@
-import React from "react";
-import ProductImageGallery from "@/components/ui/ProductImageGallery";
-import ProductInfo from "@/components/ui/ProductInfo";
-import DeliveryChecker from "@/components/ui/DeliveryChecker";
+import React, { cache } from "react";
 import ProductReviews from "@/components/ui/ProductReviews";
-import RelatedProducts from "@/components/ui/RelatedProducts";
 import RecentlyViewed from "@/components/ui/RecentlyViewed";
 import ViewTracker from "@/components/ui/ViewTracker";
 import SimilarProducts from "@/components/ui/SimilarProducts";
@@ -11,151 +7,119 @@ import CompleteTheLook from "@/components/ui/CompleteTheLook";
 import FrequentlyBoughtTogether from "@/components/ui/FrequentlyBoughtTogether";
 import { getMetadata, getProductSchema, getBreadcrumbSchema } from "@/utils/seo";
 import SocialShare from "@/components/ui/SocialShare";
-
-// All catalog products combined for details lookup
-
-
-// Fallback template for any other dynamic ID to ensure page always displays cleanly
-const DEFAULT_FALLBACK_PRODUCT = {
-  id: "default",
-  name: "Classic Atelier Knit Cardigan",
-  price: 210,
-  discountPercent: 15,
-  rating: 4.7,
-  reviewCount: 88,
-  sku: "CC-A-KNIT-99",
-  category: "New Collection",
-  brand: "Atelier",
-  color: "Beige",
-  size: ["S", "M", "L", "XL"],
-  description: "A tailored mid-weight cardigan crafted from organic extra-fine wool fibers. Minimalist, structural, and soft on touch.",
-  imageSrc: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=400&auto=format&fit=crop",
-  images: [
-    "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=600&auto=format&fit=crop",
-    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?q=80&w=600&auto=format&fit=crop",
-  ],
-};
-
-// Related products
-const RELATED_PRODUCTS = [
-  {
-    id: "m1",
-    name: "Classic Cashmere Trench Coat",
-    price: 499,
-    discountPercent: 15,
-    rating: 4.8,
-    category: "Men",
-    brand: "Certitude",
-    imageSrc: "https://images.unsplash.com/photo-1617137968427-85924c800a22?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "w1",
-    name: "Silk Cocktail Evening Gown",
-    price: 650,
-    discountPercent: 10,
-    rating: 4.9,
-    category: "Women",
-    brand: "Certitude",
-    imageSrc: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "k2",
-    name: "Kids Organic Fleece Jacket",
-    price: 98,
-    rating: 4.6,
-    category: "Kids",
-    brand: "EcoKnit",
-    imageSrc: "https://images.unsplash.com/photo-1503919545889-aef636e10ad4?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "m3",
-    name: "Suede Handcrafted Chelsea Boots",
-    price: 280,
-    discountPercent: 20,
-    rating: 4.6,
-    category: "Men",
-    brand: "Modern Classic",
-    imageSrc: "https://images.unsplash.com/photo-1520639888713-7851133b1ed0?q=80&w=400&auto=format&fit=crop",
-  },
-];
-
-// Recently Viewed products
-const RECENTLY_VIEWED_PRODUCTS = [
-  {
-    id: "w2",
-    name: "Oversized Merino Wool Sweater",
-    price: 195,
-    rating: 4.7,
-    category: "Women",
-    brand: "EcoKnit",
-    imageSrc: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "m2",
-    name: "Minimalist Linen Utility Shirt",
-    price: 120,
-    rating: 4.5,
-    category: "Men",
-    brand: "Atelier",
-    imageSrc: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "k1",
-    name: "Kids Cotton Knit Romper Set",
-    price: 85,
-    discountPercent: 10,
-    rating: 4.7,
-    category: "Kids",
-    brand: "EcoKnit",
-    imageSrc: "https://images.unsplash.com/photo-1622290319146-7b63df48a635?q=80&w=400&auto=format&fit=crop",
-  },
-  {
-    id: "m4",
-    name: "Slim Fit Wool Tuxedo Jacket",
-    price: 520,
-    rating: 4.9,
-    category: "Men",
-    brand: "Certitude",
-    imageSrc: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=400&auto=format&fit=crop",
-  },
-];
+import RecentlyViewedClient from "@/components/ui/RecentlyViewedClient";
+import ProductDetailsClient from "@/components/ui/ProductDetailsClient";
 
 interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+const getProduct = cache(async (id: string) => {
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient() as any;
+  const { data: rawProduct } = await supabase.from('products').select('*').eq('id', id).single();
+  return rawProduct;
+});
+
 export async function generateMetadata({ params }: PageProps) {
   const { id } = await params;
-  const { getProducts } = await import("@/services/AdminService");
-  const list = await getProducts();
-  const product =
-    list.find((p) => p.id === id) || {
-    // deleted old lookup || {
-    ...DEFAULT_FALLBACK_PRODUCT,
-    id,
-  };
-  return getMetadata(
-    product.name,
-    product.description,
-    `/products/${product.id}`
-  );
+  const rawProduct = await getProduct(id);
+
+  if (!rawProduct) {
+    return getMetadata("Product Not Found", "This product could not be found.", `/products/${id}`);
+  }
+  return getMetadata(rawProduct.name, rawProduct.description, `/products/${rawProduct.id}`);
 }
 
 export default async function ProductDetailsPage({ params }: PageProps) {
   const { id } = await params;
 
-  // Search in database first, fallback to fallback template if not found
-  const { getProducts } = await import("@/services/AdminService");
-  const list = await getProducts();
-  const product =
-    list.find((p) => p.id === id) || {
-    // deleted old lookup || {
-      ...DEFAULT_FALLBACK_PRODUCT,
-      id,
+  // ── 1. Fetch product from Supabase ─────────────────────────────────────────
+  const rawProduct = await getProduct(id);
+  
+  let product: import("@/services/AdminService").AdminProduct | null = null;
+  if (rawProduct) {
+    const p = rawProduct;
+    product = {
+      id: String(p.id),
+      name: String(p.name),
+      description: String(p.description || ""),
+      category: String(p.category),
+      brand: String(p.brand || "Atelier"),
+      price: Number(p.price),
+      discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
+      stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
+      imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
+      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
+      color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
+      rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+      reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
+      sku: String(p.sku || ""),
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+      hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
+      navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
+      status: p.status as "draft" | "active" | "archived" || "draft"
     };
+  }
 
+  // ── 2. Fetch variants with attribute labels (parallel with product fetch) ──
+  let variantsWithAttrs: import("@/services/VariantService").VariantWithAttributes[] = [];
+  let productAttributes: Record<string, string> = {};
+
+  try {
+    const { getVariantsWithAttributesSSR } = await import("@/services/VariantService");
+    const { getProductAttributes, getFullCatalog } = await import("@/services/AttributeService");
+
+    const [fetchedVariants, assignedValueIds, catalog] = await Promise.all([
+      getVariantsWithAttributesSSR(id),
+      // Product-level attribute assignments (Material, Fit, etc.)
+      getProductAttributes(id),
+      getFullCatalog(),
+    ]);
+
+    variantsWithAttrs = fetchedVariants;
+
+    // Build product-level attribute map from catalog + assigned value IDs
+    if (assignedValueIds.length > 0) {
+      const attrMap: Record<string, string> = {};
+      for (const group of catalog) {
+        for (const attr of group.attributes) {
+          for (const val of attr.values) {
+            if (assignedValueIds.includes(val.id)) {
+              attrMap[attr.name] = val.value;
+            }
+          }
+        }
+      }
+      productAttributes = attrMap;
+    }
+  } catch (err) {
+    // Non-fatal: variant tables may not be set up in all environments
+    console.warn("[ProductDetailsPage] Variant/attribute fetch failed:", err);
+  }
+
+  // ── 3. Handle missing product ──────────────────────────────────────────────
+  if (!product) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-24 text-center">
+        <h1 className="text-2xl font-black text-stone-900 uppercase tracking-wide">
+          Product Not Found
+        </h1>
+        <p className="mt-4 text-sm text-stone-500">
+          This product may have been removed or the link is incorrect.
+        </p>
+        <a
+          href="/"
+          className="mt-8 inline-block rounded-full bg-[#E0A99E] px-8 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#D4988D] transition-colors"
+        >
+          Back to Home
+        </a>
+      </div>
+    );
+  }
+
+  // ── 4. Structured Data ─────────────────────────────────────────────────────
   const productSchema = getProductSchema({
     id: product.id,
     name: product.name,
@@ -169,12 +133,13 @@ export default async function ProductDetailsPage({ params }: PageProps) {
 
   const breadcrumbs = [
     { name: "Home", url: "/" },
-    { name: product.category || "Fashion", url: `/${(product.category || "Fashion").toLowerCase()}` },
+    { name: product.category || "Fashion", url: `/${(product.category || "fashion").toLowerCase()}` },
     { name: product.name, url: `/products/${product.id}` },
   ];
 
   const breadcrumbSchema = getBreadcrumbSchema(breadcrumbs);
 
+  // ── 5. Render ──────────────────────────────────────────────────────────────
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8 bg-[#FAF9F6]">
       {/* Structured Data */}
@@ -190,36 +155,12 @@ export default async function ProductDetailsPage({ params }: PageProps) {
       {/* Client-side View tracker */}
       <ViewTracker productId={product.id} />
 
-      {/* 2-Column Desktop Grid (Gallery + Details) */}
-      <div className="flex flex-col lg:flex-row gap-12 items-start">
-        {/* Left Column: Image Viewport + Delivery Checker */}
-        <div className="w-full lg:w-1/2">
-          <ProductImageGallery images={product.images} category={product.category} />
-          <DeliveryChecker />
-        </div>
-
-        {/* Right Column: Title, Ratings, Size Selector, Cart trigger, Details Accordion */}
-        <div className="w-full lg:w-1/2">
-          <ProductInfo
-            id={product.id}
-            name={product.name}
-            brand={product.brand}
-            price={product.price}
-            imageSrc={product.imageSrc}
-            discountPercent={product.discountPercent}
-            rating={product.rating || 4.5}
-            reviewCount={product.reviewCount || 0}
-            sku={product.sku || ""}
-            description={product.description}
-          />
-
-          {/* Social Sharing block */}
-          <SocialShare
-            url={`https://cloudcertitudefashion.com/products/${product.id}`}
-            title={product.name}
-          />
-        </div>
-      </div>
+      {/* 2-Column Desktop Grid (Gallery + Details) Managed by Client wrapper */}
+      <ProductDetailsClient 
+        product={product} 
+        variants={variantsWithAttrs} 
+        productAttributes={productAttributes} 
+      />
 
       {/* Frequently Bought Together Bundle Package */}
       <FrequentlyBoughtTogether productId={product.id} />
@@ -230,18 +171,15 @@ export default async function ProductDetailsPage({ params }: PageProps) {
       {/* Similar Products Carousel */}
       <SimilarProducts productId={product.id} />
 
-      {/* Reviews feed breakdown (Section 7) */}
+      {/* Reviews feed breakdown */}
       <ProductReviews
         productId={product.id}
         initialRating={product.rating}
         initialReviewCount={product.reviewCount}
       />
 
-      {/* Related Products carousel (Section 8) */}
-      <RelatedProducts products={RELATED_PRODUCTS} />
-
-      {/* Recently Viewed carousel (Section 9) */}
-      <RecentlyViewed products={RECENTLY_VIEWED_PRODUCTS} />
+      {/* Recently Viewed — loaded from localStorage client-side */}
+      <RecentlyViewedClient />
     </div>
   );
 }

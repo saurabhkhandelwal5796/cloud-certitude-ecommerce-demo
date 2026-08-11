@@ -140,11 +140,11 @@ export default function ProductReviews({
     await reportReview(reviewId);
   };
 
-  // Compute breakdown stats dynamically
+  // Compute breakdown stats dynamically — NO fallback to initialRating
   const totalReviews = reviews.length;
   const avgRating = totalReviews > 0
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
-    : initialRating;
+    : 0;
 
   const distribution: { [key: number]: number } = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
   reviews.forEach((r) => {
@@ -153,9 +153,9 @@ export default function ProductReviews({
     }
   });
 
-  // If there are no reviews, fallback to dynamic initial count distributions
-  const finalTotalCount = totalReviews > 0 ? totalReviews : initialReviewCount;
-  const finalAvgRating = totalReviews > 0 ? avgRating : initialRating;
+  // Only use real review counts — never show fake numbers
+  const finalTotalCount = totalReviews;
+  const finalAvgRating = avgRating;
 
   const fallbackDistribution: { [key: number]: number } = {
     5: Math.round(finalTotalCount * 0.70),

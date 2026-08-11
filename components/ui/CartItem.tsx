@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
+import { formatPrice } from "@/utils";
 import { CartItemType, useCart } from "@/context/CartContext";
 
 interface CartItemProps {
@@ -18,11 +18,15 @@ interface CartItemProps {
  * and a deletion trigger.
  */
 export default function CartItem({ item }: CartItemProps) {
-  const { updateQuantity, removeFromCart } = useCart();
+  const { updateQuantity, removeFromCart, staleVariantIds } = useCart();
   const [currentImage, setCurrentImage] = useState(item.imageSrc);
+  const isStale = item.variantId ? staleVariantIds.has(item.variantId) : false;
+
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     setCurrentImage(item.imageSrc);
+    setHasError(false);
   }, [item.imageSrc]);
 
   const discountedPrice = item.discountPercent
@@ -32,20 +36,37 @@ export default function CartItem({ item }: CartItemProps) {
   const totalLinePrice = discountedPrice * item.quantity;
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-stone-200/50 bg-white shadow-sm text-left">
+    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border shadow-sm text-left transition-colors ${
+      isStale
+        ? "border-rose-300 bg-rose-50/50"
+        : "border-stone-200/50 bg-white"
+    }`}>
+      {/* Staleness warning banner */}
+      {isStale && (
+        <div className="w-full -mb-1 flex items-center gap-2 rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-700">
+          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+          </svg>
+          No longer available — please remove this item before checking out
+        </div>
+      )}
       {/* Left: Product Image & Details Link */}
       <div className="flex items-center gap-4 flex-1">
-        <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-stone-50 border border-stone-100">
-          <Image
-            src={currentImage}
-            alt={item.name}
-            fill
-            sizes="80px"
-            className="object-cover"
-            onError={() => {
-              setCurrentImage(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
-            }}
-          />
+        <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-center">
+          {currentImage && !hasError ? (
+            <Image
+              src={currentImage}
+              alt={item.name}
+              fill
+              sizes="80px"
+              className="object-cover"
+              onError={() => {
+                setHasError(true);
+              }}
+            />
+          ) : (
+            <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400 text-center">No<br/>Image</span>
+          )}
         </div>
 
         <div>

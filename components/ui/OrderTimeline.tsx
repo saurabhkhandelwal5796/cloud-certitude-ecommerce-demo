@@ -1,7 +1,7 @@
 import React from "react";
 
 interface OrderTimelineProps {
-  status: "Pending" | "Confirmed" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Cancelled";
+  status: "Pending" | "Confirmed" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Cancelled" | "Refunded" | "Return Requested" | "Return Approved" | "Return Rejected" | "Returned";
 }
 
 const STEPS = ["Pending", "Confirmed", "Processing", "Shipped", "Out for Delivery", "Delivered"];
@@ -9,10 +9,41 @@ const STEPS = ["Pending", "Confirmed", "Processing", "Shipped", "Out for Deliver
 /**
  * OrderTimeline Component
  *
- * Renders an interactive, beautiful visual timeline representing the shipping lifecycle.
- * Mirrors the luxury pastel aesthetic and handles Cancelled states gracefully.
+ * Renders an interactive, beautiful visual timeline representing the shipping & return lifecycle.
  */
 export default function OrderTimeline({ status }: OrderTimelineProps) {
+  // Return statuses handling
+  if (status === "Return Requested" || status === "Return Approved" || status === "Return Rejected" || status === "Returned") {
+    const isApproved = status === "Return Approved" || status === "Returned";
+    const isRejected = status === "Return Rejected";
+
+    return (
+      <div className="py-4 space-y-3">
+        <div className="flex items-center gap-3">
+          <div className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-sm ${
+            isApproved ? "bg-emerald-100 text-emerald-700" : isRejected ? "bg-rose-100 text-rose-700" : "bg-amber-100 text-amber-700"
+          }`}>
+            🔄
+          </div>
+          <div className="text-left">
+            <span className={`block text-xs font-extrabold uppercase tracking-widest leading-none ${
+              isApproved ? "text-emerald-700" : isRejected ? "text-rose-700" : "text-amber-700"
+            }`}>
+              {status}
+            </span>
+            <span className="text-[10px] text-stone-500 font-light mt-0.5 block leading-tight">
+              {isApproved
+                ? "The product return request has been approved."
+                : isRejected
+                ? "The product return request was rejected by admin."
+                : "Customer requested a return for this delivered order."}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // If order is cancelled, render a specialized cancelled timeline
   if (status === "Cancelled") {
     return (

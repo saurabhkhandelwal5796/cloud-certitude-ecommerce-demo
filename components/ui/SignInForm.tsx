@@ -22,10 +22,18 @@ export default function SignInForm() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(searchParams.get("error"));
-  const [successMsg, setSuccessMsg] = useState<string | null>(
-    searchParams.get("message")
-  );
+  const rawError = searchParams.get("error");
+  const initialError =
+    rawError === "AccountDisabled"
+      ? "Your account has been disabled. Please contact your administrator."
+      : rawError;
+  const [errorMsg, setErrorMsg] = useState<string | null>(initialError);
+  const rawMessage = searchParams.get("message");
+  const initialMessage =
+    rawMessage === "SessionExpired"
+      ? "Your session has expired due to inactivity. Please sign in again."
+      : rawMessage;
+  const [successMsg, setSuccessMsg] = useState<string | null>(initialMessage);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,29 +84,33 @@ export default function SignInForm() {
         return;
       }
 
-      console.log("[Auth SignIn] Login successful. Session user ID:", data.user?.id);
-      setSuccessMsg("Logged in successfully! Redirecting...");
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("role, status")
+          .eq("id", data.user.id)
+          .single();
 
-      // Role-based redirect
-      setTimeout(async () => {
-        try {
-          const supabase = getSupabaseClient();
-          const { data: profile } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", data.user!.id)
-            .single();
-          if (profile?.role === "admin" || data.user!.email === "admin@cloudcertitude.com") {
+        if (profile?.status === "disabled") {
+          await supabase.auth.signOut();
+          setErrorMsg("Your account has been disabled. Please contact your administrator.");
+          setIsLoading(false);
+          return;
+        }
+
+        console.log("[Auth SignIn] Login successful. Session user ID:", data.user.id);
+        setSuccessMsg("Logged in successfully! Redirecting...");
+
+        // Role-based redirect
+        setTimeout(() => {
+          if (profile?.role === "admin") {
             router.push("/admin");
           } else {
-            router.push("/");
+            router.push(nextRoute);
           }
           router.refresh();
-        } catch {
-          router.push("/");
-          router.refresh();
-        }
-      }, 800);
+        }, 800);
+      }
     } catch {
       console.error("[Auth SignIn] Unexpected error during login process");
       setErrorMsg("An unexpected error occurred. Please try again.");

@@ -54,7 +54,7 @@ export default function CartSummary() {
   };
 
   const discountAmount = cartSubtotal * (discountPercent / 100);
-  const totals = calculateOrderTotals(cartSubtotal, shipping, discountAmount);
+  const totals = calculateOrderTotals(cartSubtotal, shipping, discountAmount, cartItems);
   const tax = totals.tax;
   const grandTotal = totals.grandTotal;
 

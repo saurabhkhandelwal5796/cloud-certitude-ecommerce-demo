@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getProducts } from "@/services/AdminService";
+import { getSupabaseClient } from "@/lib/supabase/client";
 
 const SITE_URL = "https://cloudcertitudefashion.com";
 
@@ -23,9 +23,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   try {
-    const products = await getProducts();
-    const productSitemap = products.map((p) => ({
-      url: `${SITE_URL}/products/${p.id}`,
+    const supabase = getSupabaseClient() as any;
+    let allIds: string[] = [];
+    let page = 0;
+    const pageSize = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id')
+        .range(page * pageSize, (page + 1) * pageSize - 1);
+      
+      if (error) {
+        console.error("[Sitemap] Supabase error:", error);
+        break;
+      }
+      if (data && data.length > 0) {
+        allIds.push(...data.map((d: any) => d.id));
+        if (data.length < pageSize) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      } else {
+        hasMore = false;
+      }
+    }
+
+    const productSitemap = allIds.map((id) => ({
+      url: `${SITE_URL}/products/${id}`,
       lastModified: new Date(),
       changeFrequency: "weekly" as const,
       priority: 0.7,

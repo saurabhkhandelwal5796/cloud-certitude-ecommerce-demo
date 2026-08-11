@@ -66,17 +66,33 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   let isAdmin = false;
+  let isDisabled = false;
   if (user) {
     try {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", user.id)
         .single();
-      isAdmin = profile?.role === "admin" || user.email === "admin@cloudcertitude.com";
+      isAdmin = profile?.role === "admin";
+      isDisabled = profile?.status === "disabled";
     } catch {
-      isAdmin = user.email === "admin@cloudcertitude.com";
+      // Fail closed — if we cannot verify role, deny admin access
+      isAdmin = false;
     }
+  }
+
+  // Force logout disabled users immediately
+  if (user && isDisabled) {
+    await supabase.auth.signOut();
+    const url = request.nextUrl.clone();
+    url.pathname = "/signin";
+    url.searchParams.set("error", "AccountDisabled");
+    const redirectResponse = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach((c) => {
+      redirectResponse.cookies.set(c.name, c.value, c);
+    });
+    return redirectResponse;
   }
 
   const isAdminRoute = request.nextUrl.pathname.startsWith("/admin");

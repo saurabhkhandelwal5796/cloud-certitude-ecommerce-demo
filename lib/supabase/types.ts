@@ -35,6 +35,7 @@ export interface Database {
           country: string | null;
           role: "customer" | "admin";
           newsletter_subscribed: boolean | null;
+          status: string | null;
         };
         Insert: {
           id: string;
@@ -51,6 +52,7 @@ export interface Database {
           country?: string | null;
           role?: "customer" | "admin";
           newsletter_subscribed?: boolean | null;
+          status?: string | null;
         };
         Update: {
           id?: string;
@@ -67,6 +69,7 @@ export interface Database {
           country?: string | null;
           role?: "customer" | "admin";
           newsletter_subscribed?: boolean | null;
+          status?: string | null;
         };
         Relationships: [
           {
@@ -88,7 +91,7 @@ export interface Database {
           images: string[];
           category: string;
           stock: number;
-          is_active: boolean;
+          status: 'draft' | 'active' | 'archived';
         };
         Insert: {
           id?: string;
@@ -100,7 +103,7 @@ export interface Database {
           images?: string[];
           category: string;
           stock?: number;
-          is_active?: boolean;
+          status?: 'draft' | 'active' | 'archived';
         };
         Update: {
           id?: string;
@@ -112,7 +115,7 @@ export interface Database {
           images?: string[];
           category?: string;
           stock?: number;
-          is_active?: boolean;
+          status?: 'draft' | 'active' | 'archived';
         };
         Relationships: [];
       };
@@ -234,6 +237,14 @@ export interface Database {
         };
         Relationships: [];
       };
+      variant_attribute_values: { Row: any; Insert: any; Update: any; Relationships: []; };
+      product_variants: { Row: any; Insert: any; Update: any; Relationships: []; };
+      attributes: { Row: any; Insert: any; Update: any; Relationships: []; };
+      attribute_values: { Row: any; Insert: any; Update: any; Relationships: []; };
+      attribute_groups: { Row: any; Insert: any; Update: any; Relationships: []; };
+      navigation_nodes: { Row: any; Insert: any; Update: any; Relationships: []; };
+      navigation_attribute_groups: { Row: any; Insert: any; Update: any; Relationships: []; };
+      admin_activity_logs: { Row: any; Insert: any; Update: any; Relationships: []; };
     };
     Views: {
       [_ in never]: never;

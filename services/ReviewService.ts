@@ -7,6 +7,7 @@
  */
 
 import { getOrders, getProducts, saveProduct, AdminProduct } from "./AdminService";
+import { isFullSnapshot } from "./SnapshotService";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
 export interface ProductReview {
@@ -133,7 +134,10 @@ export async function checkHasPurchased(email: string, productId: string): Promi
   
   // Look for the product in the order items
   return userOrders.some((o) =>
-    o.items?.some((item) => item.id === productId)
+    o.items?.some((item) => {
+      const itemId = isFullSnapshot(item) ? item.productId : item.id;
+      return itemId === productId;
+    })
   );
 }
 

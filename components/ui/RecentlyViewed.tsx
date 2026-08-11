@@ -7,7 +7,7 @@ interface ProductType {
   price: number;
   imageSrc: string;
   discountPercent?: number;
-  rating: number;
+  rating?: number;      // optional — no fake ratings
   reviewCount?: number;
   category: string;
   brand?: string;

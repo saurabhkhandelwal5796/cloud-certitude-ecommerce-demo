@@ -84,11 +84,14 @@ export interface OrderPayload {
   paymentMethod: string;
   itemsCount: number;
   items: Array<{
-    name: string;
+    name?: string;
+    productName?: string;
     quantity: number;
-    size: string;
-    color: string;
-    price: number;
+    size?: string;
+    color?: string;
+    price?: number;
+    // Allow any extra fields from OrderItemSnapshot
+    [key: string]: unknown;
   }>;
   totals: {
     subtotal: number;
@@ -108,6 +111,7 @@ export function buildOrderPayload(params: {
   transactionId?: string;
   paymentTimestamp?: string;
   cartItems: CartItemType[];
+  enrichedItems?: unknown[];
   address: AddressType;
   deliveryOption: string;
   deliveryFee: number;
@@ -119,6 +123,7 @@ export function buildOrderPayload(params: {
     transactionId,
     paymentTimestamp,
     cartItems,
+    enrichedItems,
     address,
     deliveryOption,
     deliveryFee,
@@ -137,7 +142,7 @@ export function buildOrderPayload(params: {
   );
 
   const discountAmount = subtotal * (discountPercent / 100);
-  const calculated = calculateOrderTotals(subtotal, deliveryFee, discountAmount);
+  const calculated = calculateOrderTotals(subtotal, deliveryFee, discountAmount, cartItems);
 
   return {
     orderId,
@@ -147,7 +152,7 @@ export function buildOrderPayload(params: {
     address,
     paymentMethod: selectedPayment,
     itemsCount: cartItems.length,
-    items: cartItems.map((item) => ({
+    items: (enrichedItems as OrderPayload["items"]) || cartItems.map((item) => ({
       name: item.name,
       quantity: item.quantity,
       size: item.selectedSize,

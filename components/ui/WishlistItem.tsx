@@ -3,9 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { formatPrice, getCategoryFallbackImage, getCategoryFromProductId } from "@/utils";
+import { formatPrice } from "@/utils";
 import { WishlistItemType, useWishlist } from "@/context/WishlistContext";
 import MoveToCartButton from "./MoveToCartButton";
+import { isProductPurchasable, getPurchasabilityLabel } from "@/services/PurchasabilityService";
 
 interface WishlistItemProps {
   item: WishlistItemType;
@@ -21,9 +22,28 @@ interface WishlistItemProps {
 export default function WishlistItem({ item }: WishlistItemProps) {
   const { removeFromWishlist } = useWishlist();
   const [currentImage, setCurrentImage] = useState(item.imageSrc);
+  const [isUnavailable, setIsUnavailable] = useState(false);
+  const [unavailableLabel, setUnavailableLabel] = useState("");
+
+  // Check live purchasability on mount
+  useEffect(() => {
+    isProductPurchasable(item.id)
+      .then((result) => {
+        if (!result.purchasable) {
+          setIsUnavailable(true);
+          setUnavailableLabel(getPurchasabilityLabel(result.reason));
+        }
+      })
+      .catch(() => {
+        // Silent fail — don’t break wishlist UI
+      });
+  }, [item.id]);
+
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     setCurrentImage(item.imageSrc);
+    setHasError(false);
   }, [item.imageSrc]);
 
   const discountedPrice = item.discountPercent
@@ -31,21 +51,36 @@ export default function WishlistItem({ item }: WishlistItemProps) {
     : item.price;
 
   return (
-    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border border-stone-200/50 bg-white shadow-sm text-left">
+    <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border shadow-sm text-left transition-colors ${
+      isUnavailable ? "border-rose-200 bg-rose-50/30" : "border-stone-200/50 bg-white"
+    }`}>
+      {/* Unavailability badge */}
+      {isUnavailable && (
+        <div className="w-full -mb-1 flex items-center gap-2 rounded-xl bg-rose-100 border border-rose-200 px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-rose-700">
+          <svg className="h-3.5 w-3.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+          {unavailableLabel}
+        </div>
+      )}
       {/* Left: Product Image & Details Link */}
       <div className="flex items-center gap-4 flex-1 min-w-0">
         <Link href={`/products/${item.id}`} className="flex-shrink-0">
-          <div className="relative h-20 w-16 overflow-hidden rounded-xl bg-stone-50 border border-stone-100">
-            <Image
-              src={currentImage}
-              alt={item.name}
-              fill
-              sizes="80px"
-              className="object-cover"
-              onError={() => {
-                setCurrentImage(getCategoryFallbackImage(getCategoryFromProductId(item.id)));
-              }}
-            />
+          <div className="relative h-20 w-16 overflow-hidden rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-center">
+            {currentImage && !hasError ? (
+              <Image
+                src={currentImage}
+                alt={item.name}
+                fill
+                sizes="80px"
+                className="object-cover"
+                onError={() => {
+                  setHasError(true);
+                }}
+              />
+            ) : (
+              <span className="text-[8px] font-bold uppercase tracking-widest text-stone-400 text-center">No<br/>Image</span>
+            )}
           </div>
         </Link>
 
@@ -60,22 +95,24 @@ export default function WishlistItem({ item }: WishlistItemProps) {
             {item.brand || "Atelier"}
           </span>
 
-          {/* Star Rating */}
-          <div className="mt-1.5 flex items-center gap-1">
-            <div className="flex text-amber-400">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <svg
-                  key={i}
-                  className={`h-3 w-3 ${i < Math.floor(item.rating) ? "fill-current" : "text-stone-200"}`}
-                  viewBox="0 0 20 20"
-                  fill="currentColor"
-                >
-                  <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                </svg>
-              ))}
+          {/* Star Rating — only shown when real reviews exist */}
+          {item.rating !== undefined && (
+            <div className="mt-1.5 flex items-center gap-1">
+              <div className="flex text-amber-400">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <svg
+                    key={i}
+                    className={`h-3 w-3 ${i < Math.floor(item.rating!) ? "fill-current" : "text-stone-200"}`}
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.03a1 1 0 00-1.175 0l-2.8 2.03c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                  </svg>
+                ))}
+              </div>
+              <span className="text-[10px] font-semibold text-stone-400">({item.rating.toFixed(1)})</span>
             </div>
-            <span className="text-[10px] font-semibold text-stone-400">({item.rating.toFixed(1)})</span>
-          </div>
+          )}
 
           {/* Discount badge if applicable */}
           {item.discountPercent !== undefined && item.discountPercent > 0 && (
@@ -102,7 +139,13 @@ export default function WishlistItem({ item }: WishlistItemProps) {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
-          <MoveToCartButton item={item} />
+          {isUnavailable ? (
+            <span className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-rose-400 cursor-not-allowed">
+              Unavailable
+            </span>
+          ) : (
+            <MoveToCartButton item={item} />
+          )}
 
           {/* Remove trigger */}
           <button

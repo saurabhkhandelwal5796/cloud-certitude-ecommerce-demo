@@ -27,6 +27,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 124,
     "sku": "CC-M-TRENCH-01",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -57,6 +58,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 98,
     "sku": "CC-M-LINEN-02",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -88,6 +90,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 156,
     "sku": "CC-W-DRESS-01",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -118,6 +121,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 88,
     "sku": "CC-W-SWEATER-02",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -147,6 +151,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 64,
     "sku": "CC-W-BLOUSE-03",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -177,6 +182,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 52,
     "sku": "CC-K-OVERALL-01",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -208,6 +214,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 42,
     "sku": "CC-K-HOODIE-02",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -239,6 +246,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 30,
     "sku": "CC-K-SWEATER-03",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -271,6 +279,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 51,
     "sku": "CC-M-003",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -303,6 +312,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 64,
     "sku": "CC-M-004",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -335,6 +345,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 77,
     "sku": "CC-M-005",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -367,6 +378,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 90,
     "sku": "CC-M-006",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -399,6 +411,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 103,
     "sku": "CC-M-007",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -431,6 +444,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 116,
     "sku": "CC-M-008",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -463,6 +477,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 129,
     "sku": "CC-M-009",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -495,6 +510,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 142,
     "sku": "CC-M-010",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -527,6 +543,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 155,
     "sku": "CC-M-011",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -559,6 +576,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 168,
     "sku": "CC-M-012",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -591,6 +609,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 181,
     "sku": "CC-M-013",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -623,6 +642,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 194,
     "sku": "CC-M-014",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -655,6 +675,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 207,
     "sku": "CC-M-015",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -687,6 +708,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 220,
     "sku": "CC-M-016",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -719,6 +741,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 233,
     "sku": "CC-M-017",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -751,6 +774,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 246,
     "sku": "CC-M-018",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -783,6 +807,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 19,
     "sku": "CC-M-019",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -815,6 +840,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 32,
     "sku": "CC-M-020",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -847,6 +873,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 45,
     "sku": "CC-M-021",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -879,6 +906,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 58,
     "sku": "CC-M-022",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -911,6 +939,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 71,
     "sku": "CC-M-023",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -943,6 +972,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 84,
     "sku": "CC-M-024",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -975,6 +1005,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 97,
     "sku": "CC-M-025",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1007,6 +1038,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 110,
     "sku": "CC-M-026",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1039,6 +1071,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 123,
     "sku": "CC-M-027",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1071,6 +1104,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 136,
     "sku": "CC-M-028",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1103,6 +1137,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 149,
     "sku": "CC-M-029",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1135,6 +1170,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 162,
     "sku": "CC-M-030",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1167,6 +1203,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 175,
     "sku": "CC-M-031",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1199,6 +1236,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 188,
     "sku": "CC-M-032",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1231,6 +1269,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 201,
     "sku": "CC-M-033",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1263,6 +1302,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 214,
     "sku": "CC-M-034",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1295,6 +1335,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 227,
     "sku": "CC-M-035",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1327,6 +1368,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 240,
     "sku": "CC-M-036",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1359,6 +1401,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 13,
     "sku": "CC-M-037",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1391,6 +1434,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 26,
     "sku": "CC-M-038",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1423,6 +1467,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 39,
     "sku": "CC-M-039",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1455,6 +1500,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 52,
     "sku": "CC-M-040",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1487,6 +1533,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 65,
     "sku": "CC-M-041",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1519,6 +1566,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 78,
     "sku": "CC-M-042",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1551,6 +1599,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 91,
     "sku": "CC-M-043",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1583,6 +1632,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 104,
     "sku": "CC-M-044",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1615,6 +1665,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 117,
     "sku": "CC-M-045",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1647,6 +1698,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 130,
     "sku": "CC-M-046",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1679,6 +1731,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 143,
     "sku": "CC-M-047",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1711,6 +1764,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 156,
     "sku": "CC-M-048",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1743,6 +1797,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 169,
     "sku": "CC-M-049",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1775,6 +1830,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 182,
     "sku": "CC-M-050",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1807,6 +1863,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 64,
     "sku": "CC-W-004",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1839,6 +1896,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 77,
     "sku": "CC-W-005",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1871,6 +1929,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 90,
     "sku": "CC-W-006",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1903,6 +1962,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 103,
     "sku": "CC-W-007",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -1935,6 +1995,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 116,
     "sku": "CC-W-008",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -1967,6 +2028,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 129,
     "sku": "CC-W-009",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -1999,6 +2061,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 142,
     "sku": "CC-W-010",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2031,6 +2094,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 155,
     "sku": "CC-W-011",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2063,6 +2127,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 168,
     "sku": "CC-W-012",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2095,6 +2160,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 181,
     "sku": "CC-W-013",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2127,6 +2193,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 194,
     "sku": "CC-W-014",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2159,6 +2226,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 207,
     "sku": "CC-W-015",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2191,6 +2259,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 220,
     "sku": "CC-W-016",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2223,6 +2292,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 233,
     "sku": "CC-W-017",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2255,6 +2325,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 246,
     "sku": "CC-W-018",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2287,6 +2358,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 19,
     "sku": "CC-W-019",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2319,6 +2391,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 32,
     "sku": "CC-W-020",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2351,6 +2424,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 45,
     "sku": "CC-W-021",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2383,6 +2457,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 58,
     "sku": "CC-W-022",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2415,6 +2490,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 71,
     "sku": "CC-W-023",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2447,6 +2523,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 84,
     "sku": "CC-W-024",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2479,6 +2556,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 97,
     "sku": "CC-W-025",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2511,6 +2589,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 110,
     "sku": "CC-W-026",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2543,6 +2622,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 123,
     "sku": "CC-W-027",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2575,6 +2655,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 136,
     "sku": "CC-W-028",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2607,6 +2688,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 149,
     "sku": "CC-W-029",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2639,6 +2721,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 162,
     "sku": "CC-W-030",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2671,6 +2754,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 175,
     "sku": "CC-W-031",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2703,6 +2787,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 188,
     "sku": "CC-W-032",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2735,6 +2820,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 201,
     "sku": "CC-W-033",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2767,6 +2853,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 214,
     "sku": "CC-W-034",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2799,6 +2886,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 227,
     "sku": "CC-W-035",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2831,6 +2919,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 240,
     "sku": "CC-W-036",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2863,6 +2952,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 13,
     "sku": "CC-W-037",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2895,6 +2985,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 26,
     "sku": "CC-W-038",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -2927,6 +3018,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 39,
     "sku": "CC-W-039",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -2959,6 +3051,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 52,
     "sku": "CC-W-040",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -2991,6 +3084,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 65,
     "sku": "CC-W-041",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3023,6 +3117,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 78,
     "sku": "CC-W-042",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3055,6 +3150,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 91,
     "sku": "CC-W-043",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3087,6 +3183,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 104,
     "sku": "CC-W-044",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3119,6 +3216,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 117,
     "sku": "CC-W-045",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3151,6 +3249,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 130,
     "sku": "CC-W-046",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3183,6 +3282,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 143,
     "sku": "CC-W-047",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3215,6 +3315,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 156,
     "sku": "CC-W-048",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3247,6 +3348,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 169,
     "sku": "CC-W-049",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3279,6 +3381,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 182,
     "sku": "CC-W-050",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3311,6 +3414,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 64,
     "sku": "CC-K-004",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3343,6 +3447,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 77,
     "sku": "CC-K-005",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3375,6 +3480,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 90,
     "sku": "CC-K-006",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3407,6 +3513,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 103,
     "sku": "CC-K-007",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3439,6 +3546,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 116,
     "sku": "CC-K-008",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3471,6 +3579,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 129,
     "sku": "CC-K-009",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3503,6 +3612,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 142,
     "sku": "CC-K-010",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3535,6 +3645,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 155,
     "sku": "CC-K-011",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3567,6 +3678,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 168,
     "sku": "CC-K-012",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3599,6 +3711,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 181,
     "sku": "CC-K-013",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3631,6 +3744,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 194,
     "sku": "CC-K-014",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3663,6 +3777,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 207,
     "sku": "CC-K-015",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3695,6 +3810,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 220,
     "sku": "CC-K-016",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3727,6 +3843,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 233,
     "sku": "CC-K-017",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3759,6 +3876,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 246,
     "sku": "CC-K-018",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3791,6 +3909,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 19,
     "sku": "CC-K-019",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3823,6 +3942,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 32,
     "sku": "CC-K-020",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3855,6 +3975,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 45,
     "sku": "CC-K-021",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3887,6 +4008,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 58,
     "sku": "CC-K-022",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -3919,6 +4041,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 71,
     "sku": "CC-K-023",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -3951,6 +4074,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 84,
     "sku": "CC-K-024",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -3983,6 +4107,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.1,
     "reviewCount": 97,
     "sku": "CC-K-025",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4015,6 +4140,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 110,
     "sku": "CC-K-026",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4047,6 +4173,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 123,
     "sku": "CC-K-027",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4079,6 +4206,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 136,
     "sku": "CC-K-028",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4111,6 +4239,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 149,
     "sku": "CC-K-029",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4143,6 +4272,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 162,
     "sku": "CC-K-030",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4172,6 +4302,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 25,
     "sku": "CC-A-001",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4201,6 +4332,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 38,
     "sku": "CC-A-002",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4230,6 +4362,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 51,
     "sku": "CC-A-003",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4259,6 +4392,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 64,
     "sku": "CC-A-004",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4288,6 +4422,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 77,
     "sku": "CC-A-005",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4317,6 +4452,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 90,
     "sku": "CC-A-006",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4346,6 +4482,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 103,
     "sku": "CC-A-007",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4375,6 +4512,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 116,
     "sku": "CC-A-008",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4404,6 +4542,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 129,
     "sku": "CC-A-009",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4433,6 +4572,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 142,
     "sku": "CC-A-010",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4462,6 +4602,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 155,
     "sku": "CC-A-011",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4491,6 +4632,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 168,
     "sku": "CC-A-012",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4520,6 +4662,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 181,
     "sku": "CC-A-013",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4549,6 +4692,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 194,
     "sku": "CC-A-014",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4578,6 +4722,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 207,
     "sku": "CC-A-015",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4607,6 +4752,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 220,
     "sku": "CC-A-016",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4636,6 +4782,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 233,
     "sku": "CC-A-017",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4665,6 +4812,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 246,
     "sku": "CC-A-018",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4694,6 +4842,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 19,
     "sku": "CC-A-019",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4723,6 +4872,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 32,
     "sku": "CC-A-020",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4755,6 +4905,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 25,
     "sku": "CC-F-001",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4787,6 +4938,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 38,
     "sku": "CC-F-002",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4819,6 +4971,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 51,
     "sku": "CC-F-003",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4851,6 +5004,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 64,
     "sku": "CC-F-004",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4883,6 +5037,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 77,
     "sku": "CC-F-005",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -4915,6 +5070,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 90,
     "sku": "CC-F-006",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -4947,6 +5103,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 103,
     "sku": "CC-F-007",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -4979,6 +5136,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 116,
     "sku": "CC-F-008",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -5011,6 +5169,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.5,
     "reviewCount": 129,
     "sku": "CC-F-009",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -5043,6 +5202,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 142,
     "sku": "CC-F-010",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -5075,6 +5235,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 155,
     "sku": "CC-F-011",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -5107,6 +5268,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.9,
     "reviewCount": 168,
     "sku": "CC-F-012",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -5139,6 +5301,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 181,
     "sku": "CC-F-013",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -5171,6 +5334,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 194,
     "sku": "CC-F-014",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -5203,6 +5367,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.4,
     "reviewCount": 207,
     "sku": "CC-F-015",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -5235,6 +5400,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.6,
     "reviewCount": 220,
     "sku": "CC-F-016",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -5267,6 +5433,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.7,
     "reviewCount": 233,
     "sku": "CC-F-017",
+    "status": "active",
     "tags": [
       "Trending"
     ]
@@ -5299,6 +5466,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.8,
     "reviewCount": 246,
     "sku": "CC-F-018",
+    "status": "active",
     "tags": [
       "New Arrival"
     ]
@@ -5331,6 +5499,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.2,
     "reviewCount": 19,
     "sku": "CC-F-019",
+    "status": "active",
     "tags": [
       "Best Seller"
     ]
@@ -5363,6 +5532,7 @@ export const INITIAL_PRODUCTS: AdminProduct[] = [
     "rating": 4.3,
     "reviewCount": 32,
     "sku": "CC-F-020",
+    "status": "active",
     "tags": [
       "Trending"
     ]
