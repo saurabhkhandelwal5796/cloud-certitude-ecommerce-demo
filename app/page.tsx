@@ -443,11 +443,12 @@ export default function HomePage() {
               <div key={product.id} className="w-[280px] flex-shrink-0">
                 <ProductCard
                   id={product.id}
+                  variantId={product.variantId}
                   name={product.name}
                   price={product.price}
                   imageSrc={product.imageSrc}
                   discountPercent={product.discountPercent}
-                  rating={product.rating || 4.5}
+                  rating={product.rating}
                   category={product.category}
                 />
               </div>

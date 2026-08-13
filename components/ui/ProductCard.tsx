@@ -9,6 +9,7 @@ import { useWishlist } from "@/context/WishlistContext";
 
 interface ProductCardProps {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -41,6 +42,7 @@ interface ProductCardProps {
  */
 export default function ProductCard({
   id,
+  variantId,
   name,
   price,
   imageSrc,
@@ -88,7 +90,7 @@ export default function ProductCard({
       setIsAdding(false);
       // Use currentImage (derived from variant shim) so Cart shows the correct
       // Supabase-stored image rather than the stale product-row imageSrc.
-      addToCart({ id, name, price, imageSrc: currentImage, discountPercent, brand }, 1, "M", "Beige");
+      addToCart({ id, variantId, name, price, imageSrc: currentImage, discountPercent, brand }, 1, "M", "Beige");
     }, 600);
   };
 
@@ -114,11 +116,11 @@ export default function ProductCard({
   return (
     <div className="group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200/50 bg-white shadow-sm shadow-stone-200/40 hover:shadow-xl hover:border-stone-300/60 transition-all duration-500">
       {/* Absolute Full Card Link */}
-      <Link href={`/products/${id}`} className="absolute inset-0 z-0" aria-label={`View details of ${name}`} />
+      <Link href={`/products/${id}${variantId ? `?variant=${variantId}` : ''}`} className="absolute inset-0 z-0" aria-label={`View details of ${name}`} />
 
       {/* Product Image and Overlay triggers */}
       <div className="relative aspect-[3/4] overflow-hidden bg-stone-50 z-0">
-        <Link href={`/products/${id}`} className="absolute inset-0 z-0 block">
+        <Link href={`/products/${id}${variantId ? `?variant=${variantId}` : ''}`} className="absolute inset-0 z-0 block">
           {currentImage && !hasError ? (
             <Image
               src={currentImage}

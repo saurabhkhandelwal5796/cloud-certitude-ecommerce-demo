@@ -259,7 +259,9 @@ export async function createVariant(input: CreateVariantInput): Promise<ProductV
 
   const isFirst = count === 0;
 
-  // 3. Insert
+  const shouldBePrimary = input.isPrimary === true || isFirst;
+
+  // 3. Insert safely with is_primary = false to avoid unique constraint collisions
   const { data, error } = await supabase
     .from("product_variants")
     .insert({
@@ -270,7 +272,7 @@ export async function createVariant(input: CreateVariantInput): Promise<ProductV
       discounted_price: input.discountedPrice ?? null,
       quantity: input.quantity ?? 0,
       is_active: input.isActive ?? true,
-      is_primary: input.isPrimary ?? isFirst,
+      is_primary: false,
       images: input.images ?? [],
       variant_signature: input.variantSignature ?? "",
       gst_rate: input.gstRate ?? 5,
@@ -291,9 +293,10 @@ export async function createVariant(input: CreateVariantInput): Promise<ProductV
   
   const created = mapRow(data);
   
-  // 4. Sync parent product if this variant is primary
-  if (created.isPrimary) {
-    await syncParentProduct(created);
+  // 4. Safely promote if requested
+  if (shouldBePrimary) {
+    await setPrimaryVariant(created.productId, created.id);
+    created.isPrimary = true;
   }
   
   return created;
@@ -346,7 +349,6 @@ export async function updateVariant(
     discounted_price?: number | null;
     quantity?: number;
     is_active?: boolean;
-    is_primary?: boolean;
     images?: string[];
     variant_signature?: string;
   } = {};
@@ -356,10 +358,12 @@ export async function updateVariant(
   if (input.discountedPrice !== undefined) updatePayload.discounted_price = input.discountedPrice;
   if (input.quantity !== undefined)        updatePayload.quantity         = input.quantity;
   if (input.isActive !== undefined)        updatePayload.is_active        = input.isActive;
-  if (input.isPrimary !== undefined)       updatePayload.is_primary       = input.isPrimary;
   if (input.images !== undefined)          updatePayload.images           = input.images;
   if (input.variantSignature !== undefined) updatePayload.variant_signature = input.variantSignature;
   if (input.gstRate !== undefined)         (updatePayload as any).gst_rate = input.gstRate;
+
+  // We explicitly DO NOT set is_primary in the main update query to prevent constraint collisions.
+  const promoteToPrimary = input.isPrimary === true;
 
   const { data, error } = await supabase
     .from("product_variants")
@@ -381,8 +385,12 @@ export async function updateVariant(
   
   const updated = mapRow(data);
   
-  // Sync parent product if this variant is primary
-  if (updated.isPrimary) {
+  if (promoteToPrimary) {
+    // If setting to primary, use safe helper to demote others
+    await setPrimaryVariant(updated.productId, updated.id);
+    updated.isPrimary = true;
+  } else if (updated.isPrimary) {
+    // If it was already primary and we are just updating other fields, sync to parent
     await syncParentProduct(updated);
   }
   

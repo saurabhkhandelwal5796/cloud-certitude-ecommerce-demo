@@ -1,5 +1,6 @@
 import React from "react";
 import AdminSidebar from "@/components/ui/AdminSidebar";
+import { AdminNavigationProvider, AdminContentArea } from "@/components/ui/AdminNavigationContext";
 import { createServerClient } from "@/lib/supabase/cookie-client";
 import { redirect } from "next/navigation";
 import { verifySupabaseConfig } from "@/utils";
@@ -62,19 +63,19 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row bg-[#FAF9F6] text-stone-800">
-      <AdminSidebar 
-        user={{ 
-          email: currentUser?.email || "", 
-          name: currentProfile?.name || "Admin User", 
-          avatarUrl: currentProfile?.avatar_url 
-        }} 
-      />
-      <main className="flex-grow w-full p-4 sm:p-6 lg:p-8 overflow-y-auto">
-        <div className="mx-auto max-w-7xl">
+    <AdminNavigationProvider>
+      <div className="min-h-screen lg:h-screen lg:overflow-hidden flex flex-col lg:flex-row bg-[#FAF9F6] text-stone-800">
+        <AdminSidebar 
+          user={{ 
+            email: currentUser?.email || "", 
+            name: currentProfile?.name || "Admin User", 
+            avatarUrl: currentProfile?.avatar_url 
+          }} 
+        />
+        <AdminContentArea>
           {children}
-        </div>
-      </main>
-    </div>
+        </AdminContentArea>
+      </div>
+    </AdminNavigationProvider>
   );
 }

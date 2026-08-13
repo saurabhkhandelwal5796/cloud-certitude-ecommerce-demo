@@ -10,6 +10,14 @@ interface CartItemProps {
   item: CartItemType;
 }
 
+function isValidImage(url: any): boolean {
+  if (!url || typeof url !== "string") return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  if (trimmed === "undefined" || trimmed === "null") return false;
+  return true;
+}
+
 /**
  * CartItem Component
  *
@@ -33,7 +41,12 @@ export default function CartItem({ item }: CartItemProps) {
     ? item.price * (1 - item.discountPercent / 100)
     : item.price;
 
-  const totalLinePrice = discountedPrice * item.quantity;
+  const prePromoLineTotal = discountedPrice * item.quantity;
+  const gstRate = item.gstRate ?? 5;
+  const estimatedGstAmount = (prePromoLineTotal * gstRate) / 100;
+  const lineTotalWithGst = prePromoLineTotal + estimatedGstAmount;
+
+  const validImage = isValidImage(currentImage) ? currentImage.trim() : null;
 
   return (
     <div className={`flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-5 rounded-2xl border shadow-sm text-left transition-colors ${
@@ -53,9 +66,9 @@ export default function CartItem({ item }: CartItemProps) {
       {/* Left: Product Image & Details Link */}
       <div className="flex items-center gap-4 flex-1">
         <div className="relative h-20 w-16 flex-shrink-0 overflow-hidden rounded-xl bg-stone-50 border border-stone-100 flex items-center justify-center">
-          {currentImage && !hasError ? (
+          {validImage && !hasError ? (
             <Image
-              src={currentImage}
+              src={validImage}
               alt={item.name}
               fill
               sizes="80px"
@@ -98,7 +111,7 @@ export default function CartItem({ item }: CartItemProps) {
         {/* Quantity Controls */}
         <div className="flex items-center rounded-full border border-stone-250 bg-stone-50 h-9 px-2.5">
           <button
-            onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity - 1)}
+            onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity - 1, item.variantId)}
             className="text-stone-500 hover:text-stone-850 font-bold px-1 text-sm cursor-pointer"
             aria-label="Decrease quantity"
           >
@@ -108,7 +121,7 @@ export default function CartItem({ item }: CartItemProps) {
             {item.quantity}
           </span>
           <button
-            onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity + 1)}
+            onClick={() => updateQuantity(item.id, item.selectedSize, item.selectedColor, item.quantity + 1, item.variantId)}
             className="text-stone-500 hover:text-stone-850 font-bold px-1 text-sm cursor-pointer"
             aria-label="Increase quantity"
           >
@@ -117,16 +130,19 @@ export default function CartItem({ item }: CartItemProps) {
         </div>
 
         {/* Pricing */}
-        <div className="text-right min-w-[80px]">
-          <span className="block text-xs text-stone-400 font-light">Total</span>
+        <div className="text-right min-w-[100px] flex flex-col items-end justify-center gap-0.5">
+          <span className="block text-xs text-stone-400 font-light mb-0.5">Total</span>
           <span className="text-sm font-extrabold text-stone-900">
-            {formatPrice(totalLinePrice)}
+            {formatPrice(lineTotalWithGst)}
+          </span>
+          <span className="block text-[10px] text-stone-400">
+            Incl. {gstRate}% GST ({formatPrice(estimatedGstAmount)})
           </span>
         </div>
 
         {/* Delete Trigger */}
         <button
-          onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor)}
+          onClick={() => removeFromCart(item.id, item.selectedSize, item.selectedColor, item.variantId)}
           className="text-stone-400 hover:text-rose-500 transition-colors p-1.5 cursor-pointer"
           title="Remove from Cart"
           aria-label={`Remove ${item.name} from cart`}

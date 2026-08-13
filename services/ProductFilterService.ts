@@ -33,6 +33,7 @@ export interface FilterParams {
 /** Shape returned to UI — matches the ProductType used in CollectionTemplate. */
 export interface FilteredProduct {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -129,11 +130,12 @@ function mapRow(row: Record<string, any>): FilteredProduct {
 
   return {
     id: row.id,
+    variantId: row.variant_id,
     name: row.name,
     price: Number(row.price),
     imageSrc,
     discountPercent: row.discount_percent ?? row.discountPercent,
-    rating: row.rating ?? 4.5,
+    rating: row.rating ?? 0,
     reviewCount: row.review_count ?? row.reviewCount ?? 0,
     category: row.category,
     brand: row.brand,
@@ -141,6 +143,35 @@ function mapRow(row: Record<string, any>): FilteredProduct {
     size: Array.isArray(row.size) ? row.size : undefined,
     description: row.description,
   };
+}
+
+/**
+ * Deduplicates facet values by their display label, summing their counts.
+ * This fixes the React duplicate key issue when multiple underlying database entities
+ * (like Navigation Nodes) share the exact same display name.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function deduplicateFacetValues(facets: Record<string, any>): Record<string, any> {
+  if (!facets) return {};
+  const result = { ...facets };
+  for (const attrName of Object.keys(result)) {
+    const group = result[attrName];
+    if (group && Array.isArray(group.values)) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const uniqueValues = new Map<string, any>();
+      for (const v of group.values) {
+        if (!v || typeof v.value !== 'string') continue;
+        if (uniqueValues.has(v.value)) {
+          const existing = uniqueValues.get(v.value);
+          existing.count = (existing.count || 0) + (v.count || 0);
+        } else {
+          uniqueValues.set(v.value, { ...v });
+        }
+      }
+      group.values = Array.from(uniqueValues.values());
+    }
+  }
+  return result;
 }
 
 // ─── V1 Public API ────────────────────────────────────────────────────────────
@@ -284,7 +315,7 @@ export async function getFilteredProductsV2(
   return {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     products:        rawProducts.map(r => mapRow(r as Record<string, any>)),
-    facets:          (payload.facets as Record<string, string[]>) ?? {},
+    facets:          deduplicateFacetValues((payload.facets as Record<string, any>) ?? {}),
     totalCount:      Number(payload.totalCount   ?? 0),
     hasNextPage:     Boolean(payload.hasNextPage  ?? false),
     executionTimeMs: Number(payload.executionTimeMs ?? 0),
@@ -381,7 +412,7 @@ export async function getGlobalSearchResults(
   return {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     products:    rawProducts.map(r => mapRow(r as Record<string, any>)),
-    facets:      payload.facets ?? {},
+    facets:      deduplicateFacetValues(payload.facets ?? {}),
     metadata:    payload.metadata ?? {},
     totalCount:  Number(payload.totalCount  ?? 0),
     hasNextPage: Boolean(payload.hasNextPage ?? false),

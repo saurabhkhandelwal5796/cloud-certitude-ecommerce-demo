@@ -27,6 +27,8 @@ interface ProductInfoProps {
   variants: VariantWithAttributes[];
   /** Product-level attribute assignments { "Material": "Cotton", "Fit": "Slim" } */
   productAttributes: Record<string, string>;
+  /** Optional variant ID passed from filtered URL to pre-select matching variant */
+  initialVariantId?: string;
   /** Callback fired when the active variant changes (useful for lifting state) */
   onVariantChange?: (variant: VariantWithAttributes | null) => void;
 }
@@ -139,6 +141,7 @@ export default function ProductInfo({
   category,
   variants,
   productAttributes,
+  initialVariantId,
   onVariantChange,
 }: ProductInfoProps) {
   const { addToCart } = useCart();
@@ -203,12 +206,18 @@ export default function ProductInfo({
 
   // Helper to get initial selected attributes based on primary variant
   const getInitialAttrs = () => {
-    const primaryVariant = variants.find(v => (v.variant as any).isPrimary && v.variant.isActive);
+    let targetVariant = null;
+    if (initialVariantId) {
+      targetVariant = variants.find(v => v.variant.id === initialVariantId && v.variant.isActive);
+    }
+    if (!targetVariant) {
+      targetVariant = variants.find(v => (v.variant as any).isPrimary && v.variant.isActive);
+    }
     const init: Record<string, string> = {};
     
     for (const key of attrKeys) {
-      if (primaryVariant && primaryVariant.attributes[key]) {
-        init[key] = primaryVariant.attributes[key];
+      if (targetVariant && targetVariant.attributes[key]) {
+        init[key] = targetVariant.attributes[key];
       } else {
         const vals = uniqueAttrValues(variants, key);
         init[key] = vals.length > 0 ? vals[0] : "";
@@ -246,18 +255,18 @@ export default function ProductInfo({
 
   // ── Derived Display Values ────────────────────────────────────────────────────
 
-  const displayPrice = activeVariant?.price ?? fallbackPrice;
+  const displayPrice = activeVariant?.price ?? (hasVariants ? 0 : fallbackPrice);
   const displayDiscountedPrice = activeVariant?.discountedPrice ?? null;
   const displayDiscountPercent =
     displayDiscountedPrice != null && displayPrice > 0
       ? Math.round(((displayPrice - displayDiscountedPrice) / displayPrice) * 100)
-      : (fallbackDiscountPercent ?? 0);
+      : (hasVariants ? 0 : (fallbackDiscountPercent ?? 0));
   const finalPrice = displayDiscountedPrice ?? (
     displayDiscountPercent > 0
       ? displayPrice * (1 - displayDiscountPercent / 100)
       : displayPrice
   );
-  const displaySku    = activeVariant?.sku ?? fallbackSku;
+  const displaySku    = activeVariant?.sku ?? (hasVariants ? '' : fallbackSku);
   const displayStock  = activeVariant?.quantity ?? 0;
   const isOutOfStock  = hasVariants ? displayStock === 0 : false;
 
@@ -276,7 +285,7 @@ export default function ProductInfo({
           variantId: activeVariant?.id,
           name,
           price: displayPrice,
-          imageSrc,
+          imageSrc: (activeVariant?.images && activeVariant.images.length > 0) ? activeVariant.images[0] : (imageSrc || ""),
           discountPercent: displayDiscountPercent || undefined,
           brand,
           maxStock: displayStock,
@@ -300,7 +309,7 @@ export default function ProductInfo({
           variantId: activeVariant?.id,
           name,
           price: displayPrice,
-          imageSrc,
+          imageSrc: (activeVariant?.images && activeVariant.images.length > 0) ? activeVariant.images[0] : (imageSrc || ""),
           discountPercent: displayDiscountPercent || undefined,
           brand,
           maxStock: displayStock,

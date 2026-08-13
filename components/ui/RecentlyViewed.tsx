@@ -3,6 +3,7 @@ import ProductCard from "./ProductCard";
 
 interface ProductType {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -36,6 +37,7 @@ export default function RecentlyViewed({ products }: RecentlyViewedProps) {
           <ProductCard
             key={p.id}
             id={p.id}
+            variantId={p.variantId}
             name={p.name}
             price={p.price}
             imageSrc={p.imageSrc}

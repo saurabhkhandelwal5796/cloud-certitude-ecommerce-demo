@@ -32,6 +32,10 @@ export interface OrderItemSnapshot {
     subtotal: number;              // unitPrice * quantity
     /** GST rate applied to this line item (e.g. 5, 12, 18, 28). Frozen at purchase time. */
     gstRate?: number;
+    /** Exact GST amount calculated for this line item (after global discounts). Frozen at purchase time. */
+    gstAmount?: number;
+    /** Final line total including GST. Frozen at purchase time. */
+    lineTotal?: number;
   };
 
   // ── Purchase metadata ─────────────────────────────────────────

@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getSupabaseClient } from "@/lib/supabase/client";
+import { useAdminNav } from "@/components/ui/AdminNavigationContext";
 
 interface SidebarItem {
   name: string;
@@ -48,22 +49,8 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
 export default function AdminSidebar({ user }: AdminSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
+  const { triggerReset } = useAdminNav();
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  const handleLogout = async () => {
-    setIsLoggingOut(true);
-    try {
-      const supabase = getSupabaseClient();
-      await supabase.auth.signOut();
-      router.push("/");
-      router.refresh();
-    } catch {
-      console.error("[AdminSidebar] Error logging out");
-    } finally {
-      setIsLoggingOut(false);
-    }
-  };
 
   const checkActive = (href: string) => {
     if (href === "/admin") {
@@ -129,7 +116,13 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 )}
                 <Link
                   href={item.href}
-                  onClick={() => setIsOpen(false)}
+                  onClick={(e) => {
+                    setIsOpen(false);
+                    if (active) {
+                      e.preventDefault();
+                      triggerReset();
+                    }
+                  }}
                   className={`flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs uppercase font-extrabold tracking-wider transition-all duration-300 transform ${
                     active
                       ? "bg-[#E0A99E]/15 text-[#C68B7D] border-l-2 border-[#E0A99E] shadow-sm shadow-[#E0A99E]/5 scale-[1.02]"
@@ -142,25 +135,31 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
               </React.Fragment>
             );
           })}
+          {user && (
+            <div className="pt-4 mt-4 border-t border-stone-100/50">
+              <Link
+                href="/admin/profile"
+                title="Open profile"
+                aria-label="Open profile"
+                className="flex items-center justify-center w-full py-2.5 rounded-2xl bg-stone-50 border border-stone-100 shadow-sm transition-all duration-300 hover:shadow-md hover:bg-stone-100 group"
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A99E]/20 text-[#C68B7D] flex items-center justify-center font-bold overflow-hidden shrink-0 group-hover:scale-105 transition-transform">
+                    {user.avatarUrl ? (
+                      <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-base">👤</span>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-stone-600 uppercase tracking-wider group-hover:text-stone-900 transition-colors">Profile</span>
+                </div>
+              </Link>
+            </div>
+          )}
         </nav>
 
         {/* Footer actions */}
         <div className="shrink-0 border-t border-stone-100 p-4 space-y-2 bg-white/90 sticky bottom-0 z-10 backdrop-blur-md">
-          {user && (
-            <div className="flex items-center gap-3 px-3 py-2 mb-2 rounded-2xl bg-stone-50 border border-stone-100 shadow-sm transition-all duration-300 hover:shadow-md">
-              <div className="w-9 h-9 rounded-full bg-[#E0A99E]/20 text-[#C68B7D] flex items-center justify-center font-bold overflow-hidden shrink-0">
-                {user.avatarUrl ? (
-                  <img src={user.avatarUrl} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  user.name.charAt(0).toUpperCase()
-                )}
-              </div>
-              <div className="flex flex-col min-w-0">
-                <span className="text-xs font-bold text-stone-900 truncate">{user.name}</span>
-                <span className="text-[10px] text-stone-500 truncate">{user.email}</span>
-              </div>
-            </div>
-          )}
           <Link
             href="/?preview=true"
             target="_blank"
@@ -169,14 +168,6 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
           >
             <span className="text-sm">🏠</span> View Storefront
           </Link>
-          <button
-            onClick={handleLogout}
-            disabled={isLoggingOut}
-            className="w-full flex items-center gap-3 px-4 py-2.5 rounded-2xl text-xs font-bold text-rose-500 hover:bg-rose-50/50 transition-colors uppercase tracking-wider text-left cursor-pointer"
-          >
-            <span className="text-sm">🚪</span>
-            {isLoggingOut ? "Logging out..." : "Log out"}
-          </button>
         </div>
       </aside>
 

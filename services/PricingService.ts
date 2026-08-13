@@ -1,9 +1,19 @@
+export interface ItemBreakdown {
+  id: string;
+  variantId?: string;
+  gstRate: number;
+  gstAmount: number;
+  taxableAmount: number;
+  lineTotal: number;
+}
+
 export interface OrderTotals {
   subtotal: number;
   tax: number;
   shipping: number;
   discount: number;
   grandTotal: number;
+  itemBreakdowns: ItemBreakdown[];
 }
 
 /**
@@ -20,6 +30,7 @@ export function calculateOrderTotals(
 ): OrderTotals {
   let tax = 0;
   const items = cartItems && Array.isArray(cartItems) ? cartItems : [];
+  const itemBreakdowns: ItemBreakdown[] = [];
 
   if (items.length > 0 && subtotal > 0) {
     let itemsCalculatedSubtotal = 0;
@@ -59,7 +70,21 @@ export function calculateOrderTotals(
       if (rate === undefined || rate === null) {
         console.warn(`PricingService: Missing GST rate for item ${item.id || item.name}, using 0% to avoid arbitrary tax charges.`);
       }
-      const itemTax = itemTaxableAmount * (Number(rate || 0) / 100);
+      const actualGstRate = Number(rate || 0);
+      const itemTax = itemTaxableAmount * (actualGstRate / 100);
+      
+      const roundedItemTax = Number(itemTax.toFixed(2));
+      const roundedTaxable = Number(itemTaxableAmount.toFixed(2));
+
+      itemBreakdowns.push({
+        id: item.id,
+        variantId: item.variantId,
+        gstRate: actualGstRate,
+        gstAmount: roundedItemTax,
+        taxableAmount: roundedTaxable,
+        lineTotal: Number((roundedTaxable + roundedItemTax).toFixed(2)),
+      });
+
       totalTax += itemTax;
     });
 
@@ -80,5 +105,6 @@ export function calculateOrderTotals(
     shipping,
     discount,
     grandTotal,
+    itemBreakdowns,
   };
 }

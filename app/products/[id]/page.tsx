@@ -12,6 +12,7 @@ import ProductDetailsClient from "@/components/ui/ProductDetailsClient";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 }
 
 const getProduct = cache(async (id: string) => {
@@ -31,8 +32,10 @@ export async function generateMetadata({ params }: PageProps) {
   return getMetadata(rawProduct.name, rawProduct.description, `/products/${rawProduct.id}`);
 }
 
-export default async function ProductDetailsPage({ params }: PageProps) {
+export default async function ProductDetailsPage({ params, searchParams }: PageProps) {
   const { id } = await params;
+  const resolvedSearchParams = await searchParams;
+  const initialVariantId = typeof resolvedSearchParams?.variant === "string" ? resolvedSearchParams.variant : undefined;
 
   // ── 1. Fetch product from Supabase ─────────────────────────────────────────
   const rawProduct = await getProduct(id);
@@ -49,7 +52,7 @@ export default async function ProductDetailsPage({ params }: PageProps) {
       price: Number(p.price),
       discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
       stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-      imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
+      imageSrc: (p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "",
       images: Array.isArray(p.images) ? (p.images as string[]) : [],
       size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
       color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
@@ -126,7 +129,8 @@ export default async function ProductDetailsPage({ params }: PageProps) {
     description: product.description,
     brand: product.brand,
     price: product.price,
-    rating: product.rating || 4.5,
+    rating: product.rating || 0,
+    reviewCount: product.reviewCount || 0,
     imageSrc: product.imageSrc,
     sku: product.sku || "",
   });
@@ -160,6 +164,7 @@ export default async function ProductDetailsPage({ params }: PageProps) {
         product={product} 
         variants={variantsWithAttrs} 
         productAttributes={productAttributes} 
+        initialVariantId={initialVariantId}
       />
 
       {/* Frequently Bought Together Bundle Package */}

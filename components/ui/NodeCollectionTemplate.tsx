@@ -28,8 +28,9 @@ import type { NavNode } from "@/services/NavigationService";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface ProductType {
+export interface ProductType {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -45,13 +46,15 @@ interface ProductType {
 
 interface NodeCollectionTemplateProps {
   node: NavNode;
+  isTopLevelCategory?: boolean;
+  childCategories?: NavNode[];
 }
 
 const ITEMS_PER_PAGE = 8;
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
-export default function NodeCollectionTemplate({ node }: NodeCollectionTemplateProps) {
+export default function NodeCollectionTemplate({ node, isTopLevelCategory, childCategories }: NodeCollectionTemplateProps) {
   // ─── Product state ────────────────────────────────────────────────────────
   const [products, setProducts] = useState<ProductType[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -134,8 +137,12 @@ export default function NodeCollectionTemplate({ node }: NodeCollectionTemplateP
   }, [node.id, activeFilters, priceRange, sortOption, currentPage]);
 
   useEffect(() => {
+    if (isTopLevelCategory && childCategories && childCategories.length > 0) {
+      setIsLoading(false); // Skip fetching products
+      return;
+    }
     fetchProducts();
-  }, [fetchProducts]);
+  }, [fetchProducts, isTopLevelCategory, childCategories]);
 
   // ─── Handlers ─────────────────────────────────────────────────────────────
   const handleFilterChange = (attributeName: string, valueLabel: string) => {
@@ -181,6 +188,52 @@ export default function NodeCollectionTemplate({ node }: NodeCollectionTemplateP
   const totalPages = Math.max(1, Math.ceil(totalCount / ITEMS_PER_PAGE));
 
   // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── 5. Top-Level Category Selection View ─────────────────────────────────
+  if (isTopLevelCategory && childCategories && childCategories.length > 0) {
+    return (
+      <div className="mx-auto max-w-7xl px-4 py-16 text-center animate-fade-in">
+        <h1 className="text-3xl font-black uppercase tracking-widest text-stone-900 mb-4">{node.name}</h1>
+        <p className="text-sm font-medium text-stone-500 mb-12">Please select a category to continue shopping.</p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 text-left">
+          {childCategories.map((child) => (
+            <div key={child.id} className="group flex flex-col bg-white border border-stone-200/60 rounded-2xl overflow-hidden hover:shadow-xl hover:border-[#E0A99E] transition-all cursor-pointer" onClick={() => router.push(`/${child.fullPath}`)}>
+              <div className="p-6 pb-4">
+                <div className="flex items-center gap-3 mb-2">
+                  {child.icon && <span className="text-2xl opacity-80 group-hover:opacity-100 transition-opacity">{child.icon}</span>}
+                  <h3 className="text-lg font-black tracking-widest uppercase text-stone-850 group-hover:text-[#C68B7D] transition-colors">{child.name}</h3>
+                </div>
+                {child.children && child.children.length > 0 && (
+                  <ul className="mt-4 space-y-2">
+                    {child.children.slice(0, 4).map((subChild) => (
+                      <li key={subChild.id} className="text-xs font-medium text-stone-500 hover:text-stone-900 transition-colors">
+                        <a href={`/${subChild.fullPath}`} onClick={(e) => { e.stopPropagation(); router.push(`/${subChild.fullPath}`); }} className="block">
+                          {subChild.name}
+                        </a>
+                      </li>
+                    ))}
+                    {child.children.length > 4 && (
+                      <li className="text-xs font-bold text-[#E0A99E] mt-2">
+                        + {child.children.length - 4} more
+                      </li>
+                    )}
+                  </ul>
+                )}
+              </div>
+              <div className="mt-auto bg-stone-50 border-t border-stone-100 p-4 flex justify-between items-center group-hover:bg-[#E0A99E]/5 transition-colors">
+                <span className="text-[10px] font-black uppercase tracking-widest text-stone-400 group-hover:text-[#C68B7D]">Shop {child.name}</span>
+                <svg className="w-4 h-4 text-stone-300 group-hover:text-[#E0A99E] transition-colors transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                </svg>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ─── 6. Standard Product Listing View ─────────────────────────────────────
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8 bg-[#FAF9F6]">
       {/* Hero strip */}
@@ -243,6 +296,7 @@ export default function NodeCollectionTemplate({ node }: NodeCollectionTemplateP
                 <ProductCard
                   key={product.id}
                   id={product.id}
+                  variantId={product.variantId}
                   name={product.name}
                   price={product.price}
                   imageSrc={product.imageSrc}

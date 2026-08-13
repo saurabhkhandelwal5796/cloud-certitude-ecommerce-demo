@@ -288,20 +288,36 @@ export async function getNodeFacets(navNodeId: string): Promise<NodeFacetGroup[]
 
   const rawResult = (data ?? {}) as { metadata?: { product_count: number; has_children: boolean }; facets?: NodeFacetResult };
   const rawFacets = rawResult.facets ?? {};
-
-  const groups: NodeFacetGroup[] = Object.entries(rawFacets).map(([attributeName, meta]) => ({
-    attributeName,
-    displayType: meta.displayType ?? "multi-select",
-    sortOrder: meta.sortOrder ?? 0,
-    allowSearch: meta.allowSearch ?? false,
-    maxVisible: meta.maxVisible ?? 6,
-    isCollapsedDefault: meta.isCollapsedDefault ?? false,
-    values: (meta.values ?? []).map((v: NodeFacetValue) => ({
+  
+  const groups: NodeFacetGroup[] = Object.entries(rawFacets).map(([attributeName, meta]) => {
+    let values = (meta.values ?? []).map((v: NodeFacetValue) => ({
       value: v.value,
       hexColor: v.hexColor ?? null,
       count: v.count ?? 0,
-    })),
-  }));
+    }));
+    
+    // Deduplicate values by display label to prevent duplicate React keys
+    // This happens when multiple underlying entities (e.g. Navigation Nodes) share the same name
+    const uniqueValues = new Map<string, any>();
+    for (const v of values) {
+      if (uniqueValues.has(v.value)) {
+        uniqueValues.get(v.value).count += v.count;
+      } else {
+        uniqueValues.set(v.value, { ...v });
+      }
+    }
+    values = Array.from(uniqueValues.values());
+
+    return {
+      attributeName,
+      displayType: meta.displayType ?? "multi-select",
+      sortOrder: meta.sortOrder ?? 0,
+      allowSearch: meta.allowSearch ?? false,
+      maxVisible: meta.maxVisible ?? 6,
+      isCollapsedDefault: meta.isCollapsedDefault ?? false,
+      values,
+    };
+  });
 
   // Sort by sortOrder ascending
   groups.sort((a, b) => a.sortOrder - b.sortOrder);

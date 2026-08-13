@@ -35,6 +35,7 @@ import type { NodeFacetGroup } from "@/services/FacetService";
 
 interface ProductType {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -131,7 +132,10 @@ function SearchResults() {
       setProducts(result.products as ProductType[]);
       
       // Convert facet object to array
-      const facetArray = Object.values(result.facets) as NodeFacetGroup[];
+      const facetArray = Object.entries(result.facets).map(([attributeName, meta]) => ({
+        attributeName,
+        ...(meta as any)
+      })) as NodeFacetGroup[];
       setFacets(facetArray);
       
       setTotalCount(result.totalCount);
@@ -282,6 +286,7 @@ function SearchResults() {
                   <ProductCard
                     key={product.id}
                     id={product.id}
+                    variantId={product.variantId}
                     name={product.name}
                     price={product.price}
                     imageSrc={product.imageSrc}

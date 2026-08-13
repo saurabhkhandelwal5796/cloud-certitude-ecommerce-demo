@@ -68,12 +68,14 @@ export default function AIRecommendationCard({
           <h4 className="text-xs font-black text-stone-900 leading-snug line-clamp-2 uppercase tracking-wide">
             {product.name}
           </h4>
-          <div className="flex items-center gap-1.5 pt-1">
-            <RatingStars rating={product.rating || 4.5} size="xs" />
-            <span className="text-[9px] font-bold text-stone-400">
-              ({product.rating?.toFixed(1) || "4.5"})
-            </span>
-          </div>
+          {product.reviewCount ? (
+            <div className="flex items-center gap-1.5 pt-1">
+              <RatingStars rating={product.rating || 0} size="xs" />
+              <span className="text-[9px] font-bold text-stone-400">
+                ({product.rating?.toFixed(1)})
+              </span>
+            </div>
+          ) : null}
         </div>
 
         {/* Pricing Segment */}

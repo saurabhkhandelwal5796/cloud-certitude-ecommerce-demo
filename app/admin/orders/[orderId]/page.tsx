@@ -314,9 +314,16 @@ export default function AdminOrderAuditPage() {
                       {statusLabel}
                     </span>
                   </div>
-                  <span className="font-bold text-stone-900 text-sm">
-                    {formatPrice(item.pricing.subtotal)} ({item.pricing.quantity} &times; {formatPrice(item.pricing.unitPrice)})
-                  </span>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold text-stone-900 text-sm">
+                      {formatPrice(item.pricing.lineTotal ?? item.pricing.subtotal)} ({item.pricing.quantity} &times; {formatPrice(item.pricing.unitPrice)})
+                    </span>
+                    {(item.pricing.gstAmount != null) && (
+                      <span className="text-[10px] text-stone-500 font-medium mt-0.5">
+                        Includes {item.pricing.gstRate}% GST ({formatPrice(item.pricing.gstAmount)})
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Item Core Content */}

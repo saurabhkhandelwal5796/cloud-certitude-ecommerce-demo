@@ -72,6 +72,7 @@ export default function RecommendationCarousel({
           <div key={p.id} className="w-[260px] sm:w-[280px] flex-shrink-0 transition-all duration-350 hover:-translate-y-1">
             <ProductCard
               id={p.id}
+              variantId={p.variantId}
               name={p.name}
               price={p.price}
               imageSrc={p.imageSrc}

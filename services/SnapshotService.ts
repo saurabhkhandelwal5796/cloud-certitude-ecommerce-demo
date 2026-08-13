@@ -22,6 +22,7 @@ import type { OrderItemSnapshot } from "@/types/OrderItemSnapshot";
 
 interface EnrichmentParams {
   cartItems: CartItemType[];
+  itemBreakdowns?: { id: string; variantId?: string; gstRate: number; gstAmount: number; lineTotal: number; }[];
   orderId: string;
   orderDate: string;       // ISO timestamp
   paymentMethod: string;
@@ -39,7 +40,7 @@ interface EnrichmentParams {
 export async function buildOrderSnapshots(
   params: EnrichmentParams
 ): Promise<OrderItemSnapshot[]> {
-  const { cartItems, orderId, orderDate, paymentMethod, transactionId } = params;
+  const { cartItems, itemBreakdowns, orderId, orderDate, paymentMethod, transactionId } = params;
 
   if (cartItems.length === 0) return [];
 
@@ -162,7 +163,7 @@ export async function buildOrderSnapshots(
           };
 
     // Pricing: use cart price as the authoritative "charged" price
-    const originalPrice    = vRow?.price ?? item.price;
+    const originalPrice    = item.price ?? vRow?.price;
     const discountPercent  = item.discountPercent ?? 0;
     const unitPrice        = discountPercent > 0
       ? item.price * (1 - discountPercent / 100)
@@ -177,6 +178,14 @@ export async function buildOrderSnapshots(
         ? productImages[0]
         : null;
     const productImage = variantImage || productFallback || item.imageSrc || "";
+
+    const breakdown = itemBreakdowns?.find(
+      (b) => b.id === item.id && (b.variantId === item.variantId || !b.variantId)
+    );
+
+    const gstRateVal = breakdown?.gstRate ?? item.gstRate ?? (vRow?.gst_rate != null ? Number(vRow.gst_rate) : 5);
+    const gstAmountVal = breakdown?.gstAmount ?? parseFloat((parseFloat(subtotal.toFixed(2)) * (gstRateVal / 100)).toFixed(2));
+    const lineTotalVal = breakdown?.lineTotal ?? parseFloat((parseFloat(subtotal.toFixed(2)) + gstAmountVal).toFixed(2));
 
     return {
       productId,
@@ -198,7 +207,9 @@ export async function buildOrderSnapshots(
         discountPercent,
         quantity:        item.quantity,
         subtotal:        parseFloat(subtotal.toFixed(2)),
-        gstRate:         vRow?.gst_rate != null ? Number(vRow.gst_rate) : (item.gstRate ?? 5),
+        gstRate:         gstRateVal,
+        gstAmount:       gstAmountVal,
+        lineTotal:       lineTotalVal,
       },
 
       purchaseMetadata: {
@@ -274,6 +285,9 @@ export function coerceLegacyItem(raw: {
       discountPercent,
       quantity:        raw.quantity,
       subtotal:        parseFloat((unitPrice * raw.quantity).toFixed(2)),
+      gstRate:         5, // Fallback legacy rate
+      gstAmount:       parseFloat(((unitPrice * raw.quantity) * 0.05).toFixed(2)),
+      lineTotal:       parseFloat(((unitPrice * raw.quantity) * 1.05).toFixed(2)),
     },
 
     purchaseMetadata: {

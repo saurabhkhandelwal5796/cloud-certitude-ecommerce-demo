@@ -130,7 +130,8 @@ export default function CheckoutPage() {
     subtotal,
     shipping,
     tax,
-    grandTotal
+    grandTotal,
+    itemBreakdowns
   } = calculateOrderTotals(
     cartSubtotal,
     deliveryFee,
@@ -185,6 +186,7 @@ export default function CheckoutPage() {
     try {
       enrichedItems = await buildOrderSnapshots({
         cartItems,
+        itemBreakdowns,
         orderId,
         orderDate: new Date().toISOString(),
         paymentMethod: selectedPayment === "cod" ? "Cash on Delivery" : selectedPayment,
@@ -192,18 +194,24 @@ export default function CheckoutPage() {
       });
     } catch (err) {
       console.error("[Checkout] Snapshot enrichment failed, falling back to basic item payload:", err);
-      enrichedItems = cartItems.map((item) => ({
-        id: item.id,
-        variantId: item.variantId,
-        name: item.name,
-        quantity: item.quantity,
-        size: item.selectedSize,
-        color: item.selectedColor,
-        price: item.price,
-        imageSrc: item.imageSrc,
-        brand: item.brand,
-        discountPercent: item.discountPercent,
-      }));
+      enrichedItems = cartItems.map((item) => {
+        const breakdown = itemBreakdowns.find((b) => b.id === item.id && (b.variantId === item.variantId || !b.variantId));
+        return {
+          id: item.id,
+          variantId: item.variantId,
+          name: item.name,
+          quantity: item.quantity,
+          size: item.selectedSize,
+          color: item.selectedColor,
+          price: item.price,
+          imageSrc: item.imageSrc,
+          brand: item.brand,
+          discountPercent: item.discountPercent,
+          gstRate: breakdown?.gstRate ?? item.gstRate ?? 5,
+          gstAmount: breakdown?.gstAmount ?? 0,
+          lineTotal: breakdown?.lineTotal ?? 0
+        };
+      });
     }
 
     const payload = buildOrderPayload({

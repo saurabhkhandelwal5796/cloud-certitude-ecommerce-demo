@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import ProductImageGallery from "@/components/ui/ProductImageGallery";
 import DeliveryChecker from "@/components/ui/DeliveryChecker";
 import ProductInfo from "@/components/ui/ProductInfo";
@@ -11,24 +11,27 @@ interface Props {
   product: AdminProduct;
   variants: VariantWithAttributes[];
   productAttributes: Record<string, string>;
+  initialVariantId?: string;
 }
 
 import SocialShare from "@/components/ui/SocialShare";
 
-export default function ProductDetailsClient({ product, variants, productAttributes }: Props) {
+const EMPTY_IMAGES: string[] = [];
+
+export default function ProductDetailsClient({ product, variants, productAttributes, initialVariantId }: Props) {
   // We need to lift the variant selection state up if we want the left gallery to update
   // based on the right side's selection.
   
   const [activeVariantImages, setActiveVariantImages] = useState<string[]>(product.images);
 
   // We can pass a callback to ProductInfo to notify when the active variant changes
-  const handleVariantChange = (variant: VariantWithAttributes | null) => {
+  const handleVariantChange = useCallback((variant: VariantWithAttributes | null) => {
     if (variant && variant.variant.images && variant.variant.images.length > 0) {
       setActiveVariantImages(variant.variant.images);
     } else {
-      setActiveVariantImages(product.images); // fallback to product images
+      setActiveVariantImages(EMPTY_IMAGES); // Enforce: No variant = no product image
     }
-  };
+  }, []);
 
   return (
     <div className="flex flex-col lg:flex-row gap-12 items-start">
@@ -47,12 +50,13 @@ export default function ProductDetailsClient({ product, variants, productAttribu
           price={product.price}
           imageSrc={product.imageSrc}
           discountPercent={product.discountPercent}
-          rating={product.rating || 4.5}
+          rating={product.rating || 0}
           reviewCount={product.reviewCount || 0}
           sku={product.sku || ""}
           description={product.description}
           variants={variants}
           productAttributes={productAttributes}
+          initialVariantId={initialVariantId}
           onVariantChange={handleVariantChange}
         />
 

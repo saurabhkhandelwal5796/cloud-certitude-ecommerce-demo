@@ -97,7 +97,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         const stored = localStorage.getItem(`certitude_cart_${userId}`);
         if (stored) {
           const parsed: CartItemType[] = JSON.parse(stored);
-          setCartItems(parsed);
+          
+          // Sanitize any legacy literal "undefined" strings from localStorage
+          const sanitized = parsed.map(item => {
+            let img = item.imageSrc;
+            if (typeof img === "string" && (img === "undefined" || img === "null" || img.trim() === "")) {
+              img = "";
+            }
+            return { ...item, imageSrc: img };
+          });
+          
+          setCartItems(sanitized);
 
           // ─── Staleness Detection ──────────────────────────────────────────
           // After loading from localStorage, validate all items with variantIds

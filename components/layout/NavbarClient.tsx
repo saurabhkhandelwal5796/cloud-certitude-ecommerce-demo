@@ -63,83 +63,63 @@ interface NavbarClientProps {
  */
 // ─── MegaMenu sub-component ──────────────────────────────────────────────────
 
-function MegaMenu({ rootNode, onClose }: { rootNode: NavNode; onClose: () => void }) {
-  const [activeL1, setActiveL1] = useState<NavNode | null>(
-    rootNode.children[0] ?? null
-  );
+function MegaMenuNode({ node, onClose, depth = 1 }: { node: NavNode; onClose: () => void; depth?: number }) {
+  // If it's a leaf node, render as a regular link
+  if (node.children.length === 0) {
+    return (
+      <Link
+        href={`/${node.fullPath}`}
+        onClick={onClose}
+        className={`block hover:text-[#C68B7D] transition-colors ${
+          depth === 1 
+            ? "text-[11px] font-extrabold uppercase tracking-widest text-stone-900 mb-3"
+            : depth === 2
+            ? "text-[12px] font-medium text-stone-600 mb-1.5"
+            : "text-[12px] text-stone-500 mb-1.5"
+        }`}
+      >
+        {node.icon && <span className="mr-1.5">{node.icon}</span>}
+        {node.name}
+      </Link>
+    );
+  }
 
-  const activeL2Children = activeL1?.children ?? [];
+  // If it has children, render as a header, then recursively render children
+  return (
+    <div className={`mb-${depth === 1 ? '8' : '4'}`}>
+      <Link 
+        href={`/${node.fullPath}`}
+        onClick={onClose}
+        className={`inline-block hover:text-[#C68B7D] transition-colors ${
+          depth === 1 
+            ? "text-[11px] font-extrabold uppercase tracking-widest text-stone-900 mb-3"
+            : "text-[10px] font-extrabold uppercase tracking-widest text-stone-400 mb-2 mt-2"
+        }`}
+      >
+        {node.icon && <span className="mr-1.5">{node.icon}</span>}
+        {node.name}
+      </Link>
+      <div className={depth > 1 ? "pl-2 border-l border-stone-100 space-y-1.5" : "space-y-1.5"}>
+        {node.children.map((child) => (
+          <MegaMenuNode key={child.id} node={child} onClose={onClose} depth={depth + 1} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MegaMenu({ rootNode, onClose }: { rootNode: NavNode; onClose: () => void }) {
+  if (!rootNode.children || rootNode.children.length === 0) return null;
 
   return (
-    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-0 w-screen max-w-4xl z-50 pt-3">
-      <div className="bg-white border border-stone-200/50 shadow-2xl rounded-2xl overflow-hidden">
-        <div className="flex">
-          {/* Column 1: L1 children of root */}
-          <div className="w-44 border-r border-stone-100 bg-stone-50 py-3">
-            {rootNode.children.map((l1) => (
-              <button
-                key={l1.id}
-                onMouseEnter={() => setActiveL1(l1)}
-                className={`w-full text-left px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider transition-colors flex items-center justify-between ${
-                  activeL1?.id === l1.id
-                    ? "text-[#C68B7D] bg-white border-r-2 border-[#E0A99E]"
-                    : "text-stone-600 hover:text-[#C68B7D] hover:bg-white/70"
-                }`}
-              >
-                {l1.icon && <span className="mr-1.5">{l1.icon}</span>}
-                {l1.name}
-                {l1.children.length > 0 && <span className="text-stone-300 text-[9px]">▶</span>}
-              </button>
-            ))}
-          </div>
-
-          {/* Columns 2+: L2 / leaf links */}
-          {activeL1 && (
-            <div className="flex-1 p-5">
-              {activeL2Children.length > 0 ? (
-                <div className="grid grid-cols-3 gap-6">
-                  {activeL2Children.map((l2) => (
-                    <div key={l2.id}>
-                      <p className="text-[10px] font-extrabold uppercase tracking-widest text-stone-400 mb-2">
-                        {l2.name}
-                      </p>
-                      <div className="space-y-1.5">
-                        {l2.children.length > 0
-                          ? l2.children.map((leaf) => (
-                              <Link
-                                key={leaf.id}
-                                href={`/${leaf.fullPath}`}
-                                onClick={onClose}
-                                className="block text-[12px] text-stone-600 hover:text-[#C68B7D] font-medium transition-colors"
-                              >
-                                {leaf.name}
-                              </Link>
-                            ))
-                          : (
-                              <Link
-                                href={`/${l2.fullPath}`}
-                                onClick={onClose}
-                                className="block text-[12px] text-stone-600 hover:text-[#C68B7D] font-medium transition-colors"
-                              >
-                                Shop All
-                              </Link>
-                            )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                // L1 has no L2 children — show direct link
-                <Link
-                  href={`/${activeL1.fullPath}`}
-                  onClick={onClose}
-                  className="text-sm font-semibold text-[#C68B7D] hover:underline"
-                >
-                  Shop All {activeL1.name} →
-                </Link>
-              )}
+    <div className="relative z-10 w-full pt-3">
+      <div className="bg-white border border-stone-200/50 shadow-2xl rounded-2xl overflow-hidden p-6 max-h-[75vh] overflow-y-auto w-full">
+        <div className="columns-2 md:columns-3 lg:columns-4 gap-8">
+          {rootNode.children.map((l1) => (
+            <div key={l1.id} className="break-inside-avoid">
+              <MegaMenuNode node={l1} onClose={onClose} depth={1} />
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>
@@ -216,7 +196,6 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
   const [currentUser, setCurrentUser] = useState(user);
   const [searchQuery, setSearchQuery] = useState("");
   const [userRole, setUserRole] = useState<"admin" | "customer">("customer");
-  const [searchCategory, setSearchCategory] = useState("All");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
 
   const [searchResults, setSearchResults] = useState<SearchSuggestion[]>([]);
@@ -228,6 +207,9 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
   const [showDropdown, setShowDropdown] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const bellRef = useRef<HTMLDivElement>(null);
+
+  const [activeMegaMenuNode, setActiveMegaMenuNode] = useState<NavNode | null>(null);
+  const megaMenuRef = useRef<HTMLDivElement>(null);
 
   const closeModal = () => {
     setIsModalOpen(false);
@@ -462,9 +444,6 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
     closeModal();
     const params = new URLSearchParams();
     params.set("q", searchQuery.trim());
-    if (searchCategory !== "All") {
-      params.set("Category", searchCategory);
-    }
     router.push(`/search?${params.toString()}`);
   };
 
@@ -523,7 +502,7 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
 
   return (
     <nav className="bg-white border-b border-stone-200/50 sticky top-0 z-50 transition-all duration-300">
-      {/* Top Amazon-style Bar */}
+      {/* Top Amazon-style Bar (Navbar 1) */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-3">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           
@@ -560,30 +539,6 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
           {/* Large Amazon-style Search Bar */}
           <div className="flex-1 w-full max-w-4xl px-0 md:px-8 relative group">
             <form onSubmit={handleSearchSubmit} className={`flex w-full rounded-md border ${isSearchFocused ? 'border-[#E0A99E] ring-1 ring-[#E0A99E]' : 'border-stone-300'} bg-white transition-all`}>
-              {/* Category Dropdown */}
-              <div className="flex-shrink-0 bg-stone-100 hover:bg-stone-200 rounded-l-md border-r border-stone-300 transition-colors">
-                <select
-                  value={searchCategory}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setSearchCategory(val);
-                    if (val !== "All") {
-                      const node = navTree.find((n) => n.name.toLowerCase() === val.toLowerCase());
-                      const route = node ? `/${node.fullPath}` : `/${val.toLowerCase()}`;
-                      router.push(route);
-                    }
-                  }}
-                  className="h-full py-2.5 pl-3 pr-8 bg-transparent text-xs font-semibold text-stone-700 focus:outline-none cursor-pointer appearance-none rounded-l-md"
-                  style={{ backgroundImage: 'url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23131313%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.7rem top 50%', backgroundSize: '0.65rem auto' }}
-                >
-                  <option value="All" className="bg-white text-stone-700 text-sm font-medium py-2">All</option>
-                  <option value="Men" className="bg-white text-stone-700 text-sm font-medium py-2">Men</option>
-                  <option value="Women" className="bg-white text-stone-700 text-sm font-medium py-2">Women</option>
-                  <option value="Kids" className="bg-white text-stone-700 text-sm font-medium py-2">Kids</option>
-                  <option value="Watches" className="bg-white text-stone-700 text-sm font-medium py-2">Watches</option>
-                </select>
-              </div>
-
               {/* Input */}
               <input
                 type="text"
@@ -592,7 +547,7 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 placeholder="Search products..."
-                className="flex-1 px-4 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none w-full min-w-[200px]"
+                className="flex-1 px-4 py-2 text-sm text-stone-800 placeholder-stone-400 focus:outline-none w-full min-w-[200px] rounded-l-md"
               />
 
               {/* Search Button */}
@@ -610,9 +565,7 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
             {isSearchFocused && searchResults.length > 0 && debouncedQuery.trim() && (
               <div className="absolute top-full left-0 right-0 mt-1 mx-0 md:mx-8 bg-white border border-stone-200 shadow-2xl rounded-md overflow-hidden z-[999]">
                 <div className="max-h-[400px] overflow-y-auto">
-                  {searchResults
-                    .filter((prod) => searchCategory === "All" || prod.category_name?.toLowerCase() === searchCategory.toLowerCase())
-                    .map((prod) => (
+                  {searchResults.map((prod) => (
                     <Link
                       key={prod.id}
                       href={`/products/${prod.id}`}
@@ -631,8 +584,8 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
                       <p className="text-xs font-black text-stone-900 flex-shrink-0">{formatPrice(prod.price)}</p>
                     </Link>
                   ))}
-                  {searchResults.filter((prod) => searchCategory === "All" || prod.category_name?.toLowerCase() === searchCategory.toLowerCase()).length === 0 && (
-                    <div className="p-4 text-center text-xs text-stone-500 font-light">No products found in {searchCategory}.</div>
+                  {searchResults.length === 0 && (
+                    <div className="p-4 text-center text-xs text-stone-500 font-light">No products found.</div>
                   )}
                 </div>
               </div>
@@ -847,6 +800,55 @@ export default function NavbarClient({ user, navigationTree = {}, navTree = [] }
         </div>
       </div>
 
+      {/* Desktop Category Nav Bar (below main search bar) */}
+      <div className="hidden md:block border-b border-stone-200/50 bg-white" onMouseLeave={() => setActiveMegaMenuNode(null)}>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-8 h-12 relative">
+            {sortedNavTree.map((node) => (
+              <div 
+                key={node.id} 
+                className="h-full flex items-center"
+                onMouseEnter={() => setActiveMegaMenuNode(node)}
+              >
+                <Link
+                  href={node.children && node.children.length > 0 ? "#" : `/${node.fullPath}`}
+                  className={`text-xs font-bold tracking-widest uppercase transition-colors h-full flex items-center border-b-2 ${
+                    activeMegaMenuNode?.id === node.id 
+                      ? "border-[#E0A99E] text-[#C68B7D]" 
+                      : "border-transparent text-stone-600 hover:text-[#C68B7D]"
+                  }`}
+                  onClick={(e) => {
+                    if (node.children && node.children.length > 0) {
+                      e.preventDefault();
+                      setActiveMegaMenuNode(node);
+                    } else {
+                      setActiveMegaMenuNode(null);
+                    }
+                  }}
+                >
+                  {node.name}
+                </Link>
+              </div>
+            ))}
+            
+            {/* MegaMenu Dropdown Portal */}
+            {activeMegaMenuNode && (
+              <div className="absolute top-full left-0 w-full z-50">
+                {/* Backdrop Overlay - Starts EXACTLY below Navbar 2 and covers the rest of the screen */}
+                <div 
+                  className="absolute top-0 left-1/2 -translate-x-1/2 w-screen h-[100vh] bg-stone-900/40 backdrop-blur-sm -z-10"
+                  onClick={() => setActiveMegaMenuNode(null)}
+                  style={{ cursor: 'default' }}
+                />
+                <MegaMenu 
+                  rootNode={activeMegaMenuNode} 
+                  onClose={() => setActiveMegaMenuNode(null)} 
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
 
       {/* Mobile Drawer */}

@@ -48,6 +48,28 @@ export interface CartValidationResult {
 // ─── Core Checks ──────────────────────────────────────────────────────────────
 
 /**
+ * Helper to safely parse images from PostgreSQL text arrays or JSON strings.
+ */
+function parseImages(rawImages: any): string[] {
+  let parsed: string[] = [];
+  if (Array.isArray(rawImages)) {
+    parsed = rawImages;
+  } else if (typeof rawImages === 'string') {
+    try {
+      parsed = JSON.parse(rawImages);
+    } catch {
+      if (rawImages.startsWith("{") && rawImages.endsWith("}")) {
+        parsed = rawImages
+          .slice(1, -1)
+          .split(",")
+          .map((s: string) => s.trim().replace(/^"|"$/g, ""));
+      }
+    }
+  }
+  return parsed;
+}
+
+/**
  * Checks whether a specific variant is purchasable.
  * Fetches live data from Supabase, validates every business rule.
  */
@@ -89,11 +111,8 @@ export async function isVariantPurchasable(
       return { purchasable: false, reason: "PRICE_ZERO" };
     }
 
-    // 5. Check at least one image
-    const images = Array.isArray(variant.images) ? variant.images : [];
-    if (images.length === 0) {
-      return { purchasable: false, reason: "NO_IMAGE" };
-    }
+    // 5. Check at least one image - REMOVED
+    // Variants without images are allowed to be purchased (they show placeholders).
 
     // 6. Check stock — out of stock is still "purchasable" in the display sense
     const qty = Number(variant.quantity ?? 0);
@@ -164,9 +183,10 @@ export async function isProductPurchasable(
     }
 
     // 4. At least one priced variant must have an image
-    const qualifiedVariants = pricedVariants.filter(
-      (v: any) => Array.isArray(v.images) && v.images.length > 0
-    );
+    const qualifiedVariants = pricedVariants.filter((v: any) => {
+      const images = parseImages(v.images);
+      return images.length > 0;
+    });
 
     if (qualifiedVariants.length === 0) {
       return { purchasable: false, reason: "NO_IMAGE" };
@@ -235,11 +255,8 @@ export async function validateCartItems(
         continue;
       }
 
-      const images = Array.isArray(variant.images) ? variant.images : [];
-      if (images.length === 0) {
-        resultMap.set(vid, { purchasable: false, reason: "NO_IMAGE" });
-        continue;
-      }
+      // Images check removed for cart validation.
+      // A variant can be purchased even if it lacks an image (displays placeholder).
 
       const qty = Number(variant.quantity ?? 0);
       if (qty === 0) {

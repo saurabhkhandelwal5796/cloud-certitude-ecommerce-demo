@@ -197,7 +197,7 @@ export default function AdminRecommendationsPage() {
                 </div>
                 <div className="text-right flex items-center gap-8">
                   <div className="text-xs">
-                    <RatingStars rating={item.rating || 4.5} size="xs" />
+                    <RatingStars rating={item.rating || 0} size="xs" />
                     <span className="block text-[9px] text-stone-400 font-light mt-0.5">Rating</span>
                   </div>
                   <div className="text-xs min-w-[70px]">

@@ -62,6 +62,7 @@ export function getProductSchema(product: {
   brand: string;
   price: number;
   rating: number;
+  reviewCount?: number;
   imageSrc: string;
   sku: string;
 }) {
@@ -86,11 +87,13 @@ export function getProductSchema(product: {
       "itemCondition": "https://schema.org/NewCondition",
       "availability": "https://schema.org/InStock",
     },
-    "aggregateRating": {
-      "@type": "AggregateRating",
-      "ratingValue": product.rating || 4.5,
-      "reviewCount": 12,
-    },
+    ...(product.rating && product.reviewCount ? {
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": product.rating,
+        "reviewCount": product.reviewCount,
+      }
+    } : {}),
   };
 }
 

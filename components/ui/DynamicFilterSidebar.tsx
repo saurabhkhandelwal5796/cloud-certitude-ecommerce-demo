@@ -205,7 +205,7 @@ function CheckboxGroup({
         const active = selected.includes(v.value);
         return (
           <label
-            key={v.value}
+            key={`${group.attributeName}-${v.value}`}
             className="flex items-center justify-between text-sm text-stone-700 cursor-pointer select-none group"
           >
             <div className="flex items-center gap-2.5">

@@ -40,34 +40,63 @@ function setStorageItem<T>(key: string, value: T): void {
 }
 
 function mapRawProducts(data: any[]): AdminProduct[] {
-  return data.map((p: any) => ({
-    id: String(p.id),
-    name: String(p.name),
-    description: String(p.description || ""),
-    category: String(p.category),
-    brand: String(p.brand || "Atelier"),
-    price: Number(p.price),
-    discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
-    stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-    imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
-    images: Array.isArray(p.images) ? (p.images as string[]) : [],
-    size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
-    color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
-    rating: p.rating !== undefined ? Number(p.rating) : 4.5,
-    reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
-    sku: String(p.sku || ""),
-    tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
-    hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
-    navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
-    status: p.status as "draft" | "active" | "archived" || "draft"
-  }));
+  return data.map((p: any) => {
+    // Find primary variant if included in the payload
+    let primaryVariant = null;
+    if (Array.isArray(p.product_variants) && p.product_variants.length > 0) {
+      primaryVariant = p.product_variants.find((v: any) => v.is_primary && v.is_active) || 
+                       p.product_variants.find((v: any) => v.is_active) || 
+                       p.product_variants[0];
+    }
+
+    const variantId = primaryVariant ? primaryVariant.id : (p.variant_id !== undefined ? String(p.variant_id) : (p.variantId !== undefined ? String(p.variantId) : undefined));
+    const price = primaryVariant ? Number(primaryVariant.price) : Number(p.price);
+    
+    let discountPercent = 0;
+    if (primaryVariant) {
+      if (primaryVariant.price > 0 && primaryVariant.discounted_price !== null && primaryVariant.discounted_price < primaryVariant.price) {
+        discountPercent = Math.round(((primaryVariant.price - primaryVariant.discounted_price) / primaryVariant.price) * 100);
+      } else {
+        discountPercent = primaryVariant.discount_percent ? Number(primaryVariant.discount_percent) : 0;
+      }
+    } else {
+      discountPercent = p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0);
+    }
+
+    const imageSrc = primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0 
+      ? primaryVariant.images[0] 
+      : ((p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "");
+
+    return {
+      id: String(p.id),
+      variantId,
+      name: String(p.name),
+      description: String(p.description || ""),
+      category: String(p.category),
+      brand: String(p.brand || "Atelier"),
+      price,
+      discountPercent,
+      stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
+      imageSrc,
+      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
+      color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
+      rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+      reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
+      sku: String(p.sku || ""),
+      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+      hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
+      navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
+      status: p.status as "draft" | "active" | "archived" || "draft"
+    };
+  });
 }
 
 export async function fetchProductsByIds(ids: string[]): Promise<AdminProduct[]> {
   if (!ids || ids.length === 0) return [];
   const { getSupabaseClient } = await import("@/lib/supabase/client");
   const supabase = getSupabaseClient() as any;
-  const { data } = await supabase.from('products').select('*').in('id', ids).eq('status', 'active');
+  const { data } = await supabase.from('products').select('*, product_variants(*)').in('id', ids).eq('status', 'active');
   if (!data) return [];
   return mapRawProducts(data);
 }
@@ -75,7 +104,7 @@ export async function fetchProductsByIds(ids: string[]): Promise<AdminProduct[]>
 export async function fetchProductsByQuery(queryModifier: (q: any) => any): Promise<AdminProduct[]> {
   const { getSupabaseClient } = await import("@/lib/supabase/client");
   const supabase = getSupabaseClient() as any;
-  let q = supabase.from('products').select('*').eq('status', 'active');
+  let q = supabase.from('products').select('*, product_variants(*)').eq('status', 'active');
   q = queryModifier(q);
   const { data } = await q;
   if (!data) return [];
@@ -171,8 +200,8 @@ export async function getTrendingNow(): Promise<AdminProduct[]> {
   const products = await fetchProductsByQuery(q => q.order('rating', { ascending: false }).limit(20));
 
   const sorted = [...products].sort((a, b) => {
-    const scoreA = (viewScore[a.id] || 0) + (a.rating || 0) * 10;
-    const scoreB = (viewScore[b.id] || 0) + (b.rating || 0) * 10;
+    const scoreA = (viewScore[a.id] || 0) + (a.rating) * 10;
+    const scoreB = (viewScore[b.id] || 0) + (b.rating) * 10;
     return scoreB - scoreA;
   });
 
@@ -251,7 +280,7 @@ export async function getRecommendedForYou(email?: string): Promise<AdminProduct
     if (wishlist.some((item) => item.id === p.id)) {
       score += 100;
     }
-    score += (p.rating || 0) * 15;
+    score += (p.rating) * 15;
     if (purchasedIds.has(p.id)) {
       score -= 300;
     }
@@ -344,11 +373,11 @@ export async function getFrequentlyBoughtTogether(productId: string): Promise<{
   bundleProducts: AdminProduct[];
   totalPrice: number;
   discountedPrice: number;
-}> {
+} | null> {
   const prods = await fetchProductsByIds([productId]);
   const main = prods[0];
   if (!main) {
-    throw new Error("Product not found");
+    return null;
   }
 
   const { getSupabaseClient } = await import("@/lib/supabase/client");

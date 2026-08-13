@@ -7,6 +7,7 @@ import Image from "next/image";
 import { formatPrice, getCategoryFallbackImage } from "@/utils";
 import { getProducts, getAdminProductsPaginated, saveProduct, deleteProduct, bulkUpdateProducts, AdminProduct } from "@/services/AdminService";
 import CascadingNavPicker from "@/components/ui/CascadingNavPicker";
+import Pagination from "@/components/ui/Pagination";
 import { ALLOWED_IMAGE_HOSTS } from "@/utils/imageConfig";
 import {
   CatalogGroup,
@@ -280,7 +281,9 @@ export default function AdminProductsPage() {
   const [vPrice, setVPrice] = useState("");
   const [vDiscPrice, setVDiscPrice] = useState("");
   const [vQty, setVQty] = useState("");
+  const [vGstRate, setVGstRate] = useState("5");
   const [vActive, setVActive] = useState(true);
+  const [vIsPrimary, setVIsPrimary] = useState(false);
   const [vFormError, setVFormError] = useState<string | null>(null);
   const [vSaving, setVSaving] = useState(false);
   // Variant count badge per product
@@ -669,7 +672,9 @@ export default function AdminProductsPage() {
     setVDiscPrice("");
     setVDiscountPercent("");
     setVQty("");
+    setVGstRate("5");
     setVActive(true);
+    setVIsPrimary(false);
     setVSelectedAttrIds({});
     setVImages([]);
     setVSelectedFiles([]);
@@ -741,7 +746,9 @@ export default function AdminProductsPage() {
     }
 
     setVQty(v.quantity.toString());
+    setVGstRate(v.gstRate?.toString() || "5");
     setVActive(v.isActive);
+    setVIsPrimary(v.isPrimary);
     setVImages(v.images || []);
     setVSelectedFiles([]);
     setVFilePreviews([]);
@@ -866,6 +873,8 @@ export default function AdminProductsPage() {
           discountedPrice: sellingPrice,
           quantity: qtyNum,
           isActive: vActive,
+          isPrimary: vIsPrimary,
+          gstRate: parseInt(vGstRate, 10) || 5,
           images: finalImages,
           variantSignature,
         });
@@ -882,6 +891,8 @@ export default function AdminProductsPage() {
           discountedPrice: sellingPrice,
           quantity: qtyNum,
           isActive: vActive,
+          isPrimary: vIsPrimary,
+          gstRate: parseInt(vGstRate, 10) || 5,
           images: [],
           variantSignature,
         });
@@ -984,24 +995,7 @@ export default function AdminProductsPage() {
     if (!stockQuantity || isNaN(Number(stockQuantity)) || Number(stockQuantity) < 0) {
       return setFormError("Stock quantity must be a non-negative number.");
     }
-    const validateImageSrc = (url: string): boolean => {
-      try {
-        const parsed = new URL(url);
-        if (
-          (parsed.hostname === "unsplash.com" || parsed.hostname === "www.unsplash.com") &&
-          parsed.pathname.startsWith("/photos")
-        ) {
-          return false;
-        }
-        return ALLOWED_IMAGE_HOSTS.includes(parsed.hostname);
-      } catch {
-        return false;
-      }
-    };
-
-    if (!imageSrc.trim() || !validateImageSrc(imageSrc.trim())) {
-      return setFormError("Please provide a direct image URL.");
-    }
+    // Removed obsolete Product-level image URL validation
     if (selectedSizes.length === 0) {
       return setFormError("Please select at least one product size.");
     }
@@ -1035,6 +1029,8 @@ export default function AdminProductsPage() {
     } catch (err) {
       return setFormError("Failed to validate attribute mapping for the selected node.");
     }
+
+    console.log("[AdminService] Saving product with navNodeId:", selectedNavNodeId);
 
     const payload: AdminProduct = {
       id: editingProduct ? editingProduct.id : `product_${Date.now()}`,
@@ -1274,26 +1270,16 @@ export default function AdminProductsPage() {
       
       {/* Pagination */}
       {totalProducts > ITEMS_PER_PAGE && (
-        <div className="flex justify-between items-center bg-white p-4 rounded-3xl border border-stone-200/50 shadow-sm">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-white p-4 rounded-3xl border border-stone-200/50 shadow-sm">
           <div className="text-xs text-stone-500 font-medium">
             Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to {Math.min(currentPage * ITEMS_PER_PAGE, totalProducts)} of {totalProducts}
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              className="px-4 py-2 rounded-full border border-stone-200 text-xs font-bold uppercase tracking-wider text-stone-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-50 transition-colors"
-            >
-              Previous
-            </button>
-            <button 
-              disabled={currentPage * ITEMS_PER_PAGE >= totalProducts}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className="px-4 py-2 rounded-full border border-stone-200 text-xs font-bold uppercase tracking-wider text-stone-600 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-stone-50 transition-colors"
-            >
-              Next
-            </button>
-          </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={Math.ceil(totalProducts / ITEMS_PER_PAGE)}
+            onPageChange={(page) => setCurrentPage(page)}
+            className="w-full sm:w-auto"
+          />
         </div>
       )}
 
@@ -1855,6 +1841,22 @@ export default function AdminProductsPage() {
                             className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40" />
                         </div>
 
+                        {/* GST Rate */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">GST Rate (%) *</label>
+                          <select 
+                            value={vGstRate} 
+                            onChange={(e) => setVGstRate(e.target.value)}
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
+                          >
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18">18%</option>
+                            <option value="28">28%</option>
+                          </select>
+                        </div>
+
                         {/* Selling Price Preview */}
                         <div className="space-y-1.5">
                           <label className="block font-bold uppercase tracking-wider text-stone-500">Selling Price (Preview)</label>
@@ -1885,6 +1887,23 @@ export default function AdminProductsPage() {
                               }`} />
                             </span>
                             <span className="text-xs font-semibold text-stone-600">{vActive ? "Active" : "Inactive"}</span>
+                          </label>
+                        </div>
+
+                        {/* Primary Variant */}
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500" title={editingVariantId && variants.find(v => v.id === editingVariantId)?.isPrimary ? "Primary variant cannot be unchecked directly. Make another variant primary instead." : ""}>Primary Variant</label>
+                          <label className={`inline-flex items-center gap-2 ${editingVariantId && variants.find(v => v.id === editingVariantId)?.isPrimary ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                            <input type="checkbox" checked={vIsPrimary} onChange={(e) => setVIsPrimary(e.target.checked)} disabled={vSaving || (!!editingVariantId && !!variants.find(v => v.id === editingVariantId)?.isPrimary)}
+                              className="sr-only" />
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              vIsPrimary ? "bg-emerald-500" : "bg-stone-300"
+                            }`}>
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                                vIsPrimary ? "translate-x-4" : "translate-x-1"
+                              }`} />
+                            </span>
+                            <span className="text-xs font-semibold text-stone-600">{vIsPrimary ? "Primary" : "Secondary"}</span>
                           </label>
                         </div>
                       </div>

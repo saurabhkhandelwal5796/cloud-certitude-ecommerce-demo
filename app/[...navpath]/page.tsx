@@ -1,7 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getNodeByPath, getAncestors, getNodeSeo, getNodeBanners } from "@/services/NavigationService";
+import { getNodeByPath, getAncestors, getNodeSeo, getNodeBanners, getNavTree, NavNode } from "@/services/NavigationService";
 import NodeCollectionTemplate from "@/components/ui/NodeCollectionTemplate";
 import DynamicBreadcrumbs from "@/components/ui/DynamicBreadcrumbs";
 
@@ -76,11 +76,23 @@ export default async function NavPathPage({
     notFound();
   }
 
-  // Fetch ancestors + banners in parallel
-  const [ancestors, banners] = await Promise.all([
+  // Fetch ancestors + banners + navTree in parallel
+  const [ancestors, banners, navTree] = await Promise.all([
     getAncestors(node.id),
     getNodeBanners(node.id),
+    getNavTree(),
   ]);
+
+  // Determine if this is a top-level node with children
+  // To avoid showing a broad product listing when directly visiting a top-level route (e.g. /men)
+  let isTopLevelCategory = false;
+  let childCategories: NavNode[] = [];
+
+  const treeNode = navTree.find((n) => n.id === node.id);
+  if (treeNode) {
+    isTopLevelCategory = true;
+    childCategories = treeNode.children || [];
+  }
 
   return (
     <div className="min-h-screen bg-[#FAF9F6]">
@@ -112,7 +124,11 @@ export default async function NavPathPage({
       )}
 
       {/* Collection grid — client component */}
-      <NodeCollectionTemplate node={node} />
+      <NodeCollectionTemplate 
+        node={node} 
+        isTopLevelCategory={isTopLevelCategory}
+        childCategories={childCategories}
+      />
     </div>
   );
 }

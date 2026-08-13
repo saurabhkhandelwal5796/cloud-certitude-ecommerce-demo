@@ -27,6 +27,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 
 interface ProductType {
   id: string;
+  variantId?: string;
   name: string;
   price: number;
   imageSrc: string;
@@ -322,6 +323,7 @@ export default function CollectionTemplate({
                 <ProductCard
                   key={product.id}
                   id={product.id}
+                  variantId={product.variantId}
                   name={product.name}
                   price={product.price}
                   imageSrc={product.imageSrc}

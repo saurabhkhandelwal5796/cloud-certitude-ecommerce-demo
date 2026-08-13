@@ -481,9 +481,16 @@ export default function OrderDetailsPage({ params }: PageProps) {
                           {item.productName}
                         </Link>
                       </div>
-                      <span className="font-bold text-stone-850 text-sm whitespace-nowrap">
-                        {formatPrice(item.pricing.subtotal)}
-                      </span>
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span className="font-bold text-stone-850 text-sm whitespace-nowrap">
+                          {formatPrice(item.pricing.lineTotal ?? item.pricing.subtotal)}
+                        </span>
+                        {(item.pricing.gstAmount != null) && (
+                          <span className="text-[9px] text-stone-400 font-light whitespace-nowrap">
+                            Incl. {item.pricing.gstRate}% GST ({formatPrice(item.pricing.gstAmount)})
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {item.sku && (

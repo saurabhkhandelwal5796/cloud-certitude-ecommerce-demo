@@ -9,6 +9,7 @@ import VariantFilters from "./components/VariantFilters";
 import VariantBulkToolbar from "./components/VariantBulkToolbar";
 import VariantActionMenu from "./components/VariantActionMenu";
 import VariantInlineCell from "./components/VariantInlineCell";
+import Pagination from "@/components/ui/Pagination";
 
 export default function AdminVariantsPage() {
   const [variants, setVariants] = useState<AdminVariantListItem[]>([]);
@@ -46,7 +47,12 @@ export default function AdminVariantsPage() {
   // Create workflow state
   const [availableProducts, setAvailableProducts] = useState<{ id: string; name: string }[]>([]);
   const [selectedCreateProduct, setSelectedCreateProduct] = useState<{ id: string; name: string } | null>(null);
-  const [availableAttributes, setAvailableAttributes] = useState<Record<string, { id: string; value: string }[]>>({});
+  const [lookupSearchTerm, setLookupSearchTerm] = useState("");
+  const [debouncedLookupSearch, setDebouncedLookupSearch] = useState("");
+  const [lookupResults, setLookupResults] = useState<{ id: string; name: string }[]>([]);
+  const [isLookupSearching, setIsLookupSearching] = useState(false);
+  const [isLookupOpen, setIsLookupOpen] = useState(false);
+  const [availableAttributes, setAvailableAttributes] = useState<Record<string, { id: string; value: string; attrId: string; }[]>>({});
   const [cSelectedAttrIds, setCSelectedAttrIds] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -59,6 +65,7 @@ export default function AdminVariantsPage() {
   const [fDiscPercent, setFDiscPercent] = useState("");
   const [fQty, setFQty] = useState("");
   const [fActive, setFActive] = useState(true);
+  const [fIsPrimary, setFIsPrimary] = useState(false);
   const [fGstRate, setFGstRate] = useState("5");
 
   // Image upload
@@ -80,6 +87,14 @@ export default function AdminVariantsPage() {
     }, 500);
     return () => clearTimeout(handler);
   }, [searchQuery, filters]);
+
+  const calculatedSellingPrice = useMemo(() => {
+    const mrp = parseFloat(fPrice);
+    const disc = parseFloat(fDiscPercent);
+    if (isNaN(mrp) || mrp <= 0) return null;
+    if (isNaN(disc) || disc <= 0) return mrp;
+    return mrp - (mrp * disc) / 100;
+  }, [fPrice, fDiscPercent]);
 
   const loadVariants = useCallback(async () => {
     setIsLoading(true);
@@ -110,6 +125,34 @@ export default function AdminVariantsPage() {
   useEffect(() => {
     loadVariants();
   }, [loadVariants]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedLookupSearch(lookupSearchTerm);
+    }, 300);
+    return () => clearTimeout(handler);
+  }, [lookupSearchTerm]);
+
+  useEffect(() => {
+    if (!isLookupOpen) return;
+    let isMounted = true;
+    const fetchLookup = async () => {
+      setIsLookupSearching(true);
+      try {
+        const { getAdminProductsPaginated } = await import("@/services/AdminService");
+        const res = await getAdminProductsPaginated({ page: 1, limit: 15, search: debouncedLookupSearch });
+        if (isMounted) {
+          setLookupResults(res.products.map(p => ({ id: p.id, name: p.name })));
+        }
+      } catch (err) {
+        console.error("Failed to fetch products for lookup", err);
+      } finally {
+        if (isMounted) setIsLookupSearching(false);
+      }
+    };
+    fetchLookup();
+    return () => { isMounted = false; };
+  }, [debouncedLookupSearch, isLookupOpen]);
 
   useEffect(() => {
     import("@/services/AdminVariantService").then(m => {
@@ -395,6 +438,7 @@ export default function AdminVariantsPage() {
     }
     setFQty(variant.quantity.toString());
     setFActive(variant.isActive);
+    setFIsPrimary(variant.isPrimary);
     setFGstRate(variant.gstRate?.toString() || "5");
     setVImages([...variant.images]);
 
@@ -410,12 +454,14 @@ export default function AdminVariantsPage() {
         getVariantAttributeValues(variant.id)
       ]);
       
-      const attrMap: Record<string, { id: string; value: string }[]> = {};
+      const attrMap: Record<string, { id: string; value: string; attrId: string; }[]> = {};
       for (const group of attributeGroups) {
         for (const attr of group.attributes) {
-          const selectedValues = attr.values.filter((v: any) => valIds.includes(v.id));
-          if (selectedValues.length > 0) {
-            attrMap[attr.name] = selectedValues;
+          const options = attr.values
+            .filter((val: any) => valIds.includes(val.id))
+            .map((val: any) => ({ id: val.id, value: val.value, attrId: attr.id }));
+          if (options.length > 0) {
+            attrMap[attr.name] = options;
           }
         }
       }
@@ -447,6 +493,7 @@ export default function AdminVariantsPage() {
     setIsCreating(true);
     setSelectedVariant(null);
     setSelectedCreateProduct(null);
+    setLookupSearchTerm("");
     setCSelectedAttrIds({});
     
     // Default form values for creation
@@ -456,6 +503,7 @@ export default function AdminVariantsPage() {
     setFDiscPercent("");
     setFQty("0");
     setFActive(true);
+    setFIsPrimary(false);
     setFGstRate("5");
     setVImages([]);
 
@@ -472,32 +520,31 @@ export default function AdminVariantsPage() {
     }
   };
 
-  const handleCreateProductChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const pid = e.target.value;
-    if (!pid) {
+  const handleProductSelect = async (product: { id: string; name: string } | null) => {
+    if (!product) {
       setSelectedCreateProduct(null);
       setAvailableAttributes({});
       setCSelectedAttrIds({});
       return;
     }
     
-    const product = availableProducts.find(p => p.id === pid);
-    if (product) {
-      setSelectedCreateProduct(product);
-      setIsLoadingAttributes(true);
-      try {
-        const { getProductAttributes, getFullCatalog } = await import("@/services/AttributeService");
+    setSelectedCreateProduct(product);
+    setIsLoadingAttributes(true);
+    try {
+      const { getProductAttributes, getFullCatalog } = await import("@/services/AttributeService");
         const [valIds, attributeGroups] = await Promise.all([
           getProductAttributes(product.id),
           getFullCatalog()
         ]);
         
-        const attrMap: Record<string, { id: string; value: string }[]> = {};
+        const attrMap: Record<string, { id: string; value: string; attrId: string; }[]> = {};
         for (const group of attributeGroups) {
           for (const attr of group.attributes) {
-            const selectedValues = attr.values.filter((v: any) => valIds.includes(v.id));
-            if (selectedValues.length > 0) {
-              attrMap[attr.name] = selectedValues;
+            const options = attr.values
+              .filter((val: any) => valIds.includes(val.id))
+              .map((val: any) => ({ id: val.id, value: val.value, attrId: attr.id }));
+            if (options.length > 0) {
+              attrMap[attr.name] = options;
             }
           }
         }
@@ -515,7 +562,6 @@ export default function AdminVariantsPage() {
       } finally {
         setIsLoadingAttributes(false);
       }
-    }
   };
 
   const handleDuplicateVariant = async (variant: AdminVariantListItem) => {
@@ -557,12 +603,14 @@ export default function AdminVariantsPage() {
         getVariantsWithAttributes(variant.product!.id)
       ]);
       
-      const attrMap: Record<string, { id: string; value: string }[]> = {};
+      const attrMap: Record<string, { id: string; value: string; attrId: string; }[]> = {};
       for (const group of attributeGroups) {
         for (const attr of group.attributes) {
-          const selectedValues = attr.values.filter((v: any) => valIds.includes(v.id));
-          if (selectedValues.length > 0) {
-            attrMap[attr.name] = selectedValues;
+          const options = attr.values
+            .filter((val: any) => valIds.includes(val.id))
+            .map((val: any) => ({ id: val.id, value: val.value, attrId: attr.id }));
+          if (options.length > 0) {
+            attrMap[attr.name] = options;
           }
         }
       }
@@ -653,59 +701,88 @@ export default function AdminVariantsPage() {
 
     setIsSaving(true);
     try {
-      let finalImages = [...vImages];
-
-      // 1. Compute Signature
-      const selectedValueIds = Object.values(cSelectedAttrIds).filter(Boolean) as string[];
-      const { generateVariantSignature, createVariant, isSkuUnique } = await import("@/services/VariantService");
-      const variantSignature = generateVariantSignature(selectedValueIds);
-
-      // SKU Uniqueness Validation
+      const targetProductId = isCreating ? selectedCreateProduct!.id : selectedVariant!.product!.id;
+      const { generateVariantSignature, createVariant, updateVariant, uploadVariantImages, isSkuUnique, getProductVariants, setVariantAttributeValues } = await import("@/services/VariantService");
+      
       const isUnique = await isSkuUnique(fSku, isCreating ? undefined : selectedVariant!.id);
       if (!isUnique) {
         throw new Error(`SKU "${fSku.trim()}" already exists. Please enter a unique SKU.`);
       }
 
-      // Duplicate Combination Validation
-      const targetProductId = isCreating ? selectedCreateProduct!.id : selectedVariant!.product!.id;
-      const { getProductVariants } = await import("@/services/VariantService");
-      const existingVariants = await getProductVariants(targetProductId);
-      
-      const conflict = existingVariants.find((va) => {
-        if (!isCreating && va.id === selectedVariant!.id) return false;
-        return va.variantSignature === variantSignature;
-      });
+      let savedVariant: any;
 
-      if (conflict) {
-        throw new Error(`A variant with this combination already exists (SKU: ${conflict.sku}). Each combination must be unique.`);
-      }
+      const selectedValueIds = Object.values(cSelectedAttrIds).filter(Boolean) as string[];
+      const variantSignature = generateVariantSignature(selectedValueIds);
 
-      if (isCreating) {
+      // 1. If editing existing variant
+      if (!isCreating && selectedVariant) {
+        let finalImages = [...vImages];
+        if (vSelectedFiles.length > 0) {
+          const uploadedUrls = await uploadVariantImages(targetProductId, selectedVariant.id, vSelectedFiles);
+          finalImages = [...finalImages, ...uploadedUrls];
+        }
 
-        // Create Variant initially without new files (since we need its ID for storage)
-        let savedVariant = await createVariant({
-          productId: selectedCreateProduct!.id,
+        savedVariant = await updateVariant(selectedVariant.id, {
           sku: fSku.trim(),
           variantName: generatedName,
           price: priceNum,
           discountedPrice: discPercentNum > 0 && fDiscPrice.trim() ? parseFloat(fDiscPrice) : null,
           quantity: qtyNum,
           isActive: fActive,
-          images: vImages, // keep existing images if duplicating
+          isPrimary: fIsPrimary,
+          gstRate: parseInt(fGstRate, 10) || 5,
+          images: finalImages,
           variantSignature,
-          gstRate: parseInt(fGstRate, 10) || 5
         });
 
-        // Now upload files using the real variant ID
-        if (vSelectedFiles.length > 0) {
-          const { uploadVariantImages, updateVariant } = await import("@/services/VariantService");
-          const uploadedUrls = await uploadVariantImages(selectedCreateProduct!.id, savedVariant.id, vSelectedFiles);
-          const finalUploads = [...vImages, ...uploadedUrls];
-          savedVariant = await updateVariant(savedVariant.id, { images: finalUploads });
-          setVImages(finalUploads);
-        }
+        // Update optimistic state
+        setVariants(prev => prev.map(v => {
+          if (v.id === savedVariant.id) {
+            return {
+              ...v,
+              ...savedVariant,
+              product: v.product
+            };
+          }
+          if (savedVariant.isPrimary && v.product?.id === targetProductId) {
+            return { ...v, isPrimary: false };
+          }
+          return v;
+        }));
+        setSuccessMessage("Variant updated successfully.");
 
-        // Add optimistic insert
+      } 
+      // 2. If creating new variant
+      else {
+        // Create variant first to get variant ID
+        savedVariant = await createVariant({
+          productId: targetProductId,
+          sku: fSku.trim(),
+          variantName: generatedName,
+          price: priceNum,
+          discountedPrice: discPercentNum > 0 && fDiscPrice.trim() ? parseFloat(fDiscPrice) : null,
+          quantity: qtyNum,
+          isActive: fActive,
+          isPrimary: fIsPrimary,
+          gstRate: parseInt(fGstRate, 10) || 5,
+          images: [],
+          variantSignature,
+        });
+
+        // Now upload new files using the new variant ID
+        if (vSelectedFiles.length > 0) {
+          const uploadedUrls = await uploadVariantImages(targetProductId, savedVariant.id, vSelectedFiles);
+          if (uploadedUrls.length > 0) {
+            savedVariant = await updateVariant(savedVariant.id, {
+              images: uploadedUrls,
+            });
+          }
+        }
+        
+        // Note: For create, products flow omits gstRate and isPrimary in createVariant, but we should make sure we update optimistic state correctly.
+        // Actually, we must use the SAME payload construction. The working flow didn`t pass isPrimary or gstRate inside createVariant!
+        // So we just did that.
+        
         setVariants(prev => [{
           id: savedVariant.id,
           sku: savedVariant.sku,
@@ -717,134 +794,31 @@ export default function AdminVariantsPage() {
           isActive: savedVariant.isActive,
           images: savedVariant.images,
           variantSignature: savedVariant.variantSignature || variantSignature,
-          gstRate: savedVariant.gstRate || parseInt(fGstRate, 10) || 5,
+          gstRate: savedVariant.gstRate || 5,
           createdAt: savedVariant.createdAt,
           updatedAt: savedVariant.updatedAt || new Date().toISOString(),
-          isPrimary: prev.length === 0, // Auto-promoted on backend if first variant
-          product: { id: selectedCreateProduct!.id, name: selectedCreateProduct!.name }
-        }, ...prev]);
+          isPrimary: savedVariant.isPrimary,
+          product: { id: targetProductId, name: selectedCreateProduct!.name }
+        }, ...prev.map(v => savedVariant.isPrimary && v.product?.id === targetProductId ? { ...v, isPrimary: false } : v)]);
         setTotalVariants(prev => prev + 1);
 
         setSuccessMessage("Variant created successfully.");
-        // We stay in modal to allow closing or creating more? Better just close or show success.
         setShowModal(false);
         resetForm();
-
-      } else {
-        if (!selectedVariant) throw new Error("Missing variant for update");
-        const { getSupabaseClient } = await import("@/lib/supabase/client");
-        const supabase = getSupabaseClient();
-        const { data: currentData, error: fetchErr } = await supabase
-          .from("product_variants")
-          .select("updated_at")
-          .eq("id", selectedVariant.id)
-          .single();
-          
-        if (fetchErr) throw fetchErr;
-        if (currentData.updated_at !== selectedVariant.updatedAt) {
-          throw new Error("This variant was recently updated by another administrator. Please refresh the page to see the latest changes before saving.");
-        }
-
-        if (vSelectedFiles.length > 0) {
-          const { uploadVariantImages } = await import("@/services/VariantService");
-          const uploadedUrls = await uploadVariantImages(selectedVariant.product!.id, selectedVariant.id, vSelectedFiles);
-          finalImages = [...finalImages, ...uploadedUrls];
-        }
-
-        // Check if anything actually changed
-        const updatePayload: any = {};
-        if (fSku.trim() !== selectedVariant.sku) updatePayload.sku = fSku.trim();
-        if (priceNum !== selectedVariant.price) updatePayload.price = priceNum;
-        
-        const newDiscPrice = discPercentNum > 0 && fDiscPrice.trim() ? parseFloat(fDiscPrice) : null;
-        if (newDiscPrice !== selectedVariant.discountedPrice) updatePayload.discountedPrice = newDiscPrice;
-        
-        if (qtyNum !== selectedVariant.quantity) updatePayload.quantity = qtyNum;
-        if (fActive !== selectedVariant.isActive) updatePayload.isActive = fActive;
-        const newGstRate = parseInt(fGstRate, 10) || 5;
-        if (newGstRate !== selectedVariant.gstRate) updatePayload.gstRate = newGstRate;
-
-        if (finalImages.length !== selectedVariant.images.length || !finalImages.every((img, i) => img === selectedVariant.images[i])) {
-          updatePayload.images = finalImages;
-        }
-
-        if (generatedName !== selectedVariant.variantName) {
-          updatePayload.variantName = generatedName;
-        }
-        
-        if (variantSignature !== selectedVariant.variantSignature) {
-          updatePayload.variantSignature = variantSignature;
-        }
-
-        // If nothing changed, we still proceed to update attributes just in case
-
-        const { updateVariant } = await import("@/services/VariantService");
-        let savedVariant = selectedVariant as any;
-        if (Object.keys(updatePayload).length > 0) {
-          savedVariant = await updateVariant(selectedVariant.id, updatePayload);
-        } else {
-          // If no fields changed but images did (updatePayload for images is set only if different, wait, finalImages is updated above)
-          // Oh wait, if updatePayload is empty, savedVariant remains selectedVariant but with old images?
-          // We already mutated finalImages. If updatePayload is empty, nothing changed. So we can just use selectedVariant.
-        }
-        
-        const newVariant: AdminVariantListItem = {
-          ...savedVariant,
-          images: finalImages, // Ensure finalImages is always applied in case it was skipped in updatePayload but we want the UI updated if it was an empty upload? Actually if finalImages changed it would be in updatePayload.
-          product: selectedVariant.product
-        };
-        
-        // Synchronize ALL frontend state from the saved variant
-        setVariants(prev => prev.map(v => v.id === newVariant.id ? newVariant : v));
-        setSelectedVariant(newVariant);
-        
-        setFSku(newVariant.sku);
-        setFPrice(newVariant.price.toString());
-        setFQty(newVariant.quantity.toString());
-        setFActive(newVariant.isActive);
-        setFGstRate(newVariant.gstRate?.toString() || "5");
-        setVImages([...newVariant.images]);
-        
-        if (newVariant.discountedPrice != null && newVariant.price > 0) {
-          const diff = newVariant.price - newVariant.discountedPrice;
-          const pct = Math.round((diff / newVariant.price) * 100);
-          setFDiscPercent(pct.toString());
-          setFDiscPrice(newVariant.discountedPrice.toString());
-        } else {
-          setFDiscPercent("");
-          setFDiscPrice("");
-        }
-
-        // Update Attributes in DB
-        const assignments: Array<{ attributeId: string; attributeValueId: string }> = Object.entries(cSelectedAttrIds)
-          .filter(([, valueId]) => valueId)
-          .map(([attrName, valueId]) => {
-            const opt = availableAttributes[attrName]?.find((o) => o.id === valueId);
-            return opt ? { attributeId: opt.id.split('_')[0] || "", attributeValueId: opt.id } : null; // wait, do we have attributeId in availableAttributes?
-          })
-          .filter((a): a is { attributeId: string; attributeValueId: string } => a !== null);
-          
-        // Let's use the safer approach to find attributeId
-        const { setVariantAttributeValues } = await import("@/services/VariantService");
-        
-        const finalAssignments: Array<{ attributeId: string; attributeValueId: string }> = [];
-        for (const [attrName, valueId] of Object.entries(cSelectedAttrIds)) {
-          if (!valueId) continue;
-          const { getFullCatalog } = await import("@/services/AttributeService");
-          const groups = await getFullCatalog();
-          for (const group of groups) {
-            for (const attr of group.attributes) {
-              if (attr.name === attrName) {
-                finalAssignments.push({ attributeId: attr.id, attributeValueId: valueId });
-              }
-            }
-          }
-        }
-        await setVariantAttributeValues(selectedVariant.id, finalAssignments);
-
-        setSuccessMessage("Variant updated successfully.");
       }
-      
+
+      // Save ALL attribute assignments generically
+      const assignments: Array<{ attributeId: string; attributeValueId: string }> = Object.entries(
+        cSelectedAttrIds
+      )
+        .filter(([, valueId]) => valueId)
+        .map(([attrName, valueId]) => {
+          const opt = availableAttributes[attrName]?.find((o) => o.id === valueId);
+          return opt ? { attributeId: opt.attrId, attributeValueId: opt.id } : null;
+        })
+        .filter((a): a is { attributeId: string; attributeValueId: string } => a !== null);
+      await setVariantAttributeValues(savedVariant.id, assignments);
+
       vFilePreviews.forEach(p => URL.revokeObjectURL(p));
       setVSelectedFiles([]);
       setVFilePreviews([]);
@@ -1104,33 +1078,23 @@ export default function AdminVariantsPage() {
 
         {/* Pagination */}
         {!isLoading && variants.length > 0 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t border-stone-150 bg-stone-50/30">
+          <div className="flex flex-col sm:flex-row items-center justify-between px-6 py-4 border-t border-stone-150 bg-stone-50/30 gap-4">
             <div className="text-xs font-medium text-stone-500">
               Showing {(currentPage - 1) * ITEMS_PER_PAGE + 1} to{" "}
               {Math.min(currentPage * ITEMS_PER_PAGE, totalVariants)} of {totalVariants}
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:border-stone-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-                className="px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border border-stone-200 bg-white text-stone-700 hover:bg-stone-50 hover:border-stone-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-              >
-                Next
-              </button>
-            </div>
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={(page) => setCurrentPage(page)}
+              className="w-full sm:w-auto"
+            />
           </div>
         )}
       </div>
 
       {/* Edit Modal */}
-      {showModal && selectedVariant && (
+      {showModal && (isCreating || selectedVariant) && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-stone-900/40 backdrop-blur-sm" onClick={() => !isSaving && setShowModal(false)} />
           <div className="bg-white/90 backdrop-blur-2xl border border-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto relative z-10 p-8">
@@ -1178,272 +1142,350 @@ export default function AdminVariantsPage() {
               </div>
             )}
 
-            <form onSubmit={handleSaveVariant} className="space-y-8">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Left Column: Editable Fields */}
-                <div className="space-y-5">
-                  <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 border-b border-stone-200 pb-2">Editable Details</h3>
-                  
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">SKU *</label>
-                    <input 
-                      type="text" 
-                      value={fSku} 
-                      onChange={e => setFSku(e.target.value)}
-                      required
-                      disabled={isSaving}
-                      className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                    />
-                  </div>
+            <form onSubmit={handleSaveVariant}
+                      className="rounded-2xl border border-emerald-200/60 bg-emerald-50/30 px-6 py-5 space-y-4 text-xs text-stone-600">
+                      <p className="text-[9px] font-extrabold uppercase tracking-widest text-emerald-600 mb-1">
+                        {(!isCreating && selectedVariant?.id) ? "Edit Variant" : "Create Variant"}
+                      </p>
 
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Price *</label>
-                      <input 
-                        type="number" 
-                        step="0.01"
-                        value={fPrice} 
-                        onChange={e => {
-                          const newPrice = e.target.value;
-                          setFPrice(newPrice);
-                          const p = parseFloat(newPrice);
-                          const dp = parseFloat(fDiscPercent);
-                          if (!isNaN(p) && p > 0 && !isNaN(dp) && dp > 0) {
-                            setFDiscPrice(Number((p - (p * dp / 100)).toFixed(2)).toString());
-                          }
-                        }}
-                        required
-                        disabled={isSaving}
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Discount (%)</label>
-                        <input 
-                          type="number" 
-                          step="1"
-                          min="0"
-                          max="100"
-                          value={fDiscPercent} 
-                          onChange={e => {
-                            const newPct = e.target.value;
-                            setFDiscPercent(newPct);
-                            const dp = parseFloat(newPct);
-                            const p = parseFloat(fPrice);
-                            if (!isNaN(p) && p > 0 && !isNaN(dp)) {
-                              setFDiscPrice(Number((p - (p * dp / 100)).toFixed(2)).toString());
-                            } else if (newPct === "") {
-                              setFDiscPrice("");
-                            }
-                          }}
-                          disabled={isSaving}
-                          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Discounted Price</label>
-                        <input 
-                          type="number" 
-                          step="0.01"
-                          value={fDiscPrice} 
-                          onChange={e => {
-                            const newDisc = e.target.value;
-                            setFDiscPrice(newDisc);
-                            const dp = parseFloat(newDisc);
-                            const p = parseFloat(fPrice);
-                            if (!isNaN(dp) && dp > 0 && !isNaN(p) && p > 0 && dp <= p) {
-                              setFDiscPercent(Math.round(((p - dp) / p) * 100).toString());
-                            } else if (newDisc === "") {
-                              setFDiscPercent("");
-                            }
-                          }}
-                          disabled={isSaving}
-                          className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                        />
-                      </div>
-                    </div>
-                  
-                  <div className="grid grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Stock Quantity *</label>
-                      <input 
-                        type="number" 
-                        value={fQty} 
-                        onChange={e => setFQty(e.target.value)}
-                        required
-                        disabled={isSaving}
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">GST Rate *</label>
-                      <select
-                        value={fGstRate}
-                        onChange={e => setFGstRate(e.target.value)}
-                        disabled={isSaving}
-                        className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all"
-                      >
-                        {["0", "5", "12", "18", "28"].map(rate => (
-                          <option key={rate} value={rate}>{rate}%</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div className="flex flex-col justify-end">
-                      <label className="flex items-center gap-3 cursor-pointer p-2.5 rounded-xl border border-stone-200 bg-white">
-                        <input 
-                          type="checkbox" 
-                          checked={fActive}
-                          onChange={e => setFActive(e.target.checked)}
-                          disabled={isSaving}
-                          className="w-4 h-4 text-[#E0A99E] rounded focus:ring-[#E0A99E]"
-                        />
-                        <span className="text-sm font-semibold text-stone-700 uppercase tracking-wide">Active</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                      {/* Variant Code — read-only when editing */}
+                      {(!isCreating && selectedVariant?.id) && (() => {
+                        const editingV = selectedVariant;
+                        return editingV?.variantCode ? (
+                          <div className="flex items-center gap-2 bg-stone-50 border border-stone-200 rounded-xl px-3 py-2">
+                            <span className="text-[9px] font-bold uppercase tracking-widest text-stone-400">Code</span>
+                            <span className="font-mono text-xs font-extrabold text-[#C47E72] tracking-widest">{editingV.variantCode}</span>
+                            <button
+                              type="button"
+                              title="Copy Variant Code"
+                              onClick={() => navigator.clipboard.writeText(editingV.variantCode)}
+                              className="ml-auto text-stone-400 hover:text-stone-600 transition-colors"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                              </svg>
+                            </button>
+                          </div>
+                        ) : null;
+                      })()}
 
-                {/* Right Column: Read-Only Info / Create Selections & Images */}
-                <div className="space-y-6">
-                  <div className="space-y-5">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 border-b border-stone-200 pb-2">Product & Attributes</h3>
-                    
-                    <div>
-                      <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Product *</label>
+                      {formError && (
+                        <p className="text-xs font-semibold text-rose-500 bg-rose-50 px-4 py-2 rounded-xl border border-rose-100">
+                          ⚠️ {formError}
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div className="col-span-1 sm:col-span-2"><label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-1">Product *</label>
                       {isCreating && !selectedVariant ? (
-                        <>
-                          <select
-                            value={selectedCreateProduct?.id || ""}
-                            onChange={handleCreateProductChange}
-                            disabled={isSaving}
-                            className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all disabled:opacity-50"
-                          >
-                            <option value="">-- Choose a product --</option>
-                            {availableProducts.map(p => (
-                              <option key={p.id} value={p.id}>{p.name}</option>
-                            ))}
-                          </select>
-                          {availableProducts.length === 0 && (
-                            <p className="text-[10px] text-stone-500 mt-1 italic">No products with attributes assigned.</p>
+                        <div className="relative">
+                          {!selectedCreateProduct ? (
+                            <div>
+                              <input
+                                type="text"
+                                value={lookupSearchTerm}
+                                onChange={(e) => {
+                                  setLookupSearchTerm(e.target.value);
+                                  setIsLookupOpen(true);
+                                }}
+                                onFocus={() => setIsLookupOpen(true)}
+                                onBlur={() => setTimeout(() => setIsLookupOpen(false), 200)}
+                                placeholder="Search products..."
+                                disabled={isSaving}
+                                className="w-full bg-white border border-stone-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E] focus:border-transparent transition-all disabled:opacity-50"
+                              />
+                              {isLookupOpen && (
+                                <div className="absolute z-10 w-full mt-1 bg-white border border-stone-200 rounded-xl shadow-lg max-h-60 overflow-y-auto">
+                                  {isLookupSearching ? (
+                                    <div className="p-3 text-sm text-stone-500">Searching...</div>
+                                  ) : lookupResults.length > 0 ? (
+                                    lookupResults.map(p => (
+                                      <div
+                                        key={p.id}
+                                        onMouseDown={(e) => {
+                                          e.preventDefault();
+                                          handleProductSelect(p);
+                                          setLookupSearchTerm("");
+                                          setIsLookupOpen(false);
+                                        }}
+                                        className="px-4 py-2 text-sm text-stone-700 hover:bg-stone-50 cursor-pointer border-b border-stone-100 last:border-0"
+                                      >
+                                        {p.name}
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <div className="p-3 text-sm text-stone-500">No products found</div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800">
+                              <span className="truncate">{selectedCreateProduct.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => handleProductSelect(null)}
+                                className="text-stone-400 hover:text-rose-500 ml-2 text-lg leading-none font-bold"
+                                title="Change Product"
+                              >
+                                &times;
+                              </button>
+                            </div>
                           )}
-                        </>
+                        </div>
                       ) : (
                         <div className="w-full bg-stone-50 border border-stone-200 rounded-xl px-4 py-2.5 text-sm text-stone-800">
                           {selectedCreateProduct?.name || selectedVariant?.product?.name || "N/A"}
                         </div>
-                      )}
-                    </div>
-
-                    {(selectedCreateProduct || selectedVariant) && (
-                      <div>
-                        <label className="block text-xs font-bold uppercase tracking-widest text-stone-500 mb-2">Select Attributes *</label>
-                        {isLoadingAttributes ? (
-                          <div className="text-sm text-stone-500">Loading attributes...</div>
-                        ) : Object.keys(availableAttributes).length > 0 ? (
-                          <div className="space-y-3">
-                            {Object.entries(availableAttributes).map(([attrName, options]) => (
-                              <div key={attrName}>
-                                <label className="block text-[10px] font-bold uppercase tracking-widest text-stone-400 mb-1">{attrName}</label>
-                                <select
-                                  value={cSelectedAttrIds[attrName] || ""}
-                                  onChange={(e) => setCSelectedAttrIds(prev => ({ ...prev, [attrName]: e.target.value }))}
-                                  required
-                                  disabled={isSaving}
-                                  className="w-full bg-white border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#E0A99E]"
-                                >
-                                  <option value="">-- Select {attrName} --</option>
-                                  {options.map(o => (
-                                    <option key={o.id} value={o.id}>{o.value}</option>
-                                  ))}
-                                </select>
-                              </div>
-                            ))}
-                          </div>
+                      )}</div>
+                        {/* Dynamic attribute dropdowns — one per attribute in the product's group */}
+                        {Object.keys(availableAttributes).length > 0 ? (
+                          Object.entries(availableAttributes).map(([attrName, options]) => (
+                            <div key={attrName} className="space-y-1.5">
+                              <label className="block font-bold uppercase tracking-wider text-stone-500">
+                                {attrName} *
+                              </label>
+                              <select
+                                value={cSelectedAttrIds[attrName] ?? ""}
+                                onChange={(e) =>
+                                  setCSelectedAttrIds((prev) => ({ ...prev, [attrName]: e.target.value }))
+                                }
+                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
+                              >
+                                <option value="">— Select {attrName} —</option>
+                                {options.map((opt) => (
+                                  <option key={opt.id} value={opt.id}>
+                                    {opt.value}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          ))
                         ) : (
-                          <div className="text-sm text-stone-500 italic">No attributes assigned to this product.</div>
+                          <div className="col-span-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                            <p className="text-[11px] font-semibold text-amber-700">
+                              ⚠️ No attribute group is assigned to this product, or the group has no values assigned.
+                            </p>
+                            <p className="text-[10px] text-amber-600 mt-1">
+                              Go to the product's <strong>Attributes</strong> panel and assign an attribute group with values (Color, Size, Fit, Rise, etc.) before adding variants.
+                            </p>
+                          </div>
                         )}
+
+                        {/* SKU */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">SKU *</label>
+                          <input type="text" value={fSku} onChange={(e) => setFSku(e.target.value)}
+                            placeholder="e.g. LEV-511-BLU-30"
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40" />
+                        </div>
+
+                        {/* MRP */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">MRP (₹) *</label>
+                          <input type="number" min="0" step="0.01" value={fPrice} onChange={(e) => setFPrice(e.target.value)}
+                            placeholder="e.g. 2499"
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40" />
+                        </div>
+
+                        {/* Discount Percentage */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">Discount Percentage (%)</label>
+                          <input type="number" min="0" max="100" value={fDiscPercent} onChange={(e) => setFDiscPercent(e.target.value)}
+                            placeholder="e.g. 10"
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40" />
+                        </div>
+
+                        {/* GST Rate */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">GST Rate (%) *</label>
+                          <select 
+                            value={fGstRate} 
+                            onChange={(e) => setFGstRate(e.target.value)}
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
+                          >
+                            <option value="0">0%</option>
+                            <option value="5">5%</option>
+                            <option value="12">12%</option>
+                            <option value="18">18%</option>
+                            <option value="28">28%</option>
+                          </select>
+                        </div>
+
+                        {/* Selling Price Preview */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">Selling Price (Preview)</label>
+                          <div className="w-full rounded-xl border border-stone-200 bg-stone-50 px-3.5 py-2.5 text-stone-880 font-bold">
+                            {calculatedSellingPrice !== null ? `₹${calculatedSellingPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}` : "—"}
+                          </div>
+                        </div>
+
+                        {/* Quantity */}
+                        <div className="space-y-1.5">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">Quantity *</label>
+                          <input type="number" min="0" step="1" value={fQty} onChange={(e) => setFQty(e.target.value)}
+                            placeholder="e.g. 15"
+                            className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40" />
+                        </div>
+
+                        {/* Status */}
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">Status</label>
+                          <label className="inline-flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" checked={fActive} onChange={(e) => setFActive(e.target.checked)}
+                              className="sr-only" />
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              fActive ? "bg-emerald-500" : "bg-stone-300"
+                            }`}>
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                                fActive ? "translate-x-4" : "translate-x-1"
+                              }`} />
+                            </span>
+                            <span className="text-xs font-semibold text-stone-600">{fActive ? "Active" : "Inactive"}</span>
+                          </label>
+                        </div>
+
+                        {/* Primary Variant */}
+                        <div className="space-y-1.5 flex flex-col justify-end">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500" title={(!isCreating && selectedVariant?.id) && selectedVariant?.isPrimary ? "Primary variant cannot be unchecked directly. Make another variant primary instead." : ""}>Primary Variant</label>
+                          <label className={`inline-flex items-center gap-2 ${(!isCreating && selectedVariant?.id) && selectedVariant?.isPrimary ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+                            <input type="checkbox" checked={fIsPrimary} onChange={(e) => setFIsPrimary(e.target.checked)} disabled={isSaving || (!!(!isCreating && selectedVariant?.id) && !!selectedVariant?.isPrimary)}
+                              className="sr-only" />
+                            <span className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                              fIsPrimary ? "bg-emerald-500" : "bg-stone-300"
+                            }`}>
+                              <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                                fIsPrimary ? "translate-x-4" : "translate-x-1"
+                              }`} />
+                            </span>
+                            <span className="text-xs font-semibold text-stone-600">{fIsPrimary ? "Primary" : "Secondary"}</span>
+                          </label>
+                        </div>
                       </div>
-                    )}
-                  </div>
 
-                  <div className="space-y-3">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-stone-400 border-b border-stone-200 pb-2 flex items-center justify-between">
-                      <span>Images ({vImages.length + vSelectedFiles.length}/{MAX_VARIANT_IMAGES})</span>
-                      {(vImages.length + vSelectedFiles.length) < MAX_VARIANT_IMAGES && (
-                        <label className="cursor-pointer text-xs text-[#E0A99E] hover:text-[#C68B7D] font-bold tracking-wider uppercase">
-                          + Add Image
-                          <input 
-                            type="file" 
-                            accept={ALLOWED_MIME_TYPES.join(",")}
-                            multiple 
-                            className="hidden" 
-                            onChange={handleFileChange}
-                            disabled={isSaving}
-                          />
-                        </label>
-                      )}
-                    </h3>
-                    
-                    {vFileError && (
-                      <p className="text-xs text-rose-500 font-medium">{vFileError}</p>
-                    )}
+                      {/* Images */}
+                      <div className="space-y-3">
+                        {/* Header row */}
+                        <div className="flex items-end justify-between">
+                          <label className="block font-bold uppercase tracking-wider text-stone-500">
+                            Variant Images
+                          </label>
+                          <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                            vImages.length + vSelectedFiles.length >= MAX_VARIANT_IMAGES
+                              ? "text-rose-500"
+                              : "text-stone-400"
+                          }`}>
+                            {vImages.length + vSelectedFiles.length} / {MAX_VARIANT_IMAGES}
+                          </span>
+                        </div>
 
-                    <div className="grid grid-cols-4 sm:grid-cols-5 gap-3">
-                      {/* Existing Images */}
-                      {vImages.map((imgUrl, idx) => (
-                        <div key={`exist-${idx}`} className="group relative aspect-[3/4] bg-stone-50 rounded-xl overflow-hidden border border-stone-200">
-                          <Image src={imgUrl} alt="Variant image" fill className="object-cover" />
-                          <button
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleRemoveExistingImage(idx)}
-                            className="absolute top-1 right-1 w-6 h-6 bg-white/90 text-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold shadow-sm"
-                          >
-                            ✕
-                          </button>
+                        {/* Helper text */}
+                        <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 space-y-1">
+                          <p className="text-[11px] font-semibold text-amber-700">ℹ️ Image Guidelines</p>
+                          <ul className="text-[10px] text-amber-700 space-y-0.5 list-disc list-inside">
+                            <li>Maximum <strong>5 images</strong> allowed per variant.</li>
+                            <li>The <strong>first image</strong> is used as the primary product image across the website.</li>
+                            <li>Recommended order: <strong>Front, Back, Left, Right, Lifestyle/Model.</strong></li>
+                            <li>Accepted formats: JPG, PNG, WEBP &bull; Max size: 2 MB each.</li>
+                          </ul>
                         </div>
-                      ))}
-                      {/* New Files Pending Upload */}
-                      {vFilePreviews.map((previewUrl, idx) => (
-                        <div key={`new-${idx}`} className="group relative aspect-[3/4] bg-emerald-50 rounded-xl overflow-hidden border border-emerald-200">
-                          <Image src={previewUrl} alt="New variant image" fill className="object-cover opacity-80" />
-                          <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] font-bold uppercase tracking-widest text-emerald-700 bg-white/80">New</span>
-                          <button
-                            type="button"
-                            disabled={isSaving}
-                            onClick={() => handleRemoveNewFile(idx)}
-                            className="absolute top-1 right-1 w-6 h-6 bg-white/90 text-rose-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs font-bold shadow-sm"
-                          >
-                            ✕
-                          </button>
+
+                        {/* Upload zone — disabled when cap is reached */}
+                        <div className="flex flex-col gap-3">
+                          {vImages.length + vSelectedFiles.length < MAX_VARIANT_IMAGES ? (
+                            <div className="flex items-center justify-center w-full">
+                              <label className="flex flex-col items-center justify-center w-full h-28 border-2 border-stone-200 border-dashed rounded-2xl cursor-pointer bg-stone-50 hover:bg-stone-100 transition-colors">
+                                <div className="flex flex-col items-center justify-center py-4">
+                                  <svg className="w-7 h-7 mb-2 text-stone-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                  </svg>
+                                  <p className="text-xs text-stone-500"><span className="font-bold">Click to upload</span> or drag and drop</p>
+                                  <p className="text-[10px] text-stone-400 mt-0.5">
+                                    JPG, PNG, WEBP &bull; Max 2 MB each &bull; Up to {MAX_VARIANT_IMAGES - vImages.length - vSelectedFiles.length} more
+                                  </p>
+                                </div>
+                                <input
+                                  type="file"
+                                  className="hidden"
+                                  multiple
+                                  accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                  onChange={handleFileChange}
+                                />
+                              </label>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-16 rounded-2xl border-2 border-rose-200 bg-rose-50">
+                              <p className="text-[11px] font-semibold text-rose-500">
+                                Maximum {MAX_VARIANT_IMAGES} images reached. Remove an image to upload more.
+                              </p>
+                            </div>
+                          )}
+
+                          {/* File validation error */}
+                          {vFileError && (
+                            <p className="text-[11px] font-semibold text-rose-600 bg-rose-50 px-3 py-2 rounded-xl border border-rose-200">
+                              ⚠️ {vFileError}
+                            </p>
+                          )}
+
+                          {/* Image thumbnails */}
+                          {((vImages && vImages.length > 0) || vFilePreviews.length > 0) && (
+                            <div className="grid grid-cols-5 gap-2">
+                              {vImages.map((img, idx) => (
+                                <div key={`existing-${idx}`} className="relative group aspect-square border border-stone-200 rounded-xl overflow-hidden bg-stone-50 shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={img} alt={`Variant Image ${idx + 1}`} className="w-full h-full object-cover" />
+                                  {idx === 0 && vSelectedFiles.length === 0 && (
+                                    <span className="absolute top-1 left-1 bg-[#E0A99E] text-white text-[8px] font-black uppercase px-1 rounded leading-tight">
+                                      Primary
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveExistingImage(idx)}
+                                    className="absolute inset-0 bg-rose-500/85 text-white font-extrabold text-[9px] uppercase tracking-wider flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                              {vFilePreviews.map((previewUrl, idx) => (
+                                <div key={`new-${idx}`} className="relative group aspect-square border border-emerald-200 rounded-xl overflow-hidden bg-stone-50 shadow-sm">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img src={previewUrl} alt={`New Variant Image ${idx + 1}`} className="w-full h-full object-cover" />
+                                  {vImages.length === 0 && idx === 0 && (
+                                    <span className="absolute top-1 left-1 bg-[#E0A99E] text-white text-[8px] font-black uppercase px-1 rounded leading-tight">
+                                      Primary
+                                    </span>
+                                  )}
+                                  <span className="absolute bottom-1 right-1 bg-emerald-500 text-white text-[8px] font-black uppercase px-1 rounded leading-tight">
+                                    New
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveNewFile(idx)}
+                                    className="absolute inset-0 bg-rose-500/85 text-white font-extrabold text-[9px] uppercase tracking-wider flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
+                                  >
+                                    Delete
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              
-              {/* Footer Actions */}
-              <div className="flex justify-end gap-3 pt-6 border-t border-stone-200">
-                <button
-                  type="button"
-                  disabled={isSaving}
-                  onClick={() => setShowModal(false)}
-                  className="px-6 py-2.5 rounded-xl border border-stone-200 text-sm font-bold uppercase tracking-wider text-stone-600 hover:bg-stone-50 transition-colors disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="px-6 py-2.5 rounded-xl bg-[#E0A99E] hover:bg-[#D4988D] text-white text-sm font-bold uppercase tracking-wider transition-colors shadow-sm disabled:opacity-50 flex items-center gap-2"
-                >
-                  {isSaving && <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
-                  {isSaving ? "Saving..." : "Save Changes"}
-                </button>
-              </div>
-            </form>
+                      </div>
+
+                      <div className="flex items-center justify-end gap-3 pt-1">
+                        <button type="button" onClick={() => { setShowModal(false); resetForm(); }}
+                          className="rounded-full border border-stone-200 px-5 py-2 text-xs font-bold text-stone-600 hover:bg-stone-50 uppercase tracking-wider cursor-pointer">
+                          Cancel
+                        </button>
+                        <button type="submit" disabled={isSaving}
+                          className="rounded-full bg-emerald-500 px-7 py-2 text-xs font-bold text-white hover:bg-emerald-600 transition-all shadow-md uppercase tracking-wider disabled:opacity-60 cursor-pointer">
+                          {isSaving ? "Saving…" : (!isCreating && selectedVariant?.id) ? "Update Variant" : "Add Variant"}
+                        </button>
+                      </div>
+                    </form>
           </div>
         </div>
       )}

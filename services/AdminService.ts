@@ -15,6 +15,7 @@ import { getSupabaseClient } from "@/lib/supabase/client";
 
 export interface AdminProduct {
   id: string;
+  variantId?: string;
   name: string;
   description: string;
   category: string;
@@ -353,7 +354,7 @@ export async function getProducts(): Promise<AdminProduct[]> {
         price: Number(p.price),
         discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
         stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-        imageSrc: String(p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")),
+        imageSrc: (p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "",
         images: Array.isArray(p.images) ? (p.images as string[]) : [],
         size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
         color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
@@ -386,14 +387,16 @@ export async function getProducts(): Promise<AdminProduct[]> {
               stock: product.stockQuantity,
               brand: product.brand,
               discount_percent: product.discountPercent || 0,
-              rating: product.rating || 4.5,
-              review_count: product.reviewCount || 0,
+              rating: product.rating,
+              review_count: product.reviewCount,
               size: product.size,
               color: product.color,
               sku: product.sku || "",
               is_active: true,
               updated_at: new Date().toISOString(),
-              hsn_code: product.hsnCode || null
+              hsn_code: product.hsnCode || null,
+              nav_node_id: product.navNodeId || null,
+              status: product.status || 'draft'
             }).catch(err => console.error("[AdminService] Sync error:", err));
           }
         }
@@ -448,14 +451,16 @@ export async function saveProduct(product: AdminProduct): Promise<AdminProduct> 
       stock: product.stockQuantity,
       brand: product.brand,
       discount_percent: product.discountPercent || 0,
-      rating: product.rating || 4.5,
-      review_count: product.reviewCount || 0,
+      rating: product.rating,
+      review_count: product.reviewCount,
       size: product.size,
       color: product.color,
       sku: product.sku || "",
       is_active: true,
       updated_at: new Date().toISOString(),
-      hsn_code: product.hsnCode || null
+      hsn_code: product.hsnCode || null,
+      nav_node_id: product.navNodeId || null,
+      status: product.status || 'draft'
     });
   } catch (err) {
     console.error("[AdminService] Supabase saveProduct error:", err);
@@ -708,22 +713,23 @@ export function registerNewCheckoutOrder(params: {
     const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
-        supabase.from('orders').insert({
+        const payload = {
           order_id: params.orderId,
           profile_id: user.id,
           customer_name: params.customerName,
           customer_email: params.customerEmail,
-          items: params.items as unknown as Record<string, unknown>[],
+          items: params.items,
           total_amount: params.total,
           status: "pending",
           payment_method: formattedPayment,
-          shipping_address: params.address as unknown as Record<string, unknown>,
+          shipping_address: params.address,
           subtotal: params.subtotal,
           tax: params.tax,
           shipping: params.shipping,
           discount: params.discount,
           grand_total: params.grand_total,
-        }).then(({ error }) => {
+        };
+        ((supabase as any).rpc('create_order', { payload }) as Promise<any>).then(({ error }: any) => {
           if (error) {
             console.error("[AdminService] Supabase order insert error:", error);
           } else {
@@ -917,15 +923,17 @@ export async function seedMissingHistoricalOrders(email: string): Promise<void> 
       supabase.auth.getUser().then(({ data: { user } }) => {
         if (user) {
           mockOrders.forEach(o => {
-            supabase.from('orders').insert({
+            const payload = {
               order_id: o.orderId,
+              profile_id: user.id,
               customer_email: o.customerEmail,
-              items: o.items as unknown as Record<string, unknown>[],
+              items: o.items,
               total_amount: o.total,
               status: o.status,
               payment_method: o.paymentMethod,
-              shipping_address: o.address as unknown as Record<string, unknown>,
-            }).then(() => {});
+              shipping_address: o.address,
+            };
+            ((supabase as any).rpc('create_order', { payload }) as Promise<any>).then(() => {});
           });
         }
       });
@@ -1821,7 +1829,7 @@ export async function getAdminProductsPaginated(
 
     let query = supabase
       .from('products')
-      .select('*', { count: 'exact' });
+      .select('*, product_variants(id, is_primary, images)', { count: 'exact' });
 
     // Apply search filter on name, brand, and sku (case-insensitive)
     if (search && search.trim().length > 0) {
@@ -1840,28 +1848,40 @@ export async function getAdminProductsPaginated(
       return { products: [], total: 0 };
     }
 
-    const mapProduct = (p: Record<string, unknown>): AdminProduct => ({
-      id: String(p.id),
-      name: String(p.name),
-      description: String(p.description || ''),
-      category: String(p.category),
-      brand: String(p.brand || 'Atelier'),
-      price: Number(p.price),
-      discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : 0,
-      stockQuantity: p.stock !== undefined ? Number(p.stock) : 0,
-      imageSrc: String(p.image_src || (Array.isArray(p.images) ? (p.images as string[])[0] : '')),
-      images: Array.isArray(p.images) ? (p.images as string[]) : [],
-      size: Array.isArray(p.size) ? (p.size as string[]) : [],
-      color: Array.isArray(p.color) ? (p.color as string[]) : [],
-      rating: p.rating !== undefined ? Number(p.rating) : 4.5,
-      reviewCount: p.review_count !== undefined ? Number(p.review_count) : 0,
-      sku: String(p.sku || ''),
-      tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
-      hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || '') : '',
-      createdAt: String(p.created_at || new Date().toISOString()),
-      navNodeId: p.nav_node_id ? String(p.nav_node_id) : null,
-      status: (p.status as 'draft' | 'active' | 'archived') || 'draft',
-    });
+    const mapProduct = (p: Record<string, unknown>): AdminProduct => {
+      // Find the primary variant if product_variants is populated
+      const variants = Array.isArray(p.product_variants) ? p.product_variants as any[] : [];
+      const primaryVariant = variants.find(v => v.is_primary === true);
+      
+      // Resolve image from Primary Variant -> Primary Image
+      let resolvedImageSrc = '';
+      if (primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0) {
+        resolvedImageSrc = primaryVariant.images[0];
+      }
+
+      return {
+        id: String(p.id),
+        name: String(p.name),
+        description: String(p.description || ''),
+        category: String(p.category),
+        brand: String(p.brand || 'Atelier'),
+        price: Number(p.price),
+        discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : 0,
+        stockQuantity: p.stock !== undefined ? Number(p.stock) : 0,
+        imageSrc: resolvedImageSrc,
+        images: Array.isArray(p.images) ? (p.images as string[]) : [],
+        size: Array.isArray(p.size) ? (p.size as string[]) : [],
+        color: Array.isArray(p.color) ? (p.color as string[]) : [],
+        rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+        reviewCount: p.review_count !== undefined ? Number(p.review_count) : 0,
+        sku: String(p.sku || ''),
+        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+        hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || '') : '',
+        createdAt: String(p.created_at || new Date().toISOString()),
+        navNodeId: p.nav_node_id ? String(p.nav_node_id) : null,
+        status: (p.status as 'draft' | 'active' | 'archived') || 'draft',
+      };
+    };
 
     const products: AdminProduct[] = (data || []).map(mapProduct);
     return { products, total: count ?? 0 };
@@ -1893,6 +1913,7 @@ export async function bulkUpdateProducts(
     if (updates.brand !== undefined) dbPayload.brand = updates.brand;
     if (updates.category !== undefined) dbPayload.category = updates.category;
     if (updates.hsnCode !== undefined) dbPayload.hsn_code = updates.hsnCode;
+    if (updates.navNodeId !== undefined) dbPayload.nav_node_id = updates.navNodeId;
 
     const { error } = await supabase
       .from('products')

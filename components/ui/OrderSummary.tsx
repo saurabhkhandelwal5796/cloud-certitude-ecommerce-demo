@@ -61,7 +61,8 @@ export default function OrderSummary({
     subtotal,
     shipping,
     tax,
-    grandTotal
+    grandTotal,
+    itemBreakdowns
   } = calculateOrderTotals(
     cartSubtotal,
     deliveryFee,
@@ -81,8 +82,16 @@ export default function OrderSummary({
           const itemPrice = item.discountPercent
             ? item.price * (1 - item.discountPercent / 100)
             : item.price;
+          
+          const breakdown = itemBreakdowns?.find(
+            (b) => b.id === item.id && (b.variantId === item.variantId || !b.variantId)
+          );
+          const lineTotal = breakdown?.lineTotal ?? (itemPrice * item.quantity);
+          const gstRate = breakdown?.gstRate ?? item.gstRate ?? 5;
+          const gstAmount = breakdown?.gstAmount ?? 0;
+
           return (
-            <div key={`${item.id}-${item.selectedSize}-${item.selectedColor}`} className="flex items-center gap-3">
+            <div key={item.variantId || `${item.id}-${item.selectedSize}-${item.selectedColor}`} className="flex items-center gap-3">
               <div className="relative h-11 w-9 overflow-hidden rounded-lg bg-stone-50 border border-stone-100 flex-shrink-0">
                 <SummaryItemImage item={item} />
               </div>
@@ -93,10 +102,15 @@ export default function OrderSummary({
                 <p className="text-[10px] text-stone-400 font-light mt-0.5">
                   Size: {item.selectedSize} &middot; Qty: {item.quantity}
                 </p>
+                <p className="text-[9px] text-stone-400 font-light mt-0.5">
+                  GST {gstRate}%: {formatPrice(gstAmount)}
+                </p>
               </div>
-              <span className="text-xs font-bold text-stone-850">
-                {formatPrice(itemPrice * item.quantity)}
-              </span>
+              <div className="text-right">
+                <span className="text-xs font-bold text-stone-850 block">
+                  {formatPrice(lineTotal)}
+                </span>
+              </div>
             </div>
           );
         })}
