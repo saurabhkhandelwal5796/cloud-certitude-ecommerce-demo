@@ -213,7 +213,9 @@ export async function submitReview(params: {
       rating: params.rating,
       title: finalTitle,
       review_text: params.reviewText,
+      is_verified_purchase: isVerified,
       verified_purchase: isVerified,
+      helpful_count: 0,
       helpful_votes: 0,
       reported: false,
     })
