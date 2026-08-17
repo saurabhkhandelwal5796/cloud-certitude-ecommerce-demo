@@ -161,15 +161,12 @@ export default function CollectionTemplate({
         offset: (currentPage - 1) * ITEMS_PER_PAGE,
       });
 
-      // For Sale / New Arrival: further filter client-side since DB has no tag column
+      // For Sale: filter strictly for minimum 50% discount (no fallback to lesser discounts)
       let result = data as ProductType[];
       if (categoryFilter === "Sale") {
-        const fiftyPercentOff = result.filter(
-          (p) => p.discountPercent !== undefined && p.discountPercent >= 50
+        result = result.filter(
+          (p) => p.discountPercent !== undefined && Number(p.discountPercent) >= 50
         );
-        result = fiftyPercentOff.length > 0
-          ? fiftyPercentOff
-          : result.filter((p) => p.discountPercent !== undefined && p.discountPercent > 0);
       }
       // Apply in-page search query (lightweight: only on the returned page of results)
       if (searchQuery.trim()) {
