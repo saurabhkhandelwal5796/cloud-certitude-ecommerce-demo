@@ -125,8 +125,7 @@ export interface FilteredProductsGlobalSearchResult {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapRow(row: Record<string, any>): FilteredProduct {
   const images: string[] = Array.isArray(row.images) ? row.images : [];
-  const imageSrc: string =
-    row.image_src || row.imageSrc || images[0] || "";
+  const imageSrc: string = images[0] || "";
 
   return {
     id: row.id,
@@ -185,11 +184,21 @@ function deduplicateFacetValues(facets: Record<string, any>): Record<string, any
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function validateFilters(rawFilters: Record<string, any>): Record<string, string[]> {
-  const RESERVED = new Set(['category', 'q', 'sort', 'page', 'priceMax']);
+  const RESERVED_URL_PARAMS = new Set(['category', 'q', 'sort', 'page', 'priceMax']);
+  
+  // Valid keys to be sent to the DB as dynamic filters:
+  // Must be one of the known explicit top-level filters, OR start with an uppercase letter (implying a dynamic attribute like 'Occasion' or 'Color').
+  // Lowercase keys like 'navpath', 'slug', 'utm_source' will be safely dropped.
+  const isAllowedKey = (key: string) => {
+    if (['Brand', 'Category', 'Rating', 'Discount'].includes(key)) return true;
+    return /^[A-Z]/.test(key);
+  };
+
   const cleanFilters: Record<string, string[]> = {};
 
   for (const [key, val] of Object.entries(rawFilters)) {
-    if (RESERVED.has(key)) continue;
+    if (RESERVED_URL_PARAMS.has(key)) continue;
+    if (!isAllowedKey(key)) continue;
 
     let arr: string[];
     if (Array.isArray(val)) {

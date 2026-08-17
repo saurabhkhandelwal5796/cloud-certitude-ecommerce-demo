@@ -322,7 +322,8 @@ async function syncParentProduct(variant: ProductVariant): Promise<void> {
       discount_percent: discountPercent,
       stock: variant.quantity,
       sku: variant.sku,
-      images: variant.images || []
+      images: variant.images || [],
+      image_src: defaultImage
     } as any)
     .eq("id", variant.productId);
 

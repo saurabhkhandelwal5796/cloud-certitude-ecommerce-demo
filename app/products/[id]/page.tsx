@@ -52,8 +52,8 @@ export default async function ProductDetailsPage({ params, searchParams }: PageP
       price: Number(p.price),
       discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
       stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-      imageSrc: (p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "",
-      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      images: [],
+      imageSrc: "",
       size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
       color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
       rating: p.rating !== undefined ? Number(p.rating) : 4.5,
@@ -100,6 +100,21 @@ export default async function ProductDetailsPage({ params, searchParams }: PageP
   } catch (err) {
     // Non-fatal: variant tables may not be set up in all environments
     console.warn("[ProductDetailsPage] Variant/attribute fetch failed:", err);
+  }
+
+  // Resolve product images and imageSrc from the initial variant's images (decoupling from parent product images fallback)
+  if (product) {
+    const initialVariant = initialVariantId
+      ? variantsWithAttrs.find((v) => v.variant.id === initialVariantId)
+      : (variantsWithAttrs.find((v) => v.variant.isPrimary) || variantsWithAttrs[0]);
+
+    if (initialVariant && initialVariant.variant.images && initialVariant.variant.images.length > 0) {
+      product.images = initialVariant.variant.images;
+      product.imageSrc = initialVariant.variant.images[0];
+    } else {
+      product.images = [];
+      product.imageSrc = "";
+    }
   }
 
   // ── 3. Handle missing product ──────────────────────────────────────────────
@@ -168,7 +183,7 @@ export default async function ProductDetailsPage({ params, searchParams }: PageP
       />
 
       {/* Frequently Bought Together Bundle Package */}
-      <FrequentlyBoughtTogether productId={product.id} />
+      {/* <FrequentlyBoughtTogether productId={product.id} /> */}
 
       {/* Complete The Look styling picks */}
       <CompleteTheLook productId={product.id} />

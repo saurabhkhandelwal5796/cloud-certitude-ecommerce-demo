@@ -19,10 +19,28 @@ import SocialShare from "@/components/ui/SocialShare";
 const EMPTY_IMAGES: string[] = [];
 
 export default function ProductDetailsClient({ product, variants, productAttributes, initialVariantId }: Props) {
-  // We need to lift the variant selection state up if we want the left gallery to update
-  // based on the right side's selection.
-  
-  const [activeVariantImages, setActiveVariantImages] = useState<string[]>(product.images);
+  // Find the initial/primary variant
+  const initialVariant = useMemo(() => {
+    if (initialVariantId) {
+      return variants.find((v) => v.variant.id === initialVariantId) || null;
+    }
+    return variants.find((v) => v.variant.isPrimary) || variants[0] || null;
+  }, [variants, initialVariantId]);
+
+  // Resolve initial images list
+  const initialImages = useMemo(() => {
+    if (initialVariant && initialVariant.variant.images && initialVariant.variant.images.length > 0) {
+      return initialVariant.variant.images;
+    }
+    return EMPTY_IMAGES;
+  }, [initialVariant]);
+
+  const [activeVariantImages, setActiveVariantImages] = useState<string[]>(initialImages);
+
+  // Sync images state if initialImages changes
+  React.useEffect(() => {
+    setActiveVariantImages(initialImages);
+  }, [initialImages]);
 
   // We can pass a callback to ProductInfo to notify when the active variant changes
   const handleVariantChange = useCallback((variant: VariantWithAttributes | null) => {
@@ -38,7 +56,7 @@ export default function ProductDetailsClient({ product, variants, productAttribu
       {/* Left Column */}
       <div className="w-full lg:w-1/2">
         <ProductImageGallery images={activeVariantImages} category={product.category} />
-        <DeliveryChecker productId={product.id} />
+        {/* <DeliveryChecker productId={product.id} /> */}
       </div>
 
       {/* Right Column */}
@@ -62,7 +80,7 @@ export default function ProductDetailsClient({ product, variants, productAttribu
 
         {/* Social Sharing block */}
         <SocialShare
-          url={`https://cloudcertitudefashion.com/products/${product.id}`}
+          url={`https://cloud-certitude-ecommerce-demo.vercel.app/products/${product.id}`}
           title={product.name}
         />
       </div>

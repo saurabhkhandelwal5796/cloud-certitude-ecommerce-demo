@@ -286,6 +286,8 @@ export default function AdminProductsPage() {
   const [vIsPrimary, setVIsPrimary] = useState(false);
   const [vFormError, setVFormError] = useState<string | null>(null);
   const [vSaving, setVSaving] = useState(false);
+  // Manual variant name — used only when productAttrOptions is empty (no attributes assigned to product)
+  const [vManualName, setVManualName] = useState("");
   // Variant count badge per product
   const [variantCounts, setVariantCounts] = useState<Record<string, number>>({})
 
@@ -676,6 +678,7 @@ export default function AdminProductsPage() {
     setVActive(true);
     setVIsPrimary(false);
     setVSelectedAttrIds({});
+    setVManualName("");
     setVImages([]);
     setVSelectedFiles([]);
     setVFilePreviews([]);
@@ -753,6 +756,8 @@ export default function AdminProductsPage() {
     setVSelectedFiles([]);
     setVFilePreviews([]);
     setVFormError(null);
+    // Pre-fill manual name in case the product has no attributes assigned
+    setVManualName(v.variantName || "");
     setShowVariantForm(true);
 
     try {
@@ -820,9 +825,16 @@ export default function AdminProductsPage() {
     const selectedValues = Object.entries(vSelectedAttrIds)
       .filter(([, id]) => id)
       .map(([attrName, valueId]) => productAttrOptions[attrName]?.find((o) => o.id === valueId)?.value);
-    const generatedName = generateVariantName(selectedValues);
+    // If no attributes are assigned to the product, fall back to the manually-entered name
+    const hasAttrOptions = Object.keys(productAttrOptions).length > 0;
+    const generatedName = hasAttrOptions ? generateVariantName(selectedValues) : vManualName.trim();
 
-    const val = validateVariantFields(vPrice, vQty, null, vSku, generatedName);
+    // When no attributes are configured, the variant name comes from the manual input field
+    if (!hasAttrOptions && !generatedName) {
+      setVFormError("Please enter a Variant Name.");
+      return;
+    }
+    const val = validateVariantFields(vPrice, vQty, null, vSku, hasAttrOptions ? generatedName : undefined);
     if (!val.isValid) {
       setVFormError(val.error!);
       return;
@@ -1807,13 +1819,25 @@ export default function AdminProductsPage() {
                             </div>
                           ))
                         ) : (
-                          <div className="col-span-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
-                            <p className="text-[11px] font-semibold text-amber-700">
-                              ⚠️ No attribute group is assigned to this product, or the group has no values assigned.
-                            </p>
-                            <p className="text-[10px] text-amber-600 mt-1">
-                              Go to the product's <strong>Attributes</strong> panel and assign an attribute group with values (Color, Size, Fit, Rise, etc.) before adding variants.
-                            </p>
+                          <div className="col-span-2 space-y-3">
+                            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                              <p className="text-[11px] font-semibold text-amber-700">
+                                ⚠️ No attributes are assigned to this product yet.
+                              </p>
+                              <p className="text-[10px] text-amber-600 mt-1">
+                                To use dynamic attribute dropdowns, go to the product's <strong>Attributes</strong> panel and assign attribute values first. For now, enter a variant name manually below.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="block font-bold uppercase tracking-wider text-stone-500">Variant Name *</label>
+                              <input
+                                type="text"
+                                value={vManualName}
+                                onChange={(e) => setVManualName(e.target.value)}
+                                placeholder="e.g. Blue / M / Slim Fit"
+                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
+                              />
+                            </div>
                           </div>
                         )}
 

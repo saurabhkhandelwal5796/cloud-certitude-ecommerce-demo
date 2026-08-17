@@ -42,15 +42,15 @@ export default async function RootLayout({
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "Cloud Certitude Fashion",
-    "url": "https://cloudcertitudefashion.com",
-    "logo": "https://cloudcertitudefashion.com/logo.png",
+    "url": "https://cloud-certitude-ecommerce-demo.vercel.app",
+    "logo": "https://cloud-certitude-ecommerce-demo.vercel.app/logo.png",
   };
 
   const webSchema = {
     "@context": "https://schema.org",
     "@type": "WebSite",
     "name": "Cloud Certitude Fashion",
-    "url": "https://cloudcertitudefashion.com",
+    "url": "https://cloud-certitude-ecommerce-demo.vercel.app",
   };
 
   return (

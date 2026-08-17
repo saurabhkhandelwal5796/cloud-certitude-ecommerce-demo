@@ -53,7 +53,7 @@ export function ReferralBanner() {
           ) : (
             <button
               onClick={() => {
-                navigator.clipboard.writeText("https://cloudcertitudefashion.com/refer?code=ATELIER20");
+                navigator.clipboard.writeText("https://cloud-certitude-ecommerce-demo.vercel.app/refer?code=ATELIER20");
                 setReferred(true);
                 setTimeout(() => setReferred(false), 2000);
               }}

@@ -145,7 +145,7 @@ export default function CollectionTemplate({
         category: dbCategory,
         subcategoryName: subcategoryFilter,
         filters: cleanFilters,
-        priceMax: priceRange < 15000 ? priceRange : undefined,
+        priceMax: priceRange,
         sort: sortOption,
         limit: ITEMS_PER_PAGE,
         offset: (currentPage - 1) * ITEMS_PER_PAGE,

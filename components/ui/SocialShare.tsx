@@ -65,7 +65,7 @@ export default function SocialShare({ url, title }: SocialShareProps) {
           className={`flex h-8 px-3.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider items-center justify-center transition-colors shadow-sm cursor-pointer ${
             copied
               ? "bg-emerald-600 text-white border-emerald-600"
-              : "border-stone-200 bg-stone-900 text-white hover:bg-stone-850"
+              : "flex h-8 px-3.5 rounded-full border border-stone-200 bg-white hover:bg-stone-50 text-[10px] font-extrabold uppercase tracking-wider text-stone-600 items-center justify-center transition-colors shadow-sm"
           }`}
         >
           {copied ? "Link Copied! ✓" : "Copy Link"}

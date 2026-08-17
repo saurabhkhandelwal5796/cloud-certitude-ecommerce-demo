@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/admin/", "/checkout/", "/profile/"],
     },
-    sitemap: "https://cloudcertitudefashion.com/sitemap.xml",
+    sitemap: "https://cloud-certitude-ecommerce-demo.vercel.app/sitemap.xml",
   };
 }

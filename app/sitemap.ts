@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getSupabaseClient } from "@/lib/supabase/client";
 
-const SITE_URL = "https://cloudcertitudefashion.com";
+const SITE_URL = "https://cloud-certitude-ecommerce-demo.vercel.app";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticRoutes = [

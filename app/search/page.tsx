@@ -123,7 +123,7 @@ function SearchResults() {
       const result = await getGlobalSearchResults({
         searchQuery: debouncedQuery,
         filters:    cleanFilters,
-        priceMax:   priceRange < 15000 ? priceRange : undefined,
+        priceMax:   priceRange,
         sort:       sortParam,
         limit:      ITEMS_PER_PAGE,
         offset:     (currentPage - 1) * ITEMS_PER_PAGE,

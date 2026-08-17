@@ -371,7 +371,7 @@ export default function DynamicFilterSidebar({
   const [priceOpen, setPriceOpen] = useState(true);
 
   return (
-    <aside className="w-full flex flex-col gap-5 rounded-2xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/20">
+    <aside className="w-full flex flex-col gap-5 rounded-2xl border border-stone-200/50 bg-white p-5 shadow-sm shadow-stone-200/20 lg:max-h-[calc(100vh-7rem)] lg:overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-stone-200">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-stone-100 pb-3">
         <h3 className="text-xs font-extrabold uppercase tracking-widest text-stone-900">

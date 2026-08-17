@@ -63,8 +63,8 @@ export default function ProductImageGallery({ images, category }: ProductImageGa
 
   if (currentImages.length === 0) {
     return (
-      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-stone-200/50 bg-stone-100 flex items-center justify-center shadow-sm">
-        <span className="text-sm font-bold uppercase tracking-widest text-stone-400">No Image</span>
+      <div className="relative aspect-[3/4] w-full overflow-hidden rounded-3xl border border-stone-200/50 bg-stone-100 flex items-center justify-center shadow-sm p-6">
+        <span className="text-sm font-extrabold uppercase tracking-widest text-stone-400 text-center leading-normal">Preview Not Available</span>
       </div>
     );
   }

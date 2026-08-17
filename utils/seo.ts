@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 
-const SITE_URL = "https://cloudcertitudefashion.com";
+const SITE_URL = "https://cloud-certitude-ecommerce-demo.vercel.app";
 
 /**
  * Returns a standardized Next.js Metadata configuration object.

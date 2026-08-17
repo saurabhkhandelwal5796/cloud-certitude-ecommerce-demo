@@ -343,30 +343,39 @@ function cleanProductUrls(products: AdminProduct[]): { cleaned: AdminProduct[], 
 export async function getProducts(): Promise<AdminProduct[]> {
   try {
     const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
-    const { data, error } = await supabase.from('products').select('*');
+    const { data, error } = await supabase.from('products').select('*, product_variants(id, is_primary, images)');
     if (!error && data && data.length > 0) {
-      const mapped: AdminProduct[] = data.map((p: Record<string, unknown>) => ({
-        id: String(p.id),
-        name: String(p.name),
-        description: String(p.description || ""),
-        category: String(p.category),
-        brand: String(p.brand || "Atelier"),
-        price: Number(p.price),
-        discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
-        stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
-        imageSrc: (p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "",
-        images: Array.isArray(p.images) ? (p.images as string[]) : [],
-        size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
-        color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
-        rating: p.rating !== undefined ? Number(p.rating) : 4.5,
-        reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
-        sku: String(p.sku || ""),
-        tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
-        hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
-        createdAt: String(p.created_at || new Date().toISOString()),
-        navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
-        status: p.status as "draft" | "active" | "archived" || "draft"
-      }));
+      const mapped: AdminProduct[] = data.map((p: any) => {
+        const variants = Array.isArray(p.product_variants) ? p.product_variants : [];
+        const primaryVariant = variants.find((v: any) => v.is_primary) || variants[0];
+        const variantWithImages = variants.find((v: any) => Array.isArray(v.images) && v.images.length > 0);
+        const resolvedImages = primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0
+          ? primaryVariant.images
+          : (variantWithImages ? variantWithImages.images : (Array.isArray(p.images) ? (p.images as string[]) : []));
+
+        return {
+          id: String(p.id),
+          name: String(p.name),
+          description: String(p.description || ""),
+          category: String(p.category),
+          brand: String(p.brand || "Atelier"),
+          price: Number(p.price),
+          discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : (p.discountPercent !== undefined ? Number(p.discountPercent) : 0),
+          stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
+          images: resolvedImages,
+          imageSrc: resolvedImages.length > 0 ? resolvedImages[0] : "",
+          size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
+          color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
+          rating: p.rating !== undefined ? Number(p.rating) : 4.5,
+          reviewCount: p.review_count !== undefined ? Number(p.review_count) : (p.reviewCount !== undefined ? Number(p.reviewCount) : 0),
+          sku: String(p.sku || ""),
+          tags: Array.isArray(p.tags) ? (p.tags as string[]) : [],
+          hsnCode: p.hsn_code !== undefined ? String(p.hsn_code || "") : "",
+          createdAt: String(p.created_at || new Date().toISOString()),
+          navNodeId: p.nav_node_id ? String(p.nav_node_id) : (p.navNodeId ? String(p.navNodeId) : null),
+          status: p.status as "draft" | "active" | "archived" || "draft"
+        };
+      });
 
       const { cleaned, updatedCount } = cleanProductUrls(mapped);
       if (updatedCount > 0) {
@@ -1851,13 +1860,13 @@ export async function getAdminProductsPaginated(
     const mapProduct = (p: Record<string, unknown>): AdminProduct => {
       // Find the primary variant if product_variants is populated
       const variants = Array.isArray(p.product_variants) ? p.product_variants as any[] : [];
-      const primaryVariant = variants.find(v => v.is_primary === true);
-      
-      // Resolve image from Primary Variant -> Primary Image
-      let resolvedImageSrc = '';
-      if (primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0) {
-        resolvedImageSrc = primaryVariant.images[0];
-      }
+      const primaryVariant = variants.find(v => v.is_primary === true) || variants[0];
+      const variantWithImages = variants.find(v => Array.isArray(v.images) && v.images.length > 0);
+      const resolvedImages = primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0
+        ? primaryVariant.images
+        : (variantWithImages ? variantWithImages.images : (Array.isArray(p.images) ? (p.images as string[]) : []));
+
+      let resolvedImageSrc = resolvedImages.length > 0 ? resolvedImages[0] : '';
 
       return {
         id: String(p.id),
@@ -1869,7 +1878,7 @@ export async function getAdminProductsPaginated(
         discountPercent: p.discount_percent !== undefined ? Number(p.discount_percent) : 0,
         stockQuantity: p.stock !== undefined ? Number(p.stock) : 0,
         imageSrc: resolvedImageSrc,
-        images: Array.isArray(p.images) ? (p.images as string[]) : [],
+        images: resolvedImages,
         size: Array.isArray(p.size) ? (p.size as string[]) : [],
         color: Array.isArray(p.color) ? (p.color as string[]) : [],
         rating: p.rating !== undefined ? Number(p.rating) : 4.5,

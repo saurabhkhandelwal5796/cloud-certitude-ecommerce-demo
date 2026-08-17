@@ -170,14 +170,9 @@ export async function buildOrderSnapshots(
       : item.price;
     const subtotal         = unitPrice * item.quantity;
 
-    // Image: prefer variant image, fall back to product-level images[], then cart
+    // Image: prefer variant image, fall back to cart image
     const variantImage = vRow?.images?.[0] ?? "";
-    const productImages = pRow?.images;
-    const productFallback =
-      Array.isArray(productImages) && productImages.length > 0 && typeof productImages[0] === "string"
-        ? productImages[0]
-        : null;
-    const productImage = variantImage || productFallback || item.imageSrc || "";
+    const productImage = variantImage || item.imageSrc || "";
 
     const breakdown = itemBreakdowns?.find(
       (b) => b.id === item.id && (b.variantId === item.variantId || !b.variantId)

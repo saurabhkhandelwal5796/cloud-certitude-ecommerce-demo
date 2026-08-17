@@ -65,7 +65,7 @@ function mapRawProducts(data: any[]): AdminProduct[] {
 
     const imageSrc = primaryVariant && Array.isArray(primaryVariant.images) && primaryVariant.images.length > 0 
       ? primaryVariant.images[0] 
-      : ((p.image_src || p.imageSrc || (Array.isArray(p.images) ? p.images[0] : "")) || "");
+      : "";
 
     return {
       id: String(p.id),
@@ -78,7 +78,7 @@ function mapRawProducts(data: any[]): AdminProduct[] {
       discountPercent,
       stockQuantity: p.stock !== undefined ? Number(p.stock) : (p.stockQuantity !== undefined ? Number(p.stockQuantity) : 0),
       imageSrc,
-      images: Array.isArray(p.images) ? (p.images as string[]) : [],
+      images: primaryVariant && Array.isArray(primaryVariant.images) ? (primaryVariant.images as string[]) : [],
       size: Array.isArray(p.size) ? (p.size as string[]) : ["S", "M", "L", "XL"],
       color: Array.isArray(p.color) ? (p.color as string[]) : ["Beige", "Black", "Charcoal"],
       rating: p.rating !== undefined ? Number(p.rating) : 4.5,
@@ -296,6 +296,76 @@ export async function getRecommendedForYou(email?: string): Promise<AdminProduct
   return list.slice(0, 8);
 }
 
+async function fetchSimilarProducts(current: AdminProduct, limit: number): Promise<AdminProduct[]> {
+  const { getSupabaseClient } = await import("@/lib/supabase/client");
+  const supabase = getSupabaseClient() as any;
+  const productId = current.id;
+  
+  let results: AdminProduct[] = [];
+  
+  // 1. Try to find products with the exact same navigation node (leaf level, e.g. kids/footwear/sneakers)
+  if (current.navNodeId) {
+    const primaryMatches = await fetchProductsByQuery(q => 
+      q.eq('nav_node_id', current.navNodeId)
+       .neq('id', productId)
+       .limit(limit)
+    );
+    results = primaryMatches;
+  }
+  
+  // 2. If we need more, try to find products in sibling navigation nodes (e.g. other kids/footwear products like sandals)
+  if (results.length < limit && current.navNodeId) {
+    try {
+      const { data: nodeData } = await supabase
+        .from('navigation_nodes')
+        .select('parent_id')
+        .eq('id', current.navNodeId)
+        .maybeSingle();
+        
+      if (nodeData && nodeData.parent_id) {
+        const { data: siblingNodes } = await supabase
+          .from('navigation_nodes')
+          .select('id')
+          .eq('parent_id', nodeData.parent_id);
+          
+        if (siblingNodes && siblingNodes.length > 0) {
+          const siblingIds = siblingNodes.map((n: any) => n.id).filter((id: string) => id !== current.navNodeId);
+          if (siblingIds.length > 0) {
+            const extraLimit = limit - results.length;
+            const siblingMatches = await fetchProductsByQuery(q => 
+              q.in('nav_node_id', siblingIds)
+               .neq('id', productId)
+               .limit(extraLimit)
+            );
+            results = [...results, ...siblingMatches];
+          }
+        }
+      }
+    } catch (err) {
+      console.error("[SimilarProducts] Sibling fetch failed:", err);
+    }
+  }
+  
+  // 3. Fallback to same high-level category (e.g. Men, Women, Kids, Footwear, Accessories)
+  if (results.length < limit) {
+    const extraLimit = limit - results.length;
+    const fallbackMatches = await fetchProductsByQuery(q => 
+      q.eq('category', current.category)
+       .neq('id', productId)
+       .limit(limit + 5)
+    );
+    const existingIds = new Set(results.map(r => r.id));
+    for (const match of fallbackMatches) {
+      if (results.length >= limit) break;
+      if (!existingIds.has(match.id)) {
+        results.push(match);
+      }
+    }
+  }
+  
+  return results.slice(0, limit);
+}
+
 export async function getCustomersAlsoBought(productId: string): Promise<AdminProduct[]> {
   const orders = await getOrders();
 
@@ -328,8 +398,7 @@ export async function getCustomersAlsoBought(productId: string): Promise<AdminPr
   const prods = await fetchProductsByIds([productId]);
   const currentProduct = prods[0];
   if (currentProduct) {
-     const similar = await fetchProductsByQuery(q => q.eq('category', currentProduct.category).neq('id', productId).limit(4));
-     return similar;
+     return await fetchSimilarProducts(currentProduct, 4);
   }
   return [];
 }
@@ -340,8 +409,7 @@ export async function getSimilarProducts(productId: string): Promise<AdminProduc
 
   if (!current) return await fetchProductsByQuery(q => q.limit(4));
 
-  const similar = await fetchProductsByQuery(q => q.eq('category', current.category).neq('id', productId).limit(4));
-  return similar;
+  return await fetchSimilarProducts(current, 4);
 }
 
 export async function getCompleteTheLook(productId: string): Promise<{

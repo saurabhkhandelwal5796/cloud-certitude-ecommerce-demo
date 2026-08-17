@@ -67,6 +67,8 @@ export default function AdminVariantsPage() {
   const [fActive, setFActive] = useState(true);
   const [fIsPrimary, setFIsPrimary] = useState(false);
   const [fGstRate, setFGstRate] = useState("5");
+  // Manual variant name — used only when availableAttributes is empty (no attributes assigned to product)
+  const [fManualName, setFManualName] = useState("");
 
   // Image upload
   const MAX_VARIANT_IMAGES = 5;
@@ -227,6 +229,7 @@ export default function AdminVariantsPage() {
     setVSelectedFiles([]);
     vFilePreviews.forEach(p => URL.revokeObjectURL(p));
     setVFilePreviews([]);
+    setFManualName("");
   };
 
   const toggleSelectRow = (id: string) => {
@@ -441,6 +444,8 @@ export default function AdminVariantsPage() {
     setFIsPrimary(variant.isPrimary);
     setFGstRate(variant.gstRate?.toString() || "5");
     setVImages([...variant.images]);
+    // Pre-fill manual name fallback in case product has no attributes assigned
+    setFManualName(variant.variantName || "");
 
     setShowModal(true);
     setIsLoadingAttributes(true);
@@ -590,6 +595,8 @@ export default function AdminVariantsPage() {
     setFActive(variant.isActive);
     setFGstRate(variant.gstRate?.toString() || "5");
     setVImages([...variant.images]);
+    // Pre-fill manual name fallback for duplicate workflow
+    setFManualName(variant.variantName ? `Copy Of ${variant.variantName}` : "");
 
     setShowModal(true);
     setIsLoadingAttributes(true);
@@ -686,11 +693,17 @@ export default function AdminVariantsPage() {
     const selectedValues = Object.entries(cSelectedAttrIds)
       .filter(([, id]) => id)
       .map(([attrName, valueId]) => availableAttributes[attrName]?.find((o) => o.id === valueId)?.value);
-    generatedName = generateVariantName(selectedValues);
+    // If no attributes are assigned to the product, fall back to the manually-entered name
+    const hasAttrOptions = Object.keys(availableAttributes).length > 0;
+    generatedName = hasAttrOptions ? generateVariantName(selectedValues) : fManualName.trim();
 
+    // When no attributes are configured, validate the manual name
+    if (!hasAttrOptions && !generatedName) {
+      return setFormError("Please enter a Variant Name.");
+    }
     // Validate calculated selling price instead of fDiscPrice since we're using percentage
     const discPriceToValidate = fDiscPrice.trim() !== "" ? fDiscPrice : "";
-    const val = validateVariantFields(fPrice, fQty, discPriceToValidate, fSku, generatedName);
+    const val = validateVariantFields(fPrice, fQty, discPriceToValidate, fSku, hasAttrOptions ? generatedName : undefined);
     if (!val.isValid) {
       return setFormError(val.error!);
     }
@@ -1262,13 +1275,25 @@ export default function AdminVariantsPage() {
                             </div>
                           ))
                         ) : (
-                          <div className="col-span-2 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
-                            <p className="text-[11px] font-semibold text-amber-700">
-                              ⚠️ No attribute group is assigned to this product, or the group has no values assigned.
-                            </p>
-                            <p className="text-[10px] text-amber-600 mt-1">
-                              Go to the product's <strong>Attributes</strong> panel and assign an attribute group with values (Color, Size, Fit, Rise, etc.) before adding variants.
-                            </p>
+                          <div className="col-span-2 space-y-3">
+                            <div className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-3">
+                              <p className="text-[11px] font-semibold text-amber-700">
+                                ⚠️ No attributes are assigned to this product yet.
+                              </p>
+                              <p className="text-[10px] text-amber-600 mt-1">
+                                To use dynamic attribute dropdowns, go to the product's <strong>Attributes</strong> panel and assign attribute values first. For now, enter a variant name manually below.
+                              </p>
+                            </div>
+                            <div className="space-y-1.5">
+                              <label className="block font-bold uppercase tracking-wider text-stone-500">Variant Name *</label>
+                              <input
+                                type="text"
+                                value={fManualName}
+                                onChange={(e) => setFManualName(e.target.value)}
+                                placeholder="e.g. Blue / M / Slim Fit"
+                                className="w-full rounded-xl border border-stone-200 bg-white px-3.5 py-2.5 text-stone-850 placeholder-stone-400 focus:border-emerald-400/60 focus:outline-none focus:ring-1 focus:ring-emerald-400/40"
+                              />
+                            </div>
                           </div>
                         )}
 

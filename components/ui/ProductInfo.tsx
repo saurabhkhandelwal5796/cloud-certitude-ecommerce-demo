@@ -449,11 +449,11 @@ export default function ProductInfo({
                       </>
                     )}
                   </span>
-                  {isSize && (
+                  {/* {isSize && (
                     <button className="text-stone-400 hover:text-stone-850 hover:underline font-semibold cursor-pointer">
                       Size Guide
                     </button>
-                  )}
+                  )} */}
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -586,10 +586,10 @@ export default function ProductInfo({
       <div className="space-y-4">
         <div className="flex border-b border-stone-200">
           {[
-            { id: "description", label: "Details" },
-            { id: "specs",       label: "Specifications" },
-            { id: "shipping",    label: "Shipping" },
-            { id: "returns",     label: "Returns" },
+            { id: "description", label: "Details" }
+            // { id: "specs",       label: "Specifications" },
+            // { id: "shipping",    label: "Shipping" },
+            // { id: "returns",     label: "Returns" },
           ].map((tab) => (
             <button
               key={tab.id}

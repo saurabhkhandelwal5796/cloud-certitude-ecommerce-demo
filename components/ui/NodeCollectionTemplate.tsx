@@ -120,7 +120,7 @@ export default function NodeCollectionTemplate({ node, isTopLevelCategory, child
       const result = await getFilteredProductsByNode({
         navNodeId: node.id,
         filters: cleanFilters,
-        priceMax: priceRange < 15000 ? priceRange : undefined,
+        priceMax: priceRange,
         sort: sortOption,
         limit: ITEMS_PER_PAGE,
         offset: (currentPage - 1) * ITEMS_PER_PAGE,

@@ -133,8 +133,8 @@ export default function ProductCard({
               }}
             />
           ) : (
-            <div className="w-full h-full flex flex-col items-center justify-center bg-stone-100 text-stone-400">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-center mt-2">No Image</span>
+            <div className="w-full h-full flex flex-col items-center justify-center bg-stone-100 text-stone-400 p-4">
+              <span className="text-[9px] font-black uppercase tracking-widest text-center mt-2 leading-normal">Preview Not Available</span>
             </div>
           )}
         </Link>
