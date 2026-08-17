@@ -290,22 +290,37 @@ export async function editReview(
  * Deletes a review.
  */
 export async function deleteReview(reviewId: string): Promise<boolean> {
+  try {
+    const res = await fetch("/api/reviews", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reviewId }),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success) return true;
+    }
+  } catch (err) {
+    console.warn("[ReviewService] API delete error, trying direct fallback:", err);
+  }
+
+  // Fallback to direct client call if API is unreachable
   const supabase = getSupabaseClient() as any;
 
-  // Get product_id first to sync ratings
   const { data: reviewData } = await supabase
     .from('reviews')
     .select('product_id')
     .eq('id', reviewId)
     .single();
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from('reviews')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('id', reviewId);
 
-  if (error) {
-    console.error(`[ReviewService] Error deleting review ${reviewId}:`, error);
+  if (error || (count !== null && count === 0)) {
+    console.error(`[ReviewService] Error deleting review ${reviewId}:`, error || "0 rows deleted");
     return false;
   }
 

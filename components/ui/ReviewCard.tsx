@@ -58,8 +58,14 @@ export default function ReviewCard({
   const handleDelete = async () => {
     if (window.confirm("Are you sure you want to delete your review? This action cannot be undone.")) {
       setIsDeleting(true);
-      if (onDelete) {
-        onDelete(review.id);
+      try {
+        if (onDelete) {
+          await onDelete(review.id);
+        }
+      } catch (err) {
+        console.error("[ReviewCard] Delete error:", err);
+      } finally {
+        setIsDeleting(false);
       }
     }
   };

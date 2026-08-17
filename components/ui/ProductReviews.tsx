@@ -127,7 +127,11 @@ export default function ProductReviews({
   };
 
   const handleReviewDelete = async (reviewId: string) => {
-    await deleteReview(reviewId);
+    setReviews((prev) => prev.filter((r) => r.id !== reviewId));
+    const success = await deleteReview(reviewId);
+    if (!success) {
+      alert("Failed to delete review. Please try again.");
+    }
     await loadData();
   };
 
