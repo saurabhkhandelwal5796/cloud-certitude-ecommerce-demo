@@ -142,15 +142,36 @@ export default function HomePage() {
         const newArrList = await getNewArrivals();
         setNewArrivals(newArrList);
 
-        // Fetch testimonials from Supabase
+        // Fetch real customer testimonials from Supabase in descending order of created_at
         const { data: dbReviews } = await supabase
           .from("reviews")
           .select("*")
           .eq("reported", false)
           .order("created_at", { ascending: false })
           .limit(3);
-        if (dbReviews) {
-          setTestimonials(dbReviews);
+
+        if (dbReviews && dbReviews.length > 0) {
+          const emails = dbReviews.map((r: any) => r.customer_email).filter(Boolean);
+          const { data: profileRows } = await supabase
+            .from("profiles")
+            .select("email, avatar_url")
+            .in("email", emails);
+
+          const avatarMap: Record<string, string> = {};
+          (profileRows || []).forEach((p: any) => {
+            if (p.email && p.avatar_url) {
+              avatarMap[p.email.toLowerCase()] = p.avatar_url;
+            }
+          });
+
+          const enrichedReviews = dbReviews.map((r: any) => ({
+            ...r,
+            avatarSrc: avatarMap[r.customer_email?.toLowerCase()] || ""
+          }));
+
+          setTestimonials(enrichedReviews);
+        } else {
+          setTestimonials([]);
         }
       } catch (err) {
         console.error("Failed to load recommendations on home page:", err);
@@ -495,25 +516,18 @@ export default function HomePage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {testimonials.length > 0 ? (
-            testimonials.map((review, idx) => {
-              const avatars = [
-                "https://images.unsplash.com/photo-1534528741775-53994a69daeb?q=80&w=150&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=150&auto=format&fit=crop",
-                "https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=150&auto=format&fit=crop"
-              ];
-              return (
-                <TestimonialCard
-                  key={review.id}
-                  name={review.customer_name}
-                  review={review.review_text}
-                  rating={review.rating}
-                  avatarSrc={avatars[idx % avatars.length]}
-                  role={review.is_verified_purchase ? "Verified Purchaser" : "Conscious Customer"}
-                />
-              );
-            })
+            testimonials.map((review) => (
+              <TestimonialCard
+                key={review.id}
+                name={review.customer_name}
+                review={review.review_text}
+                rating={review.rating}
+                avatarSrc={review.avatarSrc || ""}
+                role={review.is_verified_purchase ? "Verified Purchaser" : "Conscious Customer"}
+              />
+            ))
           ) : (
-            <div className="col-span-3 text-center text-stone-500 py-8 font-light text-sm">
+            <div className="col-span-3 text-center text-stone-500 py-12 font-light text-sm border border-dashed border-stone-200 rounded-3xl bg-white/50">
               No customer testimonials are currently available. Check back soon!
             </div>
           )}

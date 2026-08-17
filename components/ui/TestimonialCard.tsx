@@ -52,14 +52,16 @@ export default function TestimonialCard({
 
       {/* User avatar & info */}
       <div className="mt-6 flex items-center gap-4 border-t border-stone-100 pt-4">
-        <div className="relative h-10 w-10 overflow-hidden rounded-full bg-stone-100 border border-stone-200/50">
-          <Image
-            src={avatarSrc}
-            alt={name}
-            fill
-            sizes="40px"
-            className="object-cover"
-          />
+        <div className="relative h-10 w-10 overflow-hidden rounded-full bg-[#E0A99E] border border-stone-200/50 flex items-center justify-center text-white font-extrabold text-sm uppercase flex-shrink-0">
+          {avatarSrc && (avatarSrc.startsWith("http://") || avatarSrc.startsWith("https://") || avatarSrc.startsWith("data:")) ? (
+            <img
+              src={avatarSrc}
+              alt={name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <span>{name ? name.trim().charAt(0).toUpperCase() : "U"}</span>
+          )}
         </div>
         <div className="text-left">
           <h4 className="text-sm font-bold text-stone-800 tracking-wide">{name}</h4>
