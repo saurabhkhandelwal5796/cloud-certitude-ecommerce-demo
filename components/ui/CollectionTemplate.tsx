@@ -98,7 +98,7 @@ export default function CollectionTemplate({
   useEffect(() => {
     const loadFacets = async () => {
       try {
-        const { getCategoryFacets } = await import("@/services/AdminService");
+        const { getCategoryFacets } = await import("@/services/FacetService");
         const data = await getCategoryFacets(categoryFilter);
         setFacets(data);
       } catch (err) {
@@ -146,7 +146,7 @@ export default function CollectionTemplate({
         subcategoryName: subcategoryFilter,
         filters: cleanFilters,
         priceMax: priceRange,
-        sort: sortOption,
+        sort: categoryFilter === "New Arrival" ? "newest" : sortOption,
         limit: ITEMS_PER_PAGE,
         offset: (currentPage - 1) * ITEMS_PER_PAGE,
       });
@@ -154,9 +154,12 @@ export default function CollectionTemplate({
       // For Sale / New Arrival: further filter client-side since DB has no tag column
       let result = data as ProductType[];
       if (categoryFilter === "Sale") {
-        result = result.filter(
-          (p) => p.discountPercent !== undefined && p.discountPercent > 0
+        const fiftyPercentOff = result.filter(
+          (p) => p.discountPercent !== undefined && p.discountPercent >= 50
         );
+        result = fiftyPercentOff.length > 0
+          ? fiftyPercentOff
+          : result.filter((p) => p.discountPercent !== undefined && p.discountPercent > 0);
       }
       // Apply in-page search query (lightweight: only on the returned page of results)
       if (searchQuery.trim()) {
