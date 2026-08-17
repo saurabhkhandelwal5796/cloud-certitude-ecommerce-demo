@@ -100,9 +100,19 @@ export default function CollectionTemplate({
       try {
         const { getCategoryFacets } = await import("@/services/FacetService");
         const data = await getCategoryFacets(categoryFilter);
-        setFacets(data);
+        const facetArray: Facet[] = Object.entries(data || {}).map(([attrName, values]) => ({
+          attributeName: attrName,
+          type: attrName.toLowerCase() === "brand" ? "brand" : "multi-select",
+          values: (values || []).map((val, idx) => ({
+            id: `${attrName}-${idx}`,
+            label: val,
+            count: 0
+          }))
+        }));
+        setFacets(facetArray);
       } catch (err) {
         console.error("Failed to load facets:", err);
+        setFacets([]);
       }
     };
     loadFacets();
