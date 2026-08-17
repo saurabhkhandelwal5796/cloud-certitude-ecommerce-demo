@@ -261,46 +261,50 @@ export default function HomePage() {
               idx === currentHeroSlide ? "opacity-100 z-10" : "opacity-0 z-0 pointer-events-none"
             }`}
           >
-            <Image
-              src={slide.image}
-              alt={slide.title}
-              fill
-              priority={idx === 0}
-              className="object-cover opacity-75 object-center"
-            />
-            <div className="absolute inset-0 bg-gradient-to-r from-stone-950/70 via-stone-900/30 to-transparent" />
-            
-            {/* Slide Content */}
-            <div className="absolute inset-0 flex items-center z-20">
-              <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 text-left">
-                <div className="max-w-xl space-y-4 sm:space-y-6">
-                  <span className="inline-block text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-[#E0A99E]">
-                    {slide.subtitle}
-                  </span>
-                  <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wider text-white uppercase leading-none">
-                    {slide.title}
-                  </h1>
-                  <p className="text-stone-300 font-light text-xs sm:text-sm max-w-sm sm:max-w-md">
-                    Experience state-of-the-art sustainable tailoring designed to represent modern values, luxury, and prestige.
-                  </p>
-                  <div>
-                    <Link
-                      href={slide.href}
-                      className="inline-block bg-white text-stone-900 rounded-full px-6 sm:px-8 py-3 text-xs font-extrabold uppercase tracking-widest hover:bg-[#E0A99E] hover:text-white transition-all shadow-lg transform hover:-translate-y-0.5 duration-300"
-                    >
-                      {slide.cta}
-                    </Link>
+            <Link href={slide.href} className="block relative w-full h-full group cursor-pointer">
+              <Image
+                src={slide.image}
+                alt={slide.title}
+                fill
+                priority={idx === 0}
+                className="object-cover opacity-75 object-center transition-transform duration-700 group-hover:scale-105"
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-stone-950/70 via-stone-900/30 to-transparent" />
+              
+              {/* Slide Content */}
+              <div className="absolute inset-0 flex items-center z-20">
+                <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 text-left">
+                  <div className="max-w-xl space-y-4 sm:space-y-6">
+                    <span className="inline-block text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] text-[#E0A99E]">
+                      {slide.subtitle}
+                    </span>
+                    <h1 className="text-3xl sm:text-5xl md:text-6xl font-black tracking-wider text-white uppercase leading-none">
+                      {slide.title}
+                    </h1>
+                    <p className="text-stone-300 font-light text-xs sm:text-sm max-w-sm sm:max-w-md">
+                      Experience state-of-the-art sustainable tailoring designed to represent modern values, luxury, and prestige.
+                    </p>
+                    <div>
+                      <span
+                        className="inline-flex items-center gap-2 bg-white text-stone-900 rounded-full px-6 sm:px-8 py-3 text-xs font-extrabold uppercase tracking-widest group-hover:bg-[#E0A99E] group-hover:text-white transition-all shadow-lg transform group-hover:-translate-y-0.5 duration-300"
+                      >
+                        {slide.cta} &rarr;
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </Link>
           </div>
         ))}
 
         {/* Carousel Left/Right navigation arrows */}
         <button
-          onClick={handlePrevSlide}
-          className="absolute left-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handlePrevSlide();
+          }}
+          className="absolute left-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
           aria-label="Previous Slide"
         >
           <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -308,8 +312,11 @@ export default function HomePage() {
           </svg>
         </button>
         <button
-          onClick={handleNextSlide}
-          className="absolute right-4 top-1/2 -translate-y-1/2 z-20 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNextSlide();
+          }}
+          className="absolute right-4 top-1/2 -translate-y-1/2 z-30 h-10 w-10 sm:h-12 sm:w-12 flex items-center justify-center rounded-full bg-white/20 hover:bg-white/40 text-white backdrop-blur-sm transition-all focus:outline-none cursor-pointer"
           aria-label="Next Slide"
         >
           <svg className="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,12 +325,15 @@ export default function HomePage() {
         </button>
 
         {/* Carousel Indicators / Dots */}
-        <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2.5 z-20">
+        <div className="absolute bottom-6 inset-x-0 flex justify-center gap-2.5 z-30">
           {HERO_SLIDES.map((_, idx) => (
             <button
               key={idx}
-              onClick={() => setCurrentHeroSlide(idx)}
-              className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none ${
+              onClick={(e) => {
+                e.stopPropagation();
+                setCurrentHeroSlide(idx);
+              }}
+              className={`h-1.5 rounded-full transition-all duration-300 focus:outline-none cursor-pointer ${
                 idx === currentHeroSlide ? "w-6 bg-[#E0A99E]" : "w-1.5 bg-white/40 hover:bg-white/60"
               }`}
               aria-label={`Slide index ${idx + 1}`}
