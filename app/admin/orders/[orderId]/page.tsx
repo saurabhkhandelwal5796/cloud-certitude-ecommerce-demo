@@ -4,10 +4,19 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { formatPrice, getGstLabel } from "@/utils";
+import { formatPrice } from "@/utils";
 import { getSupabaseClient } from "@/lib/supabase/client";
 import OrderAuditTimeline from "@/components/ui/OrderAuditTimeline";
-import { getOrders, AdminOrder } from "@/services/AdminService";
+import {
+  getOrders,
+  getCustomerById,
+  getReturnRequestByOrderId,
+  getRefundByOrderId,
+  AdminOrder,
+  AdminCustomer,
+  ReturnRequestRecord,
+  RefundRecord,
+} from "@/services/AdminService";
 import { getVariantById } from "@/services/VariantService";
 import { isFullSnapshot, coerceLegacyItem } from "@/services/SnapshotService";
 import { OrderItemSnapshot } from "@/types/OrderItemSnapshot";
@@ -19,19 +28,33 @@ interface DivergenceAnalysis {
   differences: string[];
 }
 
-export default function AdminOrderAuditPage() {
+/**
+ * Salesforce-Style Admin Order Detail & Forensic Workspace (/admin/orders/[orderId])
+ *
+ * Provides:
+ * - Order Record Header with Customer Context & Links back to Customer Detail
+ * - Detailed Order Items with Immutable Snapshot & Catalog Divergence Verification
+ * - Comprehensive Payment & Financial Breakdown
+ * - Shipping & Destination Details
+ * - Active Return Request & Refund Status Modules
+ * - Minute-to-Minute Chronological Order Audit Timeline
+ */
+export default function AdminOrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const orderIdParam = Array.isArray(params?.orderId) ? params?.orderId[0] : params?.orderId;
   const orderId = orderIdParam || "";
 
   const [order, setOrder] = useState<AdminOrder | null>(null);
+  const [customer, setCustomer] = useState<AdminCustomer | null>(null);
+  const [returnRequest, setReturnRequest] = useState<ReturnRequestRecord | null>(null);
+  const [refundRecord, setRefundRecord] = useState<RefundRecord | null>(null);
   const [analyses, setAnalyses] = useState<DivergenceAnalysis[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchOrderAndAnalyze = async () => {
+    const fetchOrderDataAndAnalyze = async () => {
       try {
         const supabase = getSupabaseClient();
         const {
@@ -53,6 +76,17 @@ export default function AdminOrderAuditPage() {
         }
 
         setOrder(matched);
+
+        // Fetch associated Customer Profile, Return Request, and Refund Record in parallel
+        const [custProfile, retReq, refRec] = await Promise.all([
+          getCustomerById(matched.profileId || matched.customerEmail),
+          getReturnRequestByOrderId(matched.orderId),
+          getRefundByOrderId(matched.orderId),
+        ]);
+
+        setCustomer(custProfile);
+        setReturnRequest(retReq);
+        setRefundRecord(refRec);
 
         // Perform real-time catalog divergence analysis
         const itemAnalyses: DivergenceAnalysis[] = [];
@@ -130,19 +164,40 @@ export default function AdminOrderAuditPage() {
 
         setAnalyses(itemAnalyses);
       } catch (err) {
-        console.error("[AdminOrderAudit] Error running audit:", err);
-        setErrorMsg("Failed executing audit and divergence analysis.");
+        console.error("[AdminOrderDetail] Error running audit:", err);
+        setErrorMsg("Failed executing order inspection.");
       } finally {
         setIsLoading(false);
       }
     };
 
     if (orderId) {
-      fetchOrderAndAnalyze();
+      fetchOrderDataAndAnalyze();
     }
   }, [orderId, router]);
 
-  const getBadgeStyle = (status: DivergenceAnalysis["status"]) => {
+  const getStatusBadgeClass = (status: string) => {
+    switch (status) {
+      case "Delivered":
+        return "bg-emerald-100 text-emerald-800 border-emerald-200";
+      case "Pending":
+      case "Processing":
+        return "bg-amber-100 text-amber-800 border-amber-200";
+      case "Shipped":
+      case "Out for Delivery":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "Cancelled":
+        return "bg-rose-100 text-rose-800 border-rose-200";
+      case "Return Requested":
+      case "Return Approved":
+      case "Returned":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      default:
+        return "bg-stone-100 text-stone-700 border-stone-200";
+    }
+  };
+
+  const getDivergenceBadgeStyle = (status: DivergenceAnalysis["status"]) => {
     switch (status) {
       case "IDENTICAL":
         return "bg-emerald-100 text-emerald-800 border-emerald-300";
@@ -155,7 +210,7 @@ export default function AdminOrderAuditPage() {
     }
   };
 
-  const getStatusLabel = (status: DivergenceAnalysis["status"]) => {
+  const getDivergenceStatusLabel = (status: DivergenceAnalysis["status"]) => {
     switch (status) {
       case "IDENTICAL":
         return "Verified & Consistent";
@@ -170,13 +225,13 @@ export default function AdminOrderAuditPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 bg-[#FAF9F6] text-center min-h-[60vh] flex items-center justify-center">
+      <div className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8 text-center min-h-[60vh] flex items-center justify-center">
         <div className="flex items-center gap-2.5 text-stone-600 font-medium text-sm">
           <svg className="h-5 w-5 animate-spin text-[#E0A99E]" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          Running forensic order snapshot & catalog divergence inspection...
+          Loading Order Details & Audit Timeline...
         </div>
       </div>
     );
@@ -184,16 +239,16 @@ export default function AdminOrderAuditPage() {
 
   if (errorMsg || !order) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 bg-[#FAF9F6] text-center min-h-[60vh] flex flex-col items-center justify-center">
-        <div className="p-8 rounded-2xl bg-white border border-stone-200/60 shadow-sm max-w-lg">
+      <div className="mx-auto max-w-4xl px-4 py-16 sm:px-6 lg:px-8 text-center min-h-[60vh] flex flex-col items-center justify-center">
+        <div className="p-8 rounded-3xl bg-white border border-stone-200 shadow-sm max-w-lg">
           <span className="text-3xl block mb-3">🛡️</span>
-          <h2 className="text-lg font-bold text-stone-900 mb-2">Audit Report Notice</h2>
+          <h2 className="text-lg font-bold text-stone-900 mb-2">Order Not Found</h2>
           <p className="text-stone-500 text-xs mb-6 leading-relaxed">
             {errorMsg || "We couldn't locate the requested order in the database."}
           </p>
           <Link
             href="/admin/orders"
-            className="rounded-full bg-stone-900 hover:bg-stone-850 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors inline-block"
+            className="rounded-full bg-stone-900 hover:bg-stone-800 text-white px-6 py-2.5 text-xs font-bold uppercase tracking-wider transition-colors inline-block"
           >
             ← Back to Admin Orders
           </Link>
@@ -202,141 +257,195 @@ export default function AdminOrderAuditPage() {
     );
   }
 
+  const customerDetailHref = customer?.id
+    ? `/admin/customers/${customer.id}`
+    : `/admin/customers/${order.customerEmail}`;
+
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8 bg-[#FAF9F6] text-stone-800 min-h-[calc(100vh-10rem)]">
-      {/* Top Bar Navigation */}
-      <div className="flex items-center justify-between mb-8">
-        <Link
-          href="/admin/orders"
-          className="inline-flex items-center gap-1.5 text-xs font-bold text-stone-600 hover:text-stone-900 transition-colors uppercase tracking-wider"
-        >
-          <span>←</span> Return to Admin Ledger
-        </Link>
-        <span className="px-3 py-1 bg-stone-900 text-white text-[10px] font-bold uppercase tracking-widest rounded-full">
-          Support Staff Audit Dashboard
-        </span>
+    <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8 text-stone-800 space-y-6 text-left">
+      {/* Top Breadcrumb & Customer Context Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+        <div className="flex items-center gap-2 font-bold text-stone-400">
+          <Link href="/admin/orders" className="hover:text-stone-900 transition">
+            Orders
+          </Link>
+          <span>/</span>
+          {customer ? (
+            <>
+              <Link href={customerDetailHref} className="hover:text-stone-900 transition text-[#A65B4E]">
+                {customer.name}
+              </Link>
+              <span>/</span>
+            </>
+          ) : null}
+          <span className="text-stone-800 font-mono">{order.orderId}</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          {customer && (
+            <Link
+              href={customerDetailHref}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-bold transition shadow-2xs"
+            >
+              <span>👤</span>
+              <span>View Customer Record ({customer.name})</span>
+            </Link>
+          )}
+          <Link
+            href="/admin/orders"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-stone-200 bg-white hover:bg-stone-50 text-stone-700 font-bold transition shadow-2xs"
+          >
+            <span>←</span>
+            <span>All Orders</span>
+          </Link>
+        </div>
       </div>
 
-      {/* Main Order Header Box */}
-      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden mb-8">
+      {/* Salesforce-Style Order Record Header */}
+      <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden">
         <div className="bg-stone-900 text-white px-6 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] uppercase font-bold text-[#E0A99E] tracking-widest block">
-                Forensic Order Record
-              </span>
-              <span className="text-[10px] text-stone-400 font-mono font-light">
-                · {order.orderDate}
-              </span>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#E0A99E] to-stone-800 flex items-center justify-center text-white text-xl shadow-md">
+              📦
             </div>
-            <h1 className="text-2xl font-black font-mono tracking-wide uppercase mt-1">
-              Order #{order.orderId}
-            </h1>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] uppercase font-bold text-[#E0A99E] tracking-widest block">
+                  Order Record
+                </span>
+                <span className="text-stone-400 font-mono text-[10px]">
+                  · Placed on {order.orderDate}
+                </span>
+              </div>
+              <h1 className="text-2xl font-black font-mono tracking-wide uppercase mt-0.5">
+                {order.orderId}
+              </h1>
+            </div>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="px-4 py-1.5 bg-[#E0A99E]/20 text-[#E0A99E] border border-[#E0A99E]/30 text-xs font-extrabold uppercase tracking-wide rounded-full">
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wide border ${getStatusBadgeClass(
+                order.status
+              )}`}
+            >
               Status: {order.status}
             </span>
           </div>
         </div>
 
-        {/* Customer & Transaction Summary Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 bg-stone-50/70 border-b border-stone-200/60 text-xs">
+        {/* Header Highlights Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-6 bg-stone-50/70 border-b border-stone-200/60 text-xs">
           <div>
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block mb-1">
-              Customer Profile
+            <span className="text-[10px] text-stone-400 uppercase font-extrabold tracking-wider block mb-1">
+              Customer Account
             </span>
-            <span className="font-bold text-stone-900 block text-sm">{order.customerName}</span>
-            <span className="text-stone-500 font-light block mt-0.5 select-all">{order.customerEmail}</span>
-          </div>
-          <div>
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block mb-1">
-              Payment & Tx Hash
-            </span>
-            <span className="font-semibold text-stone-800 block">{order.paymentMethod}</span>
-            <span className="font-mono text-stone-500 text-[11px] block mt-0.5 truncate select-all" title={order.transactionId || "N/A"}>
-              Tx: {order.transactionId || "N/A"}
+            <Link
+              href={customerDetailHref}
+              className="font-bold text-stone-900 hover:text-[#A65B4E] hover:underline block truncate text-sm"
+            >
+              {order.customerName} ↗
+            </Link>
+            <span className="text-stone-500 font-mono text-[11px] block mt-0.5 select-all truncate">
+              {order.customerEmail}
             </span>
           </div>
+
           <div>
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block mb-1">
-              Shipping Destination
+            <span className="text-[10px] text-stone-400 uppercase font-extrabold tracking-wider block mb-1">
+              Customer Contact
             </span>
-            <span className="font-medium text-stone-800 block truncate">
-              {order.address ? `${order.address.city}, ${order.address.state} — ${order.address.country}` : "Address details archived"}
+            <span className="font-mono text-stone-800 font-medium block">
+              {customer?.phone ? `📞 ${customer.phone}` : "Phone: —"}
+            </span>
+            <span className="text-stone-400 text-[10px] block mt-0.5">
+              Role: <strong className="uppercase text-stone-700">{customer?.role || "customer"}</strong>
             </span>
           </div>
+
           <div>
-            <span className="text-[10px] text-stone-400 uppercase font-bold tracking-wider block mb-1">
-              Ledger Grand Total
+            <span className="text-[10px] text-stone-400 uppercase font-extrabold tracking-wider block mb-1">
+              Payment & Transaction
             </span>
-            <span className="font-black text-[#C68B7D] text-lg block">
+            <span className="font-bold text-stone-900 block">{order.paymentMethod || "Credit Card"}</span>
+            <span className="font-mono text-stone-500 text-[10px] block mt-0.5 truncate" title={order.transactionId || "N/A"}>
+              Tx: {order.transactionId || "Recorded via Stripe/PG"}
+            </span>
+          </div>
+
+          <div>
+            <span className="text-[10px] text-stone-400 uppercase font-extrabold tracking-wider block mb-1">
+              Total Order Value
+            </span>
+            <span className="font-black text-[#A65B4E] text-lg block">
               {formatPrice(order.grand_total !== undefined ? order.grand_total : order.total)}
+            </span>
+            <span className="text-stone-400 text-[10px] block">
+              {order.itemsCount || order.items?.length || 1} items included
             </span>
           </div>
         </div>
       </div>
 
-      {/* FORENSIC DIVERGENCE REPORT */}
-      <div className="space-y-6 mb-10">
+      {/* SECTION 1: ORDER ITEMS & FORENSIC SNAPSHOT AUDIT */}
+      <div className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-base font-black uppercase tracking-wider text-stone-900">
-              Immutable Snapshot vs. Live Catalog Inspection
+            <h2 className="text-base font-black uppercase tracking-wider text-stone-900 flex items-center gap-2">
+              <span>🛍️</span>
+              <span>Purchased Items & Snapshot Verification</span>
             </h2>
             <p className="text-xs text-stone-500 font-light mt-0.5">
-              Protects customer dispute resolutions by verifying exactly what attributes and pricing were presented at checkout.
+              Immutable order snapshots recorded at checkout compared against live catalog variants.
             </p>
           </div>
-          <span className="text-xs font-mono font-bold text-stone-500">
-            Reviewed Items: {analyses.length}
+          <span className="text-xs font-mono font-bold text-stone-500 bg-white px-3 py-1 rounded-xl border border-stone-200">
+            {analyses.length} {analyses.length === 1 ? "Item" : "Items"}
           </span>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-4">
           {analyses.map((analysis, idx) => {
             const item = analysis.itemSnapshot;
-            const statusStyle = getBadgeStyle(analysis.status);
-            const statusLabel = getStatusLabel(analysis.status);
+            const statusStyle = getDivergenceBadgeStyle(analysis.status);
+            const statusLabel = getDivergenceStatusLabel(analysis.status);
 
             return (
               <div
-                key={`audit-item-${idx}`}
-                className="bg-white rounded-2xl border border-stone-200/80 shadow-sm overflow-hidden"
+                key={`item-${idx}`}
+                className="bg-white rounded-3xl border border-stone-200/80 shadow-sm overflow-hidden"
               >
                 {/* Item Header */}
-                <div className="px-6 py-4 bg-stone-50 border-b border-stone-150 flex flex-wrap items-center justify-between gap-3">
+                <div className="px-6 py-3.5 bg-stone-50/80 border-b border-stone-150 flex flex-wrap items-center justify-between gap-3">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-xs font-bold bg-stone-900 text-white px-2 py-0.5 rounded">
+                    <span className="font-mono text-xs font-bold bg-stone-900 text-white px-2.5 py-0.5 rounded-lg">
                       Item #{idx + 1}
                     </span>
                     <span className={`px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-wider ${statusStyle}`}>
                       {statusLabel}
                     </span>
                   </div>
-                  <div className="flex flex-col items-end">
-                    <span className="font-bold text-stone-900 text-sm">
-                      {formatPrice(item.pricing.lineTotal ?? item.pricing.subtotal)} ({item.pricing.quantity} &times; {formatPrice(item.pricing.unitPrice)})
+                  <div className="text-right">
+                    <span className="font-black text-stone-900 text-sm">
+                      {formatPrice(item.pricing.lineTotal ?? item.pricing.subtotal)}
                     </span>
-                    {(item.pricing.gstAmount != null) && (
-                      <span className="text-[10px] text-stone-500 font-medium mt-0.5">
-                        Includes {item.pricing.gstRate}% GST ({formatPrice(item.pricing.gstAmount)})
-                      </span>
-                    )}
+                    <span className="text-xs text-stone-500 font-medium ml-1.5">
+                      ({item.pricing.quantity} &times; {formatPrice(item.pricing.unitPrice)})
+                    </span>
                   </div>
                 </div>
 
-                {/* Item Core Content */}
+                {/* Item Body */}
                 <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Left image & basics (4 cols) */}
-                  <div className="lg:col-span-4 flex items-start gap-4 border-b lg:border-b-0 lg:border-r border-stone-150 pb-6 lg:pb-0 lg:pr-6">
-                    <div className="relative h-28 w-22 rounded-xl border border-stone-200 overflow-hidden bg-stone-50 flex-shrink-0">
+                  {/* Image & Product Basics (4 Cols) */}
+                  <div className="lg:col-span-4 flex items-start gap-4 border-b lg:border-b-0 lg:border-r border-stone-150 pb-4 lg:pb-0 lg:pr-6">
+                    <div className="relative h-24 w-20 rounded-2xl border border-stone-200 overflow-hidden bg-stone-50 flex-shrink-0">
                       {item.productImage ? (
                         <Image
                           src={item.productImage}
                           alt={item.productName}
                           fill
-                          sizes="120px"
+                          sizes="100px"
                           className="object-cover"
                         />
                       ) : (
@@ -346,64 +455,71 @@ export default function AdminOrderAuditPage() {
                       )}
                     </div>
                     <div className="min-w-0 flex-1">
-                      <span className="text-[10px] uppercase font-extrabold text-[#C68B7D] tracking-wider block">
+                      <span className="text-[9px] uppercase font-black text-[#A65B4E] tracking-widest block">
                         {item.brand || "Atelier"} {item.category ? `· ${item.category}` : ""}
                       </span>
-                      <h4 className="font-black text-stone-900 uppercase tracking-wide text-sm mt-0.5 truncate">
+                      <h4 className="font-black text-stone-900 text-sm mt-0.5 truncate">
                         {item.productName}
                       </h4>
                       <p className="font-mono text-[11px] text-stone-500 mt-1">
-                        SKU: <strong className="text-stone-700">{item.sku || "N/A"}</strong>
+                        SKU: <strong className="text-stone-800">{item.sku || "N/A"}</strong>
                       </p>
-                      <p className="font-mono text-[10px] text-stone-400 mt-0.5 truncate" title={item.variantId || "N/A"}>
-                        VarID: {item.variantId || "Legacy"}
-                      </p>
+                      {item.variantId && (
+                        <p className="font-mono text-[10px] text-stone-400 mt-0.5 truncate" title={item.variantId}>
+                          Variant: {item.variantId.slice(0, 12)}...
+                        </p>
+                      )}
                     </div>
                   </div>
 
-                  {/* Middle: Immutable Recorded Attributes (4 cols) */}
-                  <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-stone-150 pb-6 lg:pb-0 lg:pr-6">
-                    <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">
-                      Recorded Attributes at Purchase
-                    </span>
-                    <div className="flex flex-wrap gap-1.5">
-                      {Object.entries(item.attributes).map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-lg text-xs"
-                        >
-                          <span className="text-stone-400 font-light mr-1">{k}:</span>
-                          <strong className="text-stone-800 font-bold">{v}</strong>
-                        </div>
-                      ))}
-                    </div>
-                    {item.variantSignature && (
-                      <div className="mt-3 pt-3 border-t border-stone-100">
-                        <span className="block text-[9px] uppercase font-bold text-stone-400">Signature Hash</span>
-                        <span className="font-mono text-[11px] text-stone-600 bg-stone-50 px-2 py-0.5 rounded block mt-0.5 truncate">
-                          {item.variantSignature}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right: Divergence & Audit Diagnosis (4 cols) */}
-                  <div className="lg:col-span-4 flex flex-col justify-between">
+                  {/* Attributes & GST Breakdown (4 Cols) */}
+                  <div className="lg:col-span-4 border-b lg:border-b-0 lg:border-r border-stone-150 pb-4 lg:pb-0 lg:pr-6 space-y-3 text-xs">
                     <div>
-                      <span className="block text-[10px] font-bold uppercase tracking-wider text-stone-400 mb-2">
-                        Catalog Consistency Check
+                      <span className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-400 mb-1.5">
+                        Recorded Variant Attributes
+                      </span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {Object.entries(item.attributes || {}).length === 0 ? (
+                          <span className="text-stone-400 text-xs">Standard Item</span>
+                        ) : (
+                          Object.entries(item.attributes).map(([k, v]) => (
+                            <div
+                              key={k}
+                              className="bg-stone-50 border border-stone-200 px-2.5 py-1 rounded-lg text-xs"
+                            >
+                              <span className="text-stone-400 font-medium mr-1">{k}:</span>
+                              <strong className="text-stone-800 font-bold">{v}</strong>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-stone-100 flex items-center justify-between text-[11px]">
+                      <span className="text-stone-500">GST Applied</span>
+                      <span className="font-bold text-stone-800">
+                        {item.pricing.gstRate ? `${item.pricing.gstRate}% (${formatPrice(item.pricing.gstAmount || 0)})` : "Included"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Divergence Diagnosis (4 Cols) */}
+                  <div className="lg:col-span-4 flex flex-col justify-between text-xs">
+                    <div>
+                      <span className="block text-[10px] font-extrabold uppercase tracking-wider text-stone-400 mb-2">
+                        Catalog Consistency Audit
                       </span>
                       {analysis.differences.length === 0 ? (
-                        <div className="p-3 bg-emerald-50/80 rounded-xl border border-emerald-200 text-emerald-900 text-xs flex items-start gap-2">
+                        <div className="p-3 bg-emerald-50/80 rounded-2xl border border-emerald-200 text-emerald-900 text-xs flex items-start gap-2">
                           <span className="text-sm font-bold">✓</span>
-                          <span>Live product and variant parameters exactly match this order snapshot. No tampering or post-purchase edits detected.</span>
+                          <span>Verified: Live catalog parameters match order snapshot.</span>
                         </div>
                       ) : (
-                        <div className="space-y-2">
+                        <div className="space-y-1.5">
                           {analysis.differences.map((diff, dIdx) => (
                             <div
                               key={dIdx}
-                              className={`p-3 rounded-xl border text-xs leading-relaxed flex items-start gap-2 ${
+                              className={`p-2.5 rounded-xl border text-[11px] leading-relaxed flex items-start gap-2 ${
                                 analysis.status === "MISSING_IN_CATALOG"
                                   ? "bg-rose-50 border-rose-200 text-rose-900"
                                   : analysis.status === "LEGACY_ITEM"
@@ -411,9 +527,7 @@ export default function AdminOrderAuditPage() {
                                   : "bg-amber-50 border-amber-200 text-amber-900"
                               }`}
                             >
-                              <span className="font-bold text-sm">
-                                {analysis.status === "MISSING_IN_CATALOG" ? "✕" : "⚠"}
-                              </span>
+                              <span className="font-bold">{analysis.status === "MISSING_IN_CATALOG" ? "✕" : "⚠"}</span>
                               <span>{diff}</span>
                             </div>
                           ))}
@@ -428,11 +542,174 @@ export default function AdminOrderAuditPage() {
         </div>
       </div>
 
-      {/* Order Audit History Log Section */}
-      <div className="bg-white rounded-2xl border border-stone-200/80 shadow-sm p-6 mb-8">
-        <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider mb-6 border-b border-stone-150 pb-3">
-          Forensic Status Modification Ledger
-        </h3>
+      {/* SECTION 2 & 3: PAYMENT, FINANCIALS & SHIPPING DETAILS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Payment & Financial Ledger */}
+        <div className="bg-white rounded-3xl border border-stone-200/80 p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-black uppercase tracking-wider text-stone-800 flex items-center gap-2">
+            <span>💳</span>
+            <span>Payment & Financial Ledger</span>
+          </h3>
+          <div className="space-y-2.5 text-xs">
+            <div className="flex justify-between py-2 border-b border-stone-100">
+              <span className="text-stone-500">Payment Method</span>
+              <span className="font-bold text-stone-900">{order.paymentMethod || "Credit Card"}</span>
+            </div>
+            {order.transactionId && (
+              <div className="flex justify-between py-2 border-b border-stone-100">
+                <span className="text-stone-500">Gateway Transaction ID</span>
+                <span className="font-mono text-stone-800 text-[11px] select-all">{order.transactionId}</span>
+              </div>
+            )}
+            {order.subtotal !== undefined && (
+              <div className="flex justify-between py-1.5 text-stone-600">
+                <span>Subtotal</span>
+                <span>{formatPrice(order.subtotal)}</span>
+              </div>
+            )}
+            {order.discount !== undefined && order.discount > 0 && (
+              <div className="flex justify-between py-1.5 text-emerald-700 font-semibold">
+                <span>Discount Applied</span>
+                <span>-{formatPrice(order.discount)}</span>
+              </div>
+            )}
+            {order.tax !== undefined && (
+              <div className="flex justify-between py-1.5 text-stone-600">
+                <span>Tax / GST</span>
+                <span>{formatPrice(order.tax)}</span>
+              </div>
+            )}
+            {order.shipping !== undefined && (
+              <div className="flex justify-between py-1.5 text-stone-600">
+                <span>Shipping & Delivery</span>
+                <span>{order.shipping === 0 ? "FREE" : formatPrice(order.shipping)}</span>
+              </div>
+            )}
+            <div className="flex justify-between pt-3 border-t border-stone-200 text-sm font-black text-stone-900">
+              <span>Grand Total</span>
+              <span className="text-[#A65B4E] text-base">
+                {formatPrice(order.grand_total !== undefined ? order.grand_total : order.total)}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Shipping & Delivery Address */}
+        <div className="bg-white rounded-3xl border border-stone-200/80 p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-black uppercase tracking-wider text-stone-800 flex items-center gap-2">
+            <span>🚚</span>
+            <span>Delivery & Shipping Destination</span>
+          </h3>
+          {order.address ? (
+            <div className="space-y-2.5 text-xs text-stone-700">
+              <div className="p-4 bg-stone-50 rounded-2xl border border-stone-150 space-y-1">
+                <div className="font-bold text-stone-900 text-sm">
+                  {[order.address.firstName, order.address.lastName].filter(Boolean).join(" ") || order.customerName}
+                </div>
+                {order.address.addressLine1 && <div>{order.address.addressLine1}</div>}
+                {order.address.addressLine2 && <div>{order.address.addressLine2}</div>}
+                <div>
+                  {[order.address.city, order.address.state, order.address.postalCode].filter(Boolean).join(", ")}
+                </div>
+                {order.address.country && <div className="font-semibold text-stone-800">{order.address.country}</div>}
+                {order.address.phone && (
+                  <div className="pt-2 font-mono text-stone-600 flex items-center gap-1">
+                    <span>📞</span> {order.address.phone}
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between text-stone-500 text-[11px] pt-1">
+                <span>Recipient Email</span>
+                <span className="font-mono text-stone-800">{order.address.email || order.customerEmail}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="p-6 text-center text-stone-400 text-xs">
+              Shipping address details archived with order snapshot.
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* SECTION 4: RETURNS & REFUNDS STATUS (If available) */}
+      {(returnRequest || refundRecord) && (
+        <div className="bg-white rounded-3xl border border-stone-200/80 p-6 shadow-sm space-y-4">
+          <h3 className="text-sm font-black uppercase tracking-wider text-stone-800 flex items-center gap-2">
+            <span>🔄</span>
+            <span>Active Return & Refund Lifecycle</span>
+          </h3>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+            {/* Return Request Summary */}
+            {returnRequest && (
+              <div className="p-4 rounded-2xl bg-amber-50/60 border border-amber-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-black uppercase text-[10px] text-amber-900 tracking-wider">
+                    Return Request #{returnRequest.id.slice(0, 8)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-amber-200 text-amber-950 uppercase">
+                    {returnRequest.status}
+                  </span>
+                </div>
+                <div className="text-stone-800">
+                  <strong className="text-stone-900">Reason:</strong> {returnRequest.reason}
+                </div>
+                {returnRequest.comments && (
+                  <div className="text-stone-600 text-[11px]">
+                    <em>&quot;{returnRequest.comments}&quot;</em>
+                  </div>
+                )}
+                {returnRequest.admin_notes && (
+                  <div className="pt-1.5 border-t border-amber-200/60 text-[11px] text-stone-700">
+                    <strong>Admin Note:</strong> {returnRequest.admin_notes}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Refund Summary */}
+            {refundRecord && (
+              <div className="p-4 rounded-2xl bg-blue-50/60 border border-blue-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="font-black uppercase text-[10px] text-blue-900 tracking-wider">
+                    Refund Record #{refundRecord.id.slice(0, 8)}
+                  </span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-200 text-blue-950 uppercase">
+                    {refundRecord.status}
+                  </span>
+                </div>
+                <div className="text-stone-900 font-bold">
+                  Amount: {formatPrice(refundRecord.amount)}
+                </div>
+                {refundRecord.refund_transaction_id && (
+                  <div className="font-mono text-[10px] text-stone-600 truncate">
+                    Refund Tx: {refundRecord.refund_transaction_id}
+                  </div>
+                )}
+                {refundRecord.remarks && (
+                  <div className="text-[11px] text-stone-600">
+                    Remarks: {refundRecord.remarks}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SECTION 5: MINUTE-TO-MINUTE ORDER AUDIT TIMELINE */}
+      <div className="bg-white rounded-3xl border border-stone-200/80 shadow-sm p-6 space-y-4">
+        <div className="flex items-center justify-between border-b border-stone-150 pb-3">
+          <div>
+            <h3 className="text-sm font-black text-stone-900 uppercase tracking-wider flex items-center gap-2">
+              <span>📜</span>
+              <span>Minute-to-Minute Order Audit Timeline</span>
+            </h3>
+            <p className="text-xs text-stone-400 font-light mt-0.5">
+              Immutable chronological record of every status transition and administrator action.
+            </p>
+          </div>
+        </div>
         <OrderAuditTimeline orderId={orderId} isCustomerView={false} />
       </div>
     </div>

@@ -31,7 +31,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { name: "Orders", href: "/admin/orders", icon: "📦", sectionLabel: "Operations" },
   { name: "Returns", href: "/admin/returns", icon: "🔄" },
   { name: "Customers", href: "/admin/customers", icon: "👥" },
-  { name: "Users", href: "/admin/users", icon: "👤" },
   { name: "Reviews", href: "/admin/reviews", icon: "💬", sectionLabel: "Insights" },
   { name: "AI Recommendations", href: "/admin/recommendations", icon: "✨" },
   { name: "Analytics", href: "/admin/analytics", icon: "📈" },
@@ -116,10 +115,9 @@ export default function AdminSidebar({ user }: AdminSidebarProps) {
                 )}
                 <Link
                   href={item.href}
-                  onClick={(e) => {
+                  onClick={() => {
                     setIsOpen(false);
-                    if (active) {
-                      e.preventDefault();
+                    if (pathname === item.href) {
                       triggerReset();
                     }
                   }}

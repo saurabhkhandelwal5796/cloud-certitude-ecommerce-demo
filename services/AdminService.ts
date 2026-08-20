@@ -80,8 +80,20 @@ export interface AdminOrder {
 }
 
 export interface AdminCustomer {
+  id?: string;
   email: string;
   name: string;
+  role?: "admin" | "customer";
+  status?: string | null;
+  phone?: string | null;
+  avatarUrl?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  newsletterSubscribed?: boolean;
+  createdAt?: string;
+  lastSignInAt?: string | null;
   ordersCount: number;
   totalSpend: number;
 }
@@ -699,7 +711,8 @@ export async function getCustomers(): Promise<AdminCustomer[]> {
   // 1. Fetch profiles
   const { data: profiles, error: profilesError } = await supabase
     .from('profiles')
-    .select('*');
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (profilesError) {
     console.error("[AdminService] Error fetching profiles:", profilesError);
@@ -731,17 +744,161 @@ export async function getCustomers(): Promise<AdminCustomer[]> {
     }
   }
 
-  // 4. Map profiles to AdminCustomer format with derived metrics
+  // 4. Map profiles to AdminCustomer format with all available metadata
   return (profiles || []).map((p: any) => {
     const emailKey = (p.email || "").toLowerCase();
     const stats = ordersByEmail[emailKey] || { count: 0, total: 0 };
     return {
+      id: p.id,
       email: p.email,
-      name: p.name || p.email.split('@')[0],
+      name: p.name || p.email?.split('@')[0] || "Unnamed Customer",
+      role: p.role || 'customer',
+      status: p.status || 'active',
+      phone: p.phone || null,
+      avatarUrl: p.avatar_url || null,
+      address: p.address || null,
+      city: p.city || null,
+      state: p.state || null,
+      country: p.country || null,
+      newsletterSubscribed: !!p.newsletter_subscribed,
+      createdAt: p.created_at || new Date().toISOString(),
+      lastSignInAt: p.last_sign_in_at || null,
       ordersCount: stats.count,
       totalSpend: stats.total,
     };
   });
+}
+
+export async function updateUserRole(userId: string, newRole: "admin" | "customer"): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ role: newRole.toLowerCase() })
+      .eq("id", userId)
+      .select("id, role");
+
+    if (error) {
+      console.error("[AdminService] Error updating user role:", error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error("[AdminService] updateUserRole updated 0 rows. Verify Admin RLS permissions on public.profiles:", userId);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[AdminService] updateUserRole exception:", err);
+    return false;
+  }
+}
+
+/**
+ * Updates a user/customer account status in public.profiles.
+ */
+export async function updateUserStatus(userId: string, newStatus: "active" | "disabled"): Promise<boolean> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase
+      .from("profiles")
+      .update({ status: newStatus.toLowerCase() })
+      .eq("id", userId)
+      .select("id, status");
+
+    if (error) {
+      console.error("[AdminService] Error updating user status:", error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error("[AdminService] updateUserStatus updated 0 rows. Verify Admin RLS permissions on public.profiles:", userId);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[AdminService] updateUserStatus exception:", err);
+    return false;
+  }
+}
+
+export async function getCustomerById(idOrEmail: string): Promise<AdminCustomer | null> {
+  try {
+    const customers = await getCustomers();
+    const found = customers.find(c => c.id === idOrEmail || c.email.toLowerCase() === idOrEmail.toLowerCase());
+    return found || null;
+  } catch (err) {
+    console.error("[AdminService] getCustomerById error:", err);
+    return null;
+  }
+}
+
+export interface UpdateCustomerProfilePayload {
+  name?: string;
+  phone?: string | null;
+  address?: string | null;
+  city?: string | null;
+  state?: string | null;
+  country?: string | null;
+  newsletterSubscribed?: boolean;
+}
+
+/**
+ * Securely updates editable customer profile fields in public.profiles.
+ */
+export async function updateCustomerProfile(
+  userId: string,
+  payload: UpdateCustomerProfilePayload
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    
+    const dbPayload: Record<string, unknown> = {};
+    if (payload.name !== undefined) dbPayload.name = payload.name.trim();
+    if (payload.phone !== undefined) dbPayload.phone = payload.phone?.trim() || null;
+    if (payload.address !== undefined) dbPayload.address = payload.address?.trim() || null;
+    if (payload.city !== undefined) dbPayload.city = payload.city?.trim() || null;
+    if (payload.state !== undefined) dbPayload.state = payload.state?.trim() || null;
+    if (payload.country !== undefined) dbPayload.country = payload.country?.trim() || null;
+    if (payload.newsletterSubscribed !== undefined) dbPayload.newsletter_subscribed = Boolean(payload.newsletterSubscribed);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .update(dbPayload)
+      .eq("id", userId)
+      .select("id, name, phone, address, city, state, country, newsletter_subscribed");
+
+    if (error) {
+      console.error("[AdminService] updateCustomerProfile error:", error);
+      return { success: false, error: error.message || "Database update failed." };
+    }
+
+    if (!data || data.length === 0) {
+      console.error("[AdminService] updateCustomerProfile 0 rows updated. Check RLS:", userId);
+      return { success: false, error: "Update failed: No record was modified. Verify administrative RLS permissions." };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error("[AdminService] updateCustomerProfile exception:", err);
+    return { success: false, error: err?.message || "An unexpected error occurred while updating profile." };
+  }
+}
+
+/**
+ * Fetches all orders belonging to a specific customer by profile ID or email.
+ */
+export async function getOrdersByCustomer(customerIdOrEmail: string): Promise<AdminOrder[]> {
+  try {
+    const allOrders = await getOrders();
+    const query = customerIdOrEmail.toLowerCase();
+    return allOrders.filter(
+      (o) =>
+        (o.profileId && o.profileId.toLowerCase() === query) ||
+        (o.customerEmail && o.customerEmail.toLowerCase() === query)
+    );
+  } catch (err) {
+    console.error("[AdminService] getOrdersByCustomer error:", err);
+    return [];
+  }
 }
 
 export interface DashboardStats {
@@ -1679,12 +1836,18 @@ export async function getAllReturnRequests(): Promise<ReturnRequestRecord[]> {
 export async function approveReturnRequest(returnId: string, notes: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient() as any;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('returns')
       .update({ status: 'Approved', admin_notes: notes || null })
-      .eq('id', returnId);
+      .eq('id', returnId)
+      .select('id, status');
+
     if (error) {
       console.error('[AdminService] approveReturnRequest error:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[AdminService] approveReturnRequest updated 0 rows. Check RLS:', returnId);
       return false;
     }
     return true;
@@ -1700,12 +1863,18 @@ export async function approveReturnRequest(returnId: string, notes: string): Pro
 export async function rejectReturnRequest(returnId: string, notes: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient() as any;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('returns')
       .update({ status: 'Rejected', admin_notes: notes || null })
-      .eq('id', returnId);
+      .eq('id', returnId)
+      .select('id, status');
+
     if (error) {
       console.error('[AdminService] rejectReturnRequest error:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[AdminService] rejectReturnRequest updated 0 rows. Check RLS:', returnId);
       return false;
     }
     return true;
@@ -1722,16 +1891,22 @@ export async function rejectReturnRequest(returnId: string, notes: string): Prom
 export async function markReturnProductReceived(returnId: string, notes: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient() as any;
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('returns')
       .update({
         status: 'Returned',
         admin_notes: notes || null,
         received_at: new Date().toISOString(),
       })
-      .eq('id', returnId);
+      .eq('id', returnId)
+      .select('id, status, received_at');
+
     if (error) {
       console.error('[AdminService] markReturnProductReceived error:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[AdminService] markReturnProductReceived updated 0 rows. Check RLS:', returnId);
       return false;
     }
     return true;
@@ -1764,18 +1939,87 @@ export async function updateRefundStatus(
         updatePayload.refund_transaction_id = modalTxId.trim();
       }
     }
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from('refunds')
       .update(updatePayload)
-      .eq('id', refundId);
+      .eq('id', refundId)
+      .select('id, status');
+
     if (error) {
       console.error('[AdminService] updateRefundStatus error:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('[AdminService] updateRefundStatus updated 0 rows. Check RLS:', refundId);
       return false;
     }
     return true;
   } catch (err) {
     console.error('[AdminService] updateRefundStatus exception:', err);
     return false;
+  }
+}
+
+/**
+ * Initiates or creates a refund record for an order in public.refunds.
+ */
+export async function initiateOrUpdateRefund(
+  orderId: string,
+  customerEmail: string,
+  amount: number,
+  returnId?: string,
+  notes?: string
+): Promise<{ success: boolean; refundId?: string; error?: string }> {
+  try {
+    const supabase = getSupabaseClient() as any;
+    const existing = await getRefundByOrderId(orderId);
+
+    if (existing) {
+      const { data, error } = await supabase
+        .from('refunds')
+        .update({
+          status: 'Initiated',
+          remarks: notes || existing.remarks || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id)
+        .select('id, status');
+
+      if (error) {
+        console.error('[AdminService] initiateOrUpdateRefund update error:', error);
+        return { success: false, error: error.message };
+      }
+      if (!data || data.length === 0) {
+        return { success: false, error: "Zero rows updated. Verify Admin RLS permissions on public.refunds." };
+      }
+      return { success: true, refundId: existing.id };
+    } else {
+      const { data, error } = await supabase
+        .from('refunds')
+        .insert({
+          order_id: orderId,
+          return_id: returnId || null,
+          customer_email: customerEmail,
+          amount: amount || 0,
+          status: 'Initiated',
+          remarks: notes || null,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .select('id, status');
+
+      if (error) {
+        console.error('[AdminService] initiateOrUpdateRefund insert error:', error);
+        return { success: false, error: error.message };
+      }
+      if (!data || data.length === 0) {
+        return { success: false, error: "Zero rows inserted. Verify Admin RLS permissions on public.refunds." };
+      }
+      return { success: true, refundId: data[0].id };
+    }
+  } catch (err: any) {
+    console.error('[AdminService] initiateOrUpdateRefund exception:', err);
+    return { success: false, error: err?.message || "Failed to initiate refund." };
   }
 }
 
