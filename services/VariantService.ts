@@ -307,10 +307,6 @@ export async function createVariant(input: CreateVariantInput): Promise<ProductV
  */
 async function syncParentProduct(variant: ProductVariant): Promise<void> {
   const supabase = getSupabaseClient();
-  let defaultImage = "";
-  if (variant.images && variant.images.length > 0) {
-    defaultImage = variant.images[0];
-  }
   const discountPercent = variant.discountedPrice 
     ? Math.round(((variant.price - variant.discountedPrice) / variant.price) * 100)
     : 0;
@@ -323,7 +319,6 @@ async function syncParentProduct(variant: ProductVariant): Promise<void> {
       stock: variant.quantity,
       sku: variant.sku,
       images: variant.images || [],
-      image_src: defaultImage
     } as any)
     .eq("id", variant.productId);
 

@@ -30,9 +30,20 @@ function getNotificationIcon(message: string): string {
 }
 
 function getRelativeTime(timestamp: string): string {
-  const parsed = Date.parse(timestamp);
+  let parsed = Date.parse(timestamp);
   if (isNaN(parsed)) return timestamp;
-  const diffMs = Date.now() - parsed;
+
+  // Handle legacy stored timestamps that omitted the year (parsed as year 2001 by V8)
+  const parsedDate = new Date(parsed);
+  const now = new Date();
+  if (parsedDate.getFullYear() === 2001 && !timestamp.includes("2001")) {
+    parsedDate.setFullYear(now.getFullYear());
+    parsed = parsedDate.getTime();
+  }
+
+  const diffMs = now.getTime() - parsed;
+  if (diffMs < 0) return "Just now";
+
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);

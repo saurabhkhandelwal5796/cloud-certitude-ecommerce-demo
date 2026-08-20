@@ -1,7 +1,7 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { formatPrice } from "@/utils";
@@ -12,6 +12,7 @@ import {
   getOrders,
   updateOrderStatus,
   getDashboardStats,
+  getAllReturnRequests,
   getReturnRequestByOrderId,
   approveReturnRequest,
   rejectReturnRequest,
@@ -57,6 +58,13 @@ type WorkspaceTab =
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [returnAnalytics, setReturnAnalytics] = useState<ReturnAnalytics>({
+    total: 0,
+    pending: 0,
+    approved: 0,
+    rejected: 0,
+    returned: 0,
+  });
   const [isLoading, setIsLoading] = useState(true);
   const [notification, setNotification] = useState<string | null>(null);
 
@@ -66,7 +74,6 @@ export default function AdminOrdersPage() {
 
   // Return & Refund Module Data Caches
   const [returnsMap, setReturnsMap] = useState<Record<string, ReturnRequestRecord>>({});
-  const [analyticsMap, setAnalyticsMap] = useState<Record<string, ReturnAnalytics>>({});
   const [refundsMap, setRefundsMap] = useState<Record<string, RefundRecord>>({});
   const [notificationsMap, setNotificationsMap] = useState<Record<string, InAppNotification[]>>({});
   const [adminNotesMap, setAdminNotesMap] = useState<Record<string, string>>({});
@@ -83,10 +90,22 @@ export default function AdminOrdersPage() {
   const [sortByDate, setSortByDate] = useState("newest"); // newest | oldest
 
   const loadData = () => {
-    Promise.all([getOrders(), getDashboardStats()])
-      .then(([ordersList, summaryStats]) => {
+    Promise.all([
+      getOrders(),
+      getDashboardStats(),
+      getAllReturnRequests(),
+      getReturnAnalytics(),
+    ])
+      .then(([ordersList, summaryStats, allReturns, retAnalytics]) => {
         setOrders(ordersList);
         setStats(summaryStats);
+        setReturnAnalytics(retAnalytics);
+
+        const retMap: Record<string, ReturnRequestRecord> = {};
+        allReturns.forEach((r) => {
+          retMap[r.order_id] = r;
+        });
+        setReturnsMap(retMap);
         setIsLoading(false);
       })
       .catch((err) => {
@@ -107,8 +126,19 @@ export default function AdminOrdersPage() {
         prev.map((o) => (o.orderId === orderId ? { ...o, status: newStatus } : o))
       );
 
-      const updatedStats = await getDashboardStats();
+      const [updatedStats, updatedReturns, updatedAnalytics] = await Promise.all([
+        getDashboardStats(),
+        getAllReturnRequests(),
+        getReturnAnalytics(),
+      ]);
       setStats(updatedStats);
+      setReturnAnalytics(updatedAnalytics);
+
+      const retMap: Record<string, ReturnRequestRecord> = {};
+      updatedReturns.forEach((r) => {
+        retMap[r.order_id] = r;
+      });
+      setReturnsMap(retMap);
 
       setNotification(`Fulfillment status for order ${orderId} successfully set to ${newStatus}.`);
       setTimeout(() => setNotification(null), 3000);
@@ -144,11 +174,9 @@ export default function AdminOrdersPage() {
     // Load Return Request Data if missing
     if (!returnsMap[orderId]) {
       try {
-        const records = await getReturnRequestByOrderId(orderId);
-        if (records && records.length > 0) {
-          setReturnsMap((prev) => ({ ...prev, [orderId]: records[0] }));
-          const analytics = await getReturnAnalytics(orderId, records[0]);
-          setAnalyticsMap((prev) => ({ ...prev, [orderId]: analytics }));
+        const record = await getReturnRequestByOrderId(orderId);
+        if (record) {
+          setReturnsMap((prev) => ({ ...prev, [orderId]: record }));
         }
       } catch (err) {
         console.error("[AdminOrders] Exception fetching return request for order:", err);
@@ -179,14 +207,13 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleApproveReturn = async (orderId: string, returnId: string) => {
-    const note = adminNotesMap[returnId] || "";
+  const handleApproveReturn = async (returnId: string, orderId: string) => {
+    const notes = adminNotesMap[returnId] || "";
     try {
-      const success = await approveReturnRequest(returnId, note);
-      if (success) {
-        setNotification(`Return request for order ${orderId} has been approved.`);
+      const ok = await approveReturnRequest(returnId, notes);
+      if (ok) {
+        setNotification(`Return request #${returnId.slice(0, 8)} approved.`);
         setTimeout(() => setNotification(null), 3000);
-        await openOrderWorkspace(orderId, "returns");
         loadData();
       } else {
         alert("Failed to approve return request.");
@@ -196,18 +223,17 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleRejectReturn = async (orderId: string, returnId: string) => {
-    const note = adminNotesMap[returnId] || "";
-    if (!note.trim()) {
-      alert("Admin notes/remarks are required when rejecting a return request.");
+  const handleRejectReturn = async (returnId: string, orderId: string) => {
+    const notes = adminNotesMap[returnId] || "";
+    if (!notes.trim()) {
+      alert("Admin notes are required when rejecting a return request.");
       return;
     }
     try {
-      const success = await rejectReturnRequest(returnId, note);
-      if (success) {
-        setNotification(`Return request for order ${orderId} has been rejected.`);
+      const ok = await rejectReturnRequest(returnId, notes);
+      if (ok) {
+        setNotification(`Return request #${returnId.slice(0, 8)} rejected.`);
         setTimeout(() => setNotification(null), 3000);
-        await openOrderWorkspace(orderId, "returns");
         loadData();
       } else {
         alert("Failed to reject return request.");
@@ -217,66 +243,42 @@ export default function AdminOrdersPage() {
     }
   };
 
-  const handleMarkReceived = async (orderId: string, returnId: string) => {
+  const handleMarkProductReceived = async (returnId: string, orderId: string) => {
+    const notes = adminNotesMap[returnId] || "";
     try {
-      const note = adminNotesMap[returnId] || "";
-      const success = await markReturnProductReceived(returnId, note);
-      if (success) {
-        setNotification(`Returned product for order ${orderId} has been marked as received.`);
+      const ok = await markReturnProductReceived(returnId, notes);
+      if (ok) {
+        setNotification(`Return #${returnId.slice(0, 8)} marked as returned product received.`);
         setTimeout(() => setNotification(null), 3000);
-        await openOrderWorkspace(orderId, "returns");
         loadData();
       } else {
-        alert("Failed to mark product received.");
+        alert("Failed to mark returned product received.");
       }
     } catch (err) {
       console.error("[AdminOrders] Exception marking product received:", err);
     }
   };
 
-  const handleRefundStatusUpdate = async (
-    orderId: string,
-    refundId: string,
-    newStatus: "Completed" | "Initiated" | "Failed"
-  ) => {
-    if (newStatus === "Completed") {
-      setTargetRefundId(refundId);
-      setModalTxId("");
-      setModalRemarks("Refund processed by admin");
-      setIsRefundModalOpen(true);
-      return;
-    }
-
-    try {
-      const success = await updateRefundStatus(refundId, newStatus, `Status updated to ${newStatus}`);
-      if (success) {
-        setNotification(`Refund status for order ${orderId} set to ${newStatus}.`);
-        setTimeout(() => setNotification(null), 3000);
-        await openOrderWorkspace(orderId, "returns");
-        loadData();
-      } else {
-        alert(`Failed to update refund status to ${newStatus}.`);
-      }
-    } catch (err) {
-      console.error("[AdminOrders] Exception updating refund status:", err);
-    }
+  const openRefundModal = (refundId: string) => {
+    setTargetRefundId(refundId);
+    setModalTxId("");
+    setModalRemarks("");
+    setIsRefundModalOpen(true);
   };
 
-  const handleConfirmRefundCompletion = async () => {
-    if (!targetRefundId || !workspaceOrderId) return;
+  const handleCompleteRefund = async () => {
+    if (!targetRefundId) return;
     try {
-      const success = await updateRefundStatus(
+      const ok = await updateRefundStatus(
         targetRefundId,
         "Completed",
         modalRemarks,
         modalTxId
       );
-      if (success) {
-        setNotification("Refund marked as Completed successfully.");
-        setTimeout(() => setNotification(null), 3000);
+      if (ok) {
         setIsRefundModalOpen(false);
-        setTargetRefundId(null);
-        await openOrderWorkspace(workspaceOrderId, "returns");
+        setNotification(`Refund transaction processed successfully.`);
+        setTimeout(() => setNotification(null), 3000);
         loadData();
       } else {
         alert("Failed to complete refund.");
@@ -285,6 +287,50 @@ export default function AdminOrdersPage() {
       console.error("[AdminOrders] Exception completing refund:", err);
     }
   };
+
+  // Helper to determine the single authoritative return status for an order
+  const getOrderEffectiveReturnStatus = (order: AdminOrder): "Pending" | "Approved" | "Rejected" | "Returned" | null => {
+    const r = returnsMap[order.orderId];
+    if (r && r.status) {
+      const rStatus = r.status.trim().toLowerCase();
+      if (rStatus === "pending") return "Pending";
+      if (rStatus === "approved") return "Approved";
+      if (rStatus === "rejected") return "Rejected";
+      if (rStatus === "returned") return "Returned";
+    }
+    if (order.status) {
+      const oStatus = order.status.trim().toLowerCase();
+      if (oStatus === "return requested") return "Pending";
+      if (oStatus === "return approved") return "Approved";
+      if (oStatus === "return rejected") return "Rejected";
+      if (oStatus === "returned") return "Returned";
+    }
+    return null;
+  };
+
+  // Reconciled de-duplicated return counts across unique orders
+  const reconciledReturnCounts = useMemo(() => {
+    let pending = 0;
+    let approved = 0;
+    let rejected = 0;
+    let returned = 0;
+
+    orders.forEach((o) => {
+      const st = getOrderEffectiveReturnStatus(o);
+      if (st === "Pending") pending++;
+      else if (st === "Approved") approved++;
+      else if (st === "Rejected") rejected++;
+      else if (st === "Returned") returned++;
+    });
+
+    return {
+      pending,
+      approved,
+      rejected,
+      returned,
+      total: pending + approved + rejected + returned,
+    };
+  }, [orders, returnsMap]);
 
   // Process Search, Filter, Sort
   const processedOrders = orders
@@ -296,8 +342,18 @@ export default function AdminOrdersPage() {
         const matchesEmail = order.customerEmail.toLowerCase().includes(query);
         if (!matchesId && !matchesName && !matchesEmail) return false;
       }
-      if (statusFilter !== "All" && order.status !== statusFilter) {
-        return false;
+      if (statusFilter !== "All") {
+        if (statusFilter === "Return Requested") {
+          if (getOrderEffectiveReturnStatus(order) !== "Pending") return false;
+        } else if (statusFilter === "Return Approved") {
+          if (getOrderEffectiveReturnStatus(order) !== "Approved") return false;
+        } else if (statusFilter === "Return Rejected") {
+          if (getOrderEffectiveReturnStatus(order) !== "Rejected") return false;
+        } else if (statusFilter === "Returned") {
+          if (getOrderEffectiveReturnStatus(order) !== "Returned") return false;
+        } else if (order.status !== statusFilter) {
+          return false;
+        }
       }
       return true;
     })
@@ -374,7 +430,7 @@ export default function AdminOrdersPage() {
             Pending Returns
           </span>
           <span className="text-2xl font-black text-amber-950 mt-1 block">
-            {orders.filter((o) => o.status === "Return Requested").length}
+            {reconciledReturnCounts.pending}
           </span>
         </div>
         <div className="rounded-2xl border border-emerald-250 bg-emerald-50/60 p-4 text-left shadow-sm">
@@ -382,7 +438,7 @@ export default function AdminOrdersPage() {
             Approved Returns
           </span>
           <span className="text-2xl font-black text-emerald-950 mt-1 block">
-            {orders.filter((o) => o.status === "Return Approved").length}
+            {reconciledReturnCounts.approved}
           </span>
         </div>
         <div className="rounded-2xl border border-rose-250 bg-rose-50/60 p-4 text-left shadow-sm">
@@ -390,7 +446,7 @@ export default function AdminOrdersPage() {
             Rejected Returns
           </span>
           <span className="text-2xl font-black text-rose-950 mt-1 block">
-            {orders.filter((o) => o.status === "Return Rejected").length}
+            {reconciledReturnCounts.rejected}
           </span>
         </div>
         <div className="rounded-2xl border border-blue-250 bg-blue-50/60 p-4 text-left shadow-sm">
@@ -398,7 +454,7 @@ export default function AdminOrdersPage() {
             Completed Returns
           </span>
           <span className="text-2xl font-black text-blue-950 mt-1 block">
-            {orders.filter((o) => o.status === "Returned").length}
+            {reconciledReturnCounts.returned}
           </span>
         </div>
       </div>
@@ -417,10 +473,16 @@ export default function AdminOrdersPage() {
           Quick Filters:
         </span>
         {["All", "Return Requested", "Return Approved", "Return Rejected", "Returned"].map((tab) => {
-          const count =
-            tab === "All"
-              ? orders.length
-              : orders.filter((o) => o.status === tab).length;
+          let count = orders.length;
+          if (tab === "Return Requested") {
+            count = reconciledReturnCounts.pending;
+          } else if (tab === "Return Approved") {
+            count = reconciledReturnCounts.approved;
+          } else if (tab === "Return Rejected") {
+            count = reconciledReturnCounts.rejected;
+          } else if (tab === "Returned") {
+            count = reconciledReturnCounts.returned;
+          }
           const isActive = statusFilter === tab;
 
           return (

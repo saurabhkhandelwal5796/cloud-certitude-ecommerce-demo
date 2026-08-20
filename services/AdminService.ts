@@ -44,7 +44,19 @@ export interface AdminOrder {
   customerEmail: string;
   orderDate: string;
   paymentMethod: string;
-  status: "Pending" | "Confirmed" | "Processing" | "Shipped" | "Out for Delivery" | "Delivered" | "Cancelled";
+  status:
+    | "Pending"
+    | "Confirmed"
+    | "Processing"
+    | "Shipped"
+    | "Out for Delivery"
+    | "Delivered"
+    | "Cancelled"
+    | "Refunded"
+    | "Return Requested"
+    | "Return Approved"
+    | "Return Rejected"
+    | "Returned";
   total: number;
   itemsCount: number;
   address?: AddressType;
@@ -264,7 +276,12 @@ if (isBrowser) {
 interface CustomSupabaseClient {
   from: (table: string) => {
     update: (data: Record<string, unknown>) => {
-      eq: (column: string, value: string) => Promise<{
+      eq: (column: string, value: string) => {
+        select: (columns?: string) => Promise<{
+          error: { message: string } | null;
+          data: Record<string, unknown>[] | null;
+        }>;
+      } & Promise<{
         error: { message: string } | null;
         data: Record<string, unknown>[] | null;
       }>;
@@ -496,6 +513,29 @@ export async function deleteProduct(id: string): Promise<boolean> {
   return true;
 }
 
+const CANONICAL_STATUS_MAP: Record<string, AdminOrder["status"]> = {
+  "pending": "Pending",
+  "confirmed": "Confirmed",
+  "processing": "Processing",
+  "shipped": "Shipped",
+  "out for delivery": "Out for Delivery",
+  "delivered": "Delivered",
+  "cancelled": "Cancelled",
+  "canceled": "Cancelled",
+  "refunded": "Refunded",
+  "return requested": "Return Requested",
+  "return approved": "Return Approved",
+  "return rejected": "Return Rejected",
+  "returned": "Returned",
+};
+
+export function normalizeOrderStatus(status: string | null | undefined): AdminOrder["status"] {
+  if (!status) return "Pending";
+  const normalized = CANONICAL_STATUS_MAP[status.trim().toLowerCase()];
+  if (normalized) return normalized;
+  return (status.charAt(0).toUpperCase() + status.slice(1)) as AdminOrder["status"];
+}
+
 export async function getOrders(): Promise<AdminOrder[]> {
   if (isBrowser) {
     try {
@@ -511,7 +551,7 @@ export async function getOrders(): Promise<AdminOrder[]> {
           const paymentMethodVal = (row.payment_method as string) || "Credit Card";
           const totalVal = Number(row.total_amount);
           const statusStr = (row.status as string) || "Pending";
-          const statusVal = (statusStr.charAt(0).toUpperCase() + statusStr.slice(1)) as AdminOrder["status"];
+          const statusVal = normalizeOrderStatus(statusStr);
           const itemsVal = row.items as unknown as AdminOrder["items"];
           
           const subtotalVal = row.subtotal !== undefined && row.subtotal !== null ? Number(row.subtotal) : undefined;
@@ -561,21 +601,77 @@ export async function getOrders(): Promise<AdminOrder[]> {
  */
 export async function updateOrderStatus(
   orderId: string,
-  status: AdminOrder["status"]
+  status: AdminOrder["status"],
+  remarks?: string
 ): Promise<boolean> {
   // Persist status update to Supabase
   try {
     const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
-    const { error } = await supabase.from('orders').update({ status: status }).eq('order_id', orderId);
+
+    // 1. Fetch current status before update to determine previous_status
+    const { data: existingRows } = await (supabase as any)
+      .from('orders')
+      .select('status, customer_email')
+      .eq('order_id', orderId);
+
+    const existingOrder = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+    const previousStatus = existingOrder?.status || null;
+
+    // Prevent duplicate audit logs if the status is already the requested status
+    if (previousStatus && previousStatus.toLowerCase() === status.toLowerCase()) {
+      return true;
+    }
+
+    const { data, error } = await supabase
+      .from('orders')
+      .update({ status: status })
+      .eq('order_id', orderId)
+      .select('customer_email');
+
     if (error) {
       console.error("[AdminService] Supabase order status update error:", error);
       return false;
     }
 
-    // Register Notification by fetching email from Supabase order
-    const { data } = await supabase.from('orders').select('customer_email').eq('order_id', orderId);
-    if (data && data.length > 0) {
-      const customerEmail = data[0].customer_email as string;
+    if (!data || data.length === 0) {
+      console.error("[AdminService] Supabase order status update affected 0 rows (order not found or unauthorized):", orderId);
+      return false;
+    }
+
+    // 2. Fetch actor information
+    const { data: authData } = await supabase.auth.getUser();
+    const actorUserId = authData?.user?.id || null;
+    let actorName = "Admin";
+    if (actorUserId) {
+      const { data: profile } = await (supabase as any)
+        .from('profiles')
+        .select('name')
+        .eq('id', actorUserId)
+        .single();
+      if (profile?.name) {
+        actorName = profile.name;
+      }
+    }
+
+    // 3. Record Audit History Entry in order_history
+    const { error: historyErr } = await (supabase as any)
+      .from('order_history')
+      .insert({
+        order_id: orderId,
+        previous_status: previousStatus,
+        new_status: status,
+        changed_by_user_id: actorUserId,
+        changed_by_name: actorName,
+        remarks: remarks || `Status updated to ${status}`,
+      });
+
+    if (historyErr) {
+      console.warn("[AdminService] Failed to record order_history audit entry:", historyErr);
+    }
+
+    // 4. Register Notification only after verified database update
+    const customerEmail = (data[0]?.customer_email as string) || existingOrder?.customer_email;
+    if (customerEmail) {
       let message = "";
       if (status === "Confirmed") message = `Your order ${orderId} has been confirmed.`;
       else if (status === "Processing") message = `Your order ${orderId} is currently being processed.`;
@@ -677,10 +773,23 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const deliveredOrdersCount = orders.filter((o) => o.status === "Delivered").length;
   const cancelledOrdersCount = orders.filter((o) => o.status === "Cancelled").length;
 
-  // Revenue Today
-  const todayStr = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  // Revenue Today (deterministic calendar day comparison in local/business timezone)
+  const now = new Date();
+  const todayYear = now.getFullYear();
+  const todayMonth = now.getMonth();
+  const todayDate = now.getDate();
+
   const revenueToday = orders
-    .filter((o) => o.status !== "Cancelled" && o.orderDate.startsWith(todayStr))
+    .filter((o) => {
+      if (o.status === "Cancelled") return false;
+      const orderD = new Date(o.orderDate);
+      return (
+        !isNaN(orderD.getTime()) &&
+        orderD.getFullYear() === todayYear &&
+        orderD.getMonth() === todayMonth &&
+        orderD.getDate() === todayDate
+      );
+    })
     .reduce((sum, o) => sum + o.total, 0);
 
   return {
@@ -953,25 +1062,69 @@ export async function seedMissingHistoricalOrders(email: string): Promise<void> 
 /**
  * Cancels a customer's order if it is in Pending status.
  */
-export async function cancelCustomerOrder(orderId: string): Promise<boolean> {
+export async function cancelCustomerOrder(orderId: string, reason?: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient() as unknown as CustomSupabaseClient;
-    const { data } = await supabase.from('orders').select('status, customer_email').eq('order_id', orderId);
-    if (data && data.length > 0) {
-      const statusStr = (data[0].status as string) || "Pending";
+    const { data: orderData } = await supabase.from('orders').select('status, customer_email').eq('order_id', orderId);
+    if (orderData && orderData.length > 0) {
+      const statusStr = (orderData[0].status as string) || "Pending";
       const statusVal = statusStr.charAt(0).toUpperCase() + statusStr.slice(1);
       if (statusVal !== "Pending") {
         throw new Error("Only pending orders can be cancelled.");
       }
       
-      const { error } = await supabase.from('orders').update({ status: "Cancelled" }).eq('order_id', orderId);
+      const { data: updateData, error } = await supabase
+        .from('orders')
+        .update({ status: "Cancelled" })
+        .eq('order_id', orderId)
+        .select('customer_email');
+
       if (error) {
         console.error("[AdminService] Supabase order cancel error:", error);
         return false;
       }
+
+      if (!updateData || updateData.length === 0) {
+        console.error("[AdminService] Supabase order cancel affected 0 rows:", orderId);
+        return false;
+      }
+
+      // Fetch actor info
+      const { data: authData } = await supabase.auth.getUser();
+      const actorUserId = authData?.user?.id || null;
+      let actorName = "Customer";
+      if (actorUserId) {
+        const { data: profile } = await (supabase as any)
+          .from('profiles')
+          .select('name')
+          .eq('id', actorUserId)
+          .single();
+        if (profile?.name) {
+          actorName = profile.name;
+        }
+      }
+
+      // Record Audit History Entry
+      const { error: historyErr } = await (supabase as any)
+        .from('order_history')
+        .insert({
+          order_id: orderId,
+          previous_status: statusVal,
+          new_status: "Cancelled",
+          changed_by_user_id: actorUserId,
+          changed_by_name: actorName,
+          remarks: reason || "Order cancelled by customer",
+        });
+
+      if (historyErr) {
+        console.warn("[AdminService] Failed to record cancellation audit entry:", historyErr);
+      }
       
-      // Register Notification
-      registerNotification(data[0].customer_email as string, `Your order ${orderId} has been successfully cancelled.`, "Cancelled", `/orders/${orderId}`);
+      // Register Notification only after verified database update
+      const customerEmail = (updateData[0]?.customer_email as string) || (orderData[0].customer_email as string);
+      if (customerEmail) {
+        registerNotification(customerEmail, `Your order ${orderId} has been successfully cancelled.`, "Cancelled", `/orders/${orderId}`);
+      }
       return true;
     }
   } catch (err) {
@@ -1016,13 +1169,7 @@ export function registerNotification(
   const newNotif: InAppNotification = {
     id: `notif_${Date.now()}`,
     message,
-    timestamp: new Date().toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-      hour12: true,
-    }),
+    timestamp: new Date().toISOString(),
     isRead: false,
     type,
     targetUrl,
@@ -1529,9 +1676,6 @@ export async function getAllReturnRequests(): Promise<ReturnRequestRecord[]> {
   }
 }
 
-/**
- * Approves a return request, optionally recording admin notes.
- */
 export async function approveReturnRequest(returnId: string, notes: string): Promise<boolean> {
   try {
     const supabase = getSupabaseClient() as any;
@@ -1706,32 +1850,65 @@ export async function getReturnAnalytics(): Promise<ReturnAnalytics> {
   }
 }
 
+export interface CreateReturnRequestParams {
+  orderId: string;
+  customerEmail?: string;
+  reason: string;
+  comments?: string;
+  userId?: string | null;
+  items?: unknown[];
+}
+
 /**
  * Creates a new return request for a customer order.
+ * Supports both options object and positional arguments.
  */
 export async function createReturnRequest(
-  orderId: string,
-  _items: unknown[],
-  reason: string,
-  comments?: string
-): Promise<boolean> {
+  paramsOrOrderId: string | CreateReturnRequestParams,
+  _items?: unknown[],
+  reasonArg?: string,
+  commentsArg?: string
+): Promise<ReturnRequestRecord | boolean | null> {
   try {
     const supabase = getSupabaseClient() as any;
     const { data: { user } } = await supabase.auth.getUser();
-    const customerEmail = user?.email || '';
-    const { error } = await supabase.from('returns').insert({
-      order_id: orderId,
-      user_id: user?.id || null,
-      customer_email: customerEmail,
-      reason,
-      comments: comments || null,
-      status: 'Pending',
-    });
+
+    let orderId: string;
+    let customerEmail: string = user?.email || '';
+    let reason: string = '';
+    let comments: string | null = null;
+    let userId: string | null = user?.id || null;
+
+    if (typeof paramsOrOrderId === 'object' && paramsOrOrderId !== null) {
+      orderId = paramsOrOrderId.orderId;
+      if (paramsOrOrderId.customerEmail) customerEmail = paramsOrOrderId.customerEmail;
+      reason = paramsOrOrderId.reason;
+      comments = paramsOrOrderId.comments || null;
+      if (paramsOrOrderId.userId !== undefined) userId = paramsOrOrderId.userId;
+    } else {
+      orderId = paramsOrOrderId;
+      reason = reasonArg || '';
+      comments = commentsArg || null;
+    }
+
+    const { data, error } = await supabase
+      .from('returns')
+      .insert({
+        order_id: orderId,
+        user_id: userId,
+        customer_email: customerEmail,
+        reason: reason,
+        comments: comments,
+        status: 'Pending',
+      })
+      .select('*');
+
     if (error) {
       console.error('[AdminService] createReturnRequest error:', error);
       return false;
     }
-    return true;
+
+    return data && data.length > 0 ? (data[0] as ReturnRequestRecord) : true;
   } catch (err) {
     console.error('[AdminService] createReturnRequest exception:', err);
     return false;
@@ -1742,13 +1919,13 @@ export async function createReturnRequest(
 
 export interface OrderHistoryEntry {
   id: string;
-  order_id: string;
-  previous_status?: string | null;
-  new_status: string;
-  changed_by_user_id?: string | null;
-  changed_by_name?: string | null;
+  orderId: string;
+  previousStatus?: string | null;
+  newStatus: string;
+  changedByUserId?: string | null;
+  changedByName?: string | null;
   remarks?: string | null;
-  created_at: string;
+  createdAt: string;
 }
 
 /**
@@ -1766,7 +1943,16 @@ export async function getOrderHistory(orderId: string): Promise<OrderHistoryEntr
       console.error('[AdminService] getOrderHistory error:', error);
       return [];
     }
-    return (data || []) as OrderHistoryEntry[];
+    return (data || []).map((row: any) => ({
+      id: String(row.id),
+      orderId: String(row.order_id),
+      previousStatus: row.previous_status || null,
+      newStatus: String(row.new_status),
+      changedByUserId: row.changed_by_user_id || null,
+      changedByName: row.changed_by_name || null,
+      remarks: row.remarks || null,
+      createdAt: String(row.created_at || new Date().toISOString()),
+    }));
   } catch (err) {
     console.error('[AdminService] getOrderHistory exception:', err);
     return [];
